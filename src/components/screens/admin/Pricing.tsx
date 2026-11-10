@@ -15,6 +15,7 @@ type Extra = { id: string; key: string; labelEn: string; isk: number; active: bo
 
 export function Pricing() {
   const [rate, setRate] = useState(138)
+  const [eurRate, setEurRate] = useState(150)
   const [usd, setUsd] = useState(true)
   const [isk, setIsk] = useState(true)
   const [extras, setExtras] = useState<Extra[]>([])
@@ -29,6 +30,7 @@ export function Pricing() {
         return
       }
       if (data.rate?.iskPerUsd) setRate(data.rate.iskPerUsd)
+      if (data.rate?.iskPerEur) setEurRate(data.rate.iskPerEur)
       setExtras(data.extras || [])
       setMsg(null)
     } catch (e) {
@@ -46,7 +48,7 @@ export function Pricing() {
     const rateRes = await fetch('/api/admin/pricing', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ type: 'rate', iskPerUsd: rate }),
+      body: JSON.stringify({ type: 'rate', iskPerUsd: rate, iskPerEur: eurRate }),
     })
     const rateData = await rateRes.json()
     if (!rateRes.ok || !rateData.ok) {
@@ -80,7 +82,7 @@ export function Pricing() {
       <Panel title="Currencies" hint="Customers see the transaction currency before paying, and are charged in exactly that currency.">
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-3">
-            {([['USD', 'US dollar · default for international visitors', usd, setUsd], ['ISK', 'Icelandic króna · residents only', isk, setIsk]] as const).map(([code, label, on, set]) => (
+            {([['EUR', 'Euro · default for international visitors', usd, setUsd], ['ISK', 'Icelandic króna · residents', isk, setIsk]] as const).map(([code, label, on, set]) => (
               <label key={code} className="flex items-center justify-between rounded-lg border border-line p-3">
                 <span>
                   <span className="block text-sm font-semibold text-heading">{code}</span>
@@ -89,21 +91,25 @@ export function Pricing() {
                 <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} className="h-5 w-5 accent-[var(--mint)]" />
               </label>
             ))}
-            <Select label="Default currency" value="USD" options={['USD', 'ISK']} />
+            <Select label="Default currency" value="EUR" options={['EUR', 'ISK']} />
           </div>
           <div>
             <label className="block">
               <span className="text-xs font-semibold text-muted">Exchange rate · ISK per 1 USD</span>
               <input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 font-display text-2xl font-bold text-heading outline-none focus:border-focus" />
             </label>
-            <p className="mt-2 text-xs text-muted">Persisted via admin pricing API · used for USD snapshots</p>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold text-muted">Exchange rate · ISK per 1 EUR</span>
+              <input type="number" value={eurRate} onChange={(e) => setEurRate(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 font-display text-2xl font-bold text-heading outline-none focus:border-focus" />
+            </label>
+            <p className="mt-2 text-xs text-muted">Public euros use ISK per 1 EUR. The USD rate stays for older USD snapshots. Seed demo, not a live FX feed.</p>
             <div className="mt-4 rounded-lg bg-surface p-4 text-sm">
-              <p className="text-muted">Example: KEF → Reykjavík, 22.900 kr</p>
-              <p className="mt-1 font-display text-xl font-bold text-heading">${Math.round(22900 / (rate || 1))} USD</p>
+              <p className="text-muted">Example: KEF → Reykjavík, ISK 22,900</p>
+              <p className="mt-1 font-display text-xl font-bold text-heading">€{Math.round(22900 / (eurRate || 1)).toLocaleString('en-US').replace(/,/g, '.')} EUR</p>
             </div>
             <div className="mt-4 flex gap-2 rounded-lg border border-line p-3 text-xs text-text">
               <AlertTriangle size={16} className="shrink-0 text-warning" />
-              Confirm Teya supports charging in both USD and ISK, and your payout currency, before enabling a currency.
+              Confirm Teya supports charging in both EUR and ISK, and your payout currency, before enabling a currency. Older USD bookings stay in USD.
             </div>
           </div>
         </div>

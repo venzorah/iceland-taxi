@@ -13,7 +13,7 @@ import { bookingWhatsAppText, whatsappHref } from '@/lib/whatsapp'
 export const args = {
   theme: 'light',
   language: 'en',
-  currency: 'USD',
+  currency: 'EUR',
   role: 'customer',
 }
 

@@ -5,7 +5,7 @@ import { Download, MessageCircle, Pencil, Send, XCircle } from 'lucide-react'
 
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
-import { IMG, type Currency } from '@/lib/design/data'
+import { IMG, formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 import { bookingWhatsAppText, whatsappHref } from '@/lib/whatsapp'
@@ -14,14 +14,14 @@ export const args = {
   tab: 'upcoming',
   theme: 'light',
   language: 'en',
-  currency: 'USD',
+  currency: 'EUR',
 }
 
 export const argTypes = {
   tab: { control: 'radio', options: ['upcoming', 'completed', 'cancelled'] },
   theme: { control: 'radio', options: ['light', 'dark'] },
   language: { control: 'radio', options: ['en', 'is'] },
-  currency: { control: 'radio', options: ['USD', 'ISK'] },
+  currency: { control: 'radio', options: ['EUR', 'ISK'] },
 }
 
 type Props = Partial<typeof args> & {
@@ -40,10 +40,10 @@ const GUEST_EMAIL = 'emma@example.local'
 
 const PAST = {
   completed: [
-    { ref: 'ITB-1QA9TR', title: 'Golden Circle Private Tour', date: '13 Mar 2025', amount: '$652', img: IMG.goldenCircle },
-    { ref: 'ITB-6YH2LD', title: 'Keflavík Airport → Reykjavík', date: '10 Mar 2025', amount: '$166', img: IMG.airport },
+    { ref: 'ITB-1QA9TR', title: 'Golden Circle Private Tour', date: '13 Mar 2025', amount: formatPrice(89900, 'EUR'), img: IMG.goldenCircle },
+    { ref: 'ITB-6YH2LD', title: 'Keflavík Airport → Reykjavík', date: '10 Mar 2025', amount: formatPrice(22900, 'EUR'), img: IMG.airport },
   ],
-  cancelled: [{ ref: 'ITB-2ZC8RU', title: 'Northern Lights Experience', date: '11 Mar 2025', amount: 'Refunded $434', img: IMG.northernLights }],
+  cancelled: [{ ref: 'ITB-2ZC8RU', title: 'Northern Lights Experience', date: '11 Mar 2025', amount: `Refunded ${formatPrice(59900, 'EUR')}`, img: IMG.northernLights }],
 }
 
 type ChatMsg = { id: string; body: string; authorRole: string; time: string }
@@ -132,7 +132,7 @@ export default function CustomerDashboard(props: Props) {
                       </div>
                     </div>
                     <div className="mt-6 grid grid-cols-3 items-center gap-2 border-t border-line pt-5 sm:flex sm:flex-wrap">
-                      <span className="col-span-3 font-display text-xl font-extrabold text-heading sm:mr-auto">$166 <span className="text-xs font-semibold text-success">Paid</span></span>
+                      <span className="col-span-3 font-display text-xl font-extrabold text-heading sm:mr-auto">{formatPrice(22900, 'EUR')} <span className="text-xs font-semibold text-success">Paid</span></span>
                       <button className="flex flex-col items-center gap-1 rounded-2xl bg-surface py-3 text-xs font-semibold text-heading active:bg-line sm:inline-flex sm:flex-row sm:gap-1.5 sm:rounded-full sm:border sm:border-line sm:bg-transparent sm:px-3.5 sm:py-2 sm:text-sm"><Pencil size={16} className="sm:h-3.5 sm:w-3.5" /> <span className="whitespace-nowrap"><span className="hidden sm:inline">Request </span>change</span></button>
                       <button className="flex flex-col items-center gap-1 rounded-2xl bg-surface py-3 text-xs font-semibold text-heading active:bg-line sm:inline-flex sm:flex-row sm:gap-1.5 sm:rounded-full sm:border sm:border-line sm:bg-transparent sm:px-3.5 sm:py-2 sm:text-sm"><Download size={16} className="sm:h-3.5 sm:w-3.5" /> Receipt</button>
                       <button className="flex flex-col items-center gap-1 rounded-2xl bg-surface py-3 text-xs font-semibold text-error active:bg-line sm:inline-flex sm:flex-row sm:gap-1.5 sm:rounded-full sm:bg-transparent sm:px-3.5 sm:py-2 sm:text-sm"><XCircle size={16} className="sm:h-3.5 sm:w-3.5" /> Cancel</button>

@@ -97,7 +97,7 @@ export function Overview({ onOpenBookings }: { onOpenBookings?: () => void }) {
               </div>
               <div>
                 <p className="text-xs font-medium text-muted">ISK</p>
-                <p className="whitespace-nowrap font-display text-xl font-extrabold text-heading sm:text-2xl">{iskTotal.toLocaleString('en-US').replace(/,/g, '.')} kr</p>
+                <p className="whitespace-nowrap font-display text-xl font-extrabold text-heading sm:text-2xl">ISK {iskTotal.toLocaleString('en-US')}</p>
               </div>
             </div>
             <div className="mt-5 flex h-28 items-end gap-2" aria-label="USD revenue by day">

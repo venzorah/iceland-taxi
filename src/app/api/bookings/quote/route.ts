@@ -15,7 +15,7 @@ const schema = z.object({
     })
     .optional(),
   customerCategory: z.enum(['INTERNATIONAL', 'RESIDENT', 'international', 'resident']).default('INTERNATIONAL'),
-  currency: z.enum(['USD', 'ISK']).optional(),
+  currency: z.enum(['USD', 'ISK', 'EUR']).optional(),
   depositPct: z.number().min(0).max(100).optional(),
 })
 

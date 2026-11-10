@@ -27,9 +27,16 @@ export type CreateBookingInput = {
   awaitPaymentWithoutGateway?: boolean
 }
 
-export async function getIskPerUsd() {
+export async function getExchangeRates() {
   const rate = await prisma.exchangeRate.findFirst({ orderBy: { effective: 'desc' } })
-  return rate?.iskPerUsd ?? 138
+  return {
+    iskPerUsd: rate?.iskPerUsd ?? 138,
+    iskPerEur: rate?.iskPerEur ?? 150,
+  }
+}
+
+export async function getIskPerUsd() {
+  return (await getExchangeRates()).iskPerUsd
 }
 
 export async function quoteFromCatalogue(params: {
@@ -42,7 +49,7 @@ export async function quoteFromCatalogue(params: {
   currency?: QuoteInput['currency']
   depositPct?: number
 }) {
-  const iskPerUsd = await getIskPerUsd()
+  const { iskPerUsd, iskPerEur } = await getExchangeRates()
   let baseIsk = 22900
   let durationMinutes = 45
   let routeLabel = `${params.pickup || 'Pickup'} → ${params.destination || 'Destination'}`
@@ -106,6 +113,7 @@ export async function quoteFromCatalogue(params: {
     customerCategory: params.customerCategory,
     currency: params.currency,
     iskPerUsd,
+    iskPerEur,
     depositPct: params.depositPct,
   })
 
@@ -273,7 +281,7 @@ export function toOpsBooking(b: {
     vehicle: b.vehicleLabel || '—',
     driver: b.driver?.displayName ?? null,
     amount: b.amountSnapshot,
-    currency: b.currency as 'USD' | 'ISK',
+    currency: b.currency as 'USD' | 'ISK' | 'EUR',
     status: statusMap[b.status] || b.status,
     flight: b.flightNumber || undefined,
   }

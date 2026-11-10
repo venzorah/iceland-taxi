@@ -29,12 +29,12 @@ type Props = {
 const STEPS = [
   { icon: Search, title: '1. Choose your trip', body: 'Pick airport transfer, private taxi, tour or driver. Enter pickup, destination, date, time and passengers.' },
   { icon: CalendarCheck, title: '2. Confirm the details', body: 'Select a vehicle class, add flight number if needed, and review waiting-time and cancellation terms before checkout.' },
-  { icon: CreditCard, title: '3. Pay in USD or ISK', body: 'International visitors pay in USD. Residents can choose ISK or USD. Payment uses the configured gateway (Teya first).' },
+  { icon: CreditCard, title: '3. Pay in EUR or ISK', body: 'International visitors pay in euro (EUR). Residents can choose ISK or EUR. Payment uses the configured gateway (Teya first).' },
   { icon: MessageSquare, title: '4. Track and message', body: 'Use your booking reference to follow status, message the team, request changes or open WhatsApp with a prefilled note.' },
 ]
 
 export default function HowItWorks(props: Props) {
-  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'USD' as Currency, ...props }
+  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
 
   return (

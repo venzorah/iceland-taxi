@@ -28,6 +28,7 @@ enum CustomerCategory {
 enum CurrencyCode {
   USD
   ISK
+  EUR
 }
 
 enum BookingStatus {
@@ -330,7 +331,10 @@ model ThemeSettings {
 
 model ExchangeRate {
   id        String   @id @default(cuid())
+  /// ISK per 1 USD. Kept for historical USD booking snapshots.
   iskPerUsd Int
+  /// ISK per 1 EUR. Public catalogue and new international charges. Seed demo, admin-editable.
+  iskPerEur Int      @default(150)
   effective DateTime @default(now())
   note      String?
 }

@@ -29,7 +29,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [theme, setThemeState] = useState<Theme>('light')
   const [language, setLanguage] = useState<Lang>('en')
-  const [currency, setCurrency] = useState<Currency>('USD')
+  const [currency, setCurrency] = useState<Currency>('EUR')
   const [customerCategory, setCustomerCategory] = useState<'international' | 'resident'>('international')
   const [announcements, setAnnouncements] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
 

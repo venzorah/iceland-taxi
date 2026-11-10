@@ -14,7 +14,7 @@ const PAGES = [
 export function Seo() {
   const [sel, setSel] = useState(PAGES[0])
   const [title, setTitle] = useState('Keflavík Airport Transfer to Reykjavík | Private & Fixed Price')
-  const [desc, setDesc] = useState('Book a private transfer from Keflavík Airport to Reykjavík or your hotel. Fixed prices in USD or ISK, flight tracking and meet & greet.')
+  const [desc, setDesc] = useState('Book a private transfer from Keflavík Airport to Reykjavík or your hotel. Fixed prices in EUR or ISK, flight tracking and meet & greet.')
 
   return (
     <div className="grid min-h-0 lg:h-full lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px]">

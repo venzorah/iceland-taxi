@@ -34,7 +34,7 @@ const PACKAGES = [
 ]
 
 export default function PrivateDriver(props: Props) {
-  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'USD' as Currency, ...props }
+  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
   const [whatsappE164, setWhatsappE164] = useState<string | null>(null)
 

@@ -56,7 +56,11 @@ export function PaymentsList() {
                 </td>
                 <td className="px-4 py-3 text-text">{p.provider}</td>
                 <td className="px-4 py-3 font-semibold tabular-nums text-heading">
-                  {p.currency === 'USD' ? `$${p.amount}` : `${p.amount.toLocaleString('en-US').replace(/,/g, '.')} kr`}
+                  {p.currency === 'EUR'
+                    ? `€${p.amount.toLocaleString('en-US').replace(/,/g, '.')}`
+                    : p.currency === 'ISK'
+                      ? `ISK ${p.amount.toLocaleString('en-US')}`
+                      : `$${p.amount.toLocaleString('en-US')}`}
                 </td>
                 <td className="px-4 py-3 text-xs font-semibold text-heading">{p.status}</td>
                 <td className="px-4 py-3 font-mono text-xs text-muted">{p.providerRef || '—'}</td>

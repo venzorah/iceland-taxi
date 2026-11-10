@@ -82,7 +82,7 @@ export const SEO_PUBLIC_PAGES: { path: string; titleEn: string; descriptionEn: s
   { path: '/services', titleEn: 'Services', descriptionEn: 'Airport transfers, private taxis, tours, private drivers and corporate travel.' },
   { path: '/destinations', titleEn: 'Destinations', descriptionEn: 'Popular Iceland destinations for transfers, tours and private-driver days.' },
   { path: '/fleet', titleEn: 'Our fleet', descriptionEn: 'Sedan, SUV, minivan and minibus classes sized for passengers and luggage.' },
-  { path: '/how-it-works', titleEn: 'How it works', descriptionEn: 'Choose a trip, confirm details, pay in USD or ISK, then track and message.' },
+  { path: '/how-it-works', titleEn: 'How it works', descriptionEn: 'Choose a trip, confirm details, pay in EUR or ISK, then track and message.' },
   { path: '/faqs', titleEn: 'FAQs', descriptionEn: 'Answers about booking, currency, flight delays, multi-day drivers and cancellations.' },
   { path: '/blog', titleEn: 'Blog', descriptionEn: 'Practical travel notes for airport arrivals, tours and booking in Iceland.' },
   { path: '/travel-guides', titleEn: 'Travel guides', descriptionEn: 'Longer guides for Reykjavík arrivals, Blue Lagoon timing and South Coast days.' },

@@ -73,7 +73,7 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
             ))}
           </div>
           <div className="hidden items-center rounded-full border border-line p-0.5 text-xs font-semibold md:flex">
-            {(['USD', 'ISK'] as Currency[]).map((c) => (
+            {(['EUR', 'ISK'] as Currency[]).map((c) => (
               <button
                 key={c}
                 onClick={() => onCurrencyChange?.(c)}
@@ -127,7 +127,7 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
         <p className="mt-4 text-xs font-semibold text-muted">Currency</p>
         <Segmented
           value={currency}
-          options={[['USD', 'USD $'], ['ISK', 'ISK kr']]}
+          options={[['EUR', 'EUR €'], ['ISK', 'ISK']]}
           onChange={(v) => onCurrencyChange?.(v as Currency)}
         />
 

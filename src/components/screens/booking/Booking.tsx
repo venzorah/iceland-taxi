@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { ArrowLeft, Baby, Check, CheckCircle2, Copy, Lock, MessageCircle, Plane, Repeat, Signpost } from 'lucide-react'
 
 import { SiteHeader } from '@/components/site/SiteHeader'
-import { FLEET, IMG, ISK_PER_USD, formatPrice, type Currency } from '@/lib/design/data'
+import { FLEET, IMG, ISK_PER_EUR, formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -13,7 +13,7 @@ export const args = {
   theme: 'light',
   language: 'en',
   customerCategory: 'international',
-  currency: 'USD',
+  currency: 'EUR',
   passengers: 2,
   pickup: 'Keflavík Airport (KEF)',
   destination: 'Reykjavík city centre',
@@ -26,7 +26,7 @@ export const argTypes = {
   theme: { control: 'radio', options: ['light', 'dark'] },
   language: { control: 'radio', options: ['en', 'is'] },
   customerCategory: { control: 'radio', options: ['international', 'resident'] },
-  currency: { control: 'radio', options: ['USD', 'ISK'] },
+  currency: { control: 'radio', options: ['EUR', 'ISK'] },
   passengers: { control: 'number' },
 }
 
@@ -79,7 +79,7 @@ export default function Booking(props: Props) {
   const [guestPhone, setGuestPhone] = useState('+45 20 12 34 56')
   const [hotel, setHotel] = useState('Hotel Borg, Pósthússtræti 11')
 
-  const currency: Currency = category === 'international' ? 'USD' : (p.currency as Currency)
+  const currency: Currency = category === 'international' ? 'EUR' : (p.currency === 'ISK' ? 'ISK' : 'EUR')
   const vehicleSpec = FLEET.find((v) => v.name === vehicle)!
 
   const lines = useMemo(() => {
@@ -214,8 +214,8 @@ export default function Booking(props: Props) {
                   <p className="mt-6 text-sm font-semibold text-heading">Where do you live?</p>
                   <div className="mt-2 grid gap-3 sm:grid-cols-2">
                     {[
-                      ['international', 'Visiting Iceland', 'You pay in USD'],
-                      ['resident', 'I live in Iceland', 'Pay in ISK or USD'],
+                      ['international', 'Visiting Iceland', 'You pay in euro (EUR)'],
+                      ['resident', 'I live in Iceland', 'Pay in ISK or EUR'],
                     ].map(([id, label, hint]) => (
                       <button key={id} onClick={() => setCategory(id)} className={`rounded-xl border p-4 text-left transition-colors duration-150 ${category === id ? 'border-heading bg-card' : 'border-line bg-card hover:border-input-line'}`}>
                         <span className="block font-semibold text-heading">{label}</span>
@@ -225,7 +225,7 @@ export default function Booking(props: Props) {
                   </div>
                   {category === 'resident' && (
                     <div className="mt-4 inline-flex rounded-full border border-line p-0.5 text-sm font-semibold">
-                      {(['ISK', 'USD'] as Currency[]).map((c) => (
+                      {(['ISK', 'EUR'] as Currency[]).map((c) => (
                         <button key={c} onClick={() => p.onCurrencyChange?.(c)} className={`rounded-full px-4 py-1.5 transition-colors duration-150 ${currency === c ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}>
                           Pay in {c}
                         </button>
@@ -255,7 +255,7 @@ export default function Booking(props: Props) {
                     <span className="font-display text-3xl font-extrabold text-heading">{formatPrice(total, currency)}</span>
                   </div>
                   <p className="mt-2 text-xs text-muted">
-                    You will be charged in <strong className="text-heading">{currency}</strong>.{currency === 'USD' && ` Rate used: 1 USD = ${ISK_PER_USD} ISK.`}
+                    You will be charged in <strong className="text-heading">{currency}</strong>.{currency === 'EUR' && ` Rate used: 1 EUR = ${ISK_PER_EUR} ISK.`}
                   </p>
                   <p className="mt-1 text-xs text-muted">{vehicleSpec.name}: {vehicleSpec.pax} seats, {vehicleSpec.bags} bags</p>
                   <button onClick={submitPay} disabled={p.state === 'paying'} className="mt-6 hidden w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover disabled:opacity-70 lg:flex">

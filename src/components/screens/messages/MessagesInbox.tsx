@@ -179,7 +179,7 @@ export default function MessagesInbox(props: Props) {
             </div>
           </div>
           {!waNumber && (
-            <p className="mt-2 hidden px-1 text-xs text-muted md:block">Company WhatsApp number is unset in CMS — deep link opens WhatsApp with prefilled text only (no invented number).</p>
+            <p className="mt-2 hidden px-1 text-xs text-muted md:block">Company WhatsApp number is unset in CMS, deep link opens WhatsApp with prefilled text only (no invented number).</p>
           )}
 
           <div className="mt-0 grid min-h-[560px] flex-1 overflow-hidden border-line bg-bg md:mt-6 md:grid-cols-[340px_1fr] md:rounded-2xl md:border">

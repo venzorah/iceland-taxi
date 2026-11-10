@@ -27,7 +27,7 @@ type Props = {
 }
 
 const VALUES = [
-  { icon: Car, title: 'Private vehicles only', body: 'Every trip is a private booking — no shared shuttles, no open marketplace. You choose the vehicle class that fits your luggage and group.' },
+  { icon: Car, title: 'Private vehicles only', body: 'Every trip is a private booking, no shared shuttles, no open marketplace. You choose the vehicle class that fits your luggage and group.' },
   { icon: MapPinned, title: 'Built around Iceland travel', body: 'Airport meets, sightseeing days and multi-day private drivers are priced and scheduled as distinct services, with waiting-time rules shown before you pay.' },
   { icon: ShieldCheck, title: 'You stay in control', body: 'Book as a guest or with an account. Track status, message the team, request changes and keep receipts from one booking reference.' },
 ]
@@ -61,7 +61,7 @@ export default function About(props: Props) {
           <p className="text-sm font-semibold text-cyan">Iceland Taxi Booking</p>
           <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Company-owned transport, booked around your trip</h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg">
-            We design airport transfers, private taxis, sightseeing tours and vacation drivers as one booking experience — clear prices, flight-aware pickups and in-app messaging when plans change.
+            We design airport transfers, private taxis, sightseeing tours and vacation drivers as one booking experience, clear prices, flight-aware pickups and in-app messaging when plans change.
           </p>
         </div>
       </section>
@@ -71,7 +71,7 @@ export default function About(props: Props) {
           <div>
             <h2 className="font-display text-2xl font-bold text-heading sm:text-3xl">What we are</h2>
             <p className="mt-4 text-base leading-relaxed text-muted">
-              Iceland Taxi Booking is a company booking platform — not an open taxi marketplace. Services, vehicles, routes and prices are managed by the operations team and published to the site when ready.
+              Iceland Taxi Booking is a company booking platform, not an open taxi marketplace. Services, vehicles, routes and prices are managed by the operations team and published to the site when ready.
             </p>
             <p className="mt-4 text-base leading-relaxed text-muted">
               Company contact details, registrations and fleet facts live in the CMS so they stay accurate. This page describes how the product works; published company facts appear when administrators add them.

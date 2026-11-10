@@ -45,7 +45,7 @@ export async function GET() {
         destinations: DESTINATIONS.map((d) => ({ name: d.name, note: d.note, imageUrl: d.img })),
         faqs: FAQS.map((f) => ({ questionEn: f.q, answerEn: f.a })),
         vehicles: FLEET.map((v) => ({ name: v.name, pax: v.pax, bags: v.bags, useCase: v.use })),
-        note: 'DATABASE_URL unset or unreachable — serving design seed fallback.',
+        note: 'DATABASE_URL unset or unreachable, serving design seed fallback.',
       }) as const,
   )
 

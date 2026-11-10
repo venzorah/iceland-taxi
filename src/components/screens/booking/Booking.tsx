@@ -270,7 +270,7 @@ export default function Booking(props: Props) {
             </div>
 
             {/* Phone checkout bar: the total and the pay action stay in reach of the thumb */}
-            <div className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 px-4 pt-3 backdrop-blur lg:hidden">
+            <div className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white px-4 pt-3 dark:bg-bg lg:hidden">
               <div className="mx-auto flex max-w-2xl items-center gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-muted">Total · {currency}</p>

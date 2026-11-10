@@ -64,7 +64,7 @@ export default function Contact(props: Props) {
         <div className="max-w-2xl">
           <h1 className="font-display text-3xl font-extrabold text-heading sm:text-4xl">Contact</h1>
           <p className="mt-3 text-base text-muted">
-            Send a message about a booking, quotation or partnership. Phone, email and address publish from Admin when set — this design never invents them.
+            Send a message about a booking, quotation or partnership. Phone, email and address publish from Admin when set, this design never invents them.
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function Contact(props: Props) {
           <aside className="space-y-4">
             <div className="rounded-2xl border border-line bg-surface p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">Faster channels</p>
-              <a href={whatsappHref({ e164: company?.whatsappE164, text: 'Hello Iceland Taxi Booking — ' })} className="mt-4 flex items-center gap-3 rounded-2xl bg-mint px-4 py-3.5 font-bold text-navy">
+              <a href={whatsappHref({ e164: company?.whatsappE164, text: 'Hello Iceland Taxi Booking, ' })} className="mt-4 flex items-center gap-3 rounded-2xl bg-mint px-4 py-3.5 font-bold text-navy">
                 <MessageCircle size={18} /> WhatsApp
               </a>
               {company?.email ? (

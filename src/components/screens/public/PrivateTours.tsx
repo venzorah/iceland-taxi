@@ -54,7 +54,7 @@ export default function PrivateTours(props: Props) {
         <img src={IMG.goldenCircle} alt="Golden Circle private tour landscape" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private sightseeing tours across Iceland</h1>
-          <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Your own vehicle and driver, your own schedule. Stop where you want — packages are starting points, not fixed bus itineraries.</p>
+          <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Your own vehicle and driver, your own schedule. Stop where you want, packages are starting points, not fixed bus itineraries.</p>
           <button onClick={p.onBook} className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
             Book a private tour <ArrowRight size={16} />
           </button>

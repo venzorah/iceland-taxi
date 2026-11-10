@@ -61,7 +61,7 @@ export default function TravelGuides(props: Props) {
           <BookOpen size={16} /> Travel guides
         </div>
         <h1 className="mt-2 font-display text-3xl font-extrabold text-heading sm:text-4xl">Plan the journey, then book the car</h1>
-        <p className="mt-3 max-w-2xl text-base text-muted">Longer CMS guides for itineraries and logistics. Seed titles only — publish full articles from Admin → Pages.</p>
+        <p className="mt-3 max-w-2xl text-base text-muted">Longer CMS guides for itineraries and logistics. Seed titles only, publish full articles from Admin → Pages.</p>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
           {GUIDES.map((g) => (

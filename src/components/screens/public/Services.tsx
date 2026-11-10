@@ -32,7 +32,7 @@ type Props = {
 const SERVICES = [
   { id: 'airport', icon: Plane, title: 'Airport transfers', img: IMG.airport, body: 'Private meets at KEF with flight tracking, fixed routes to Reykjavík, Blue Lagoon and southwest hotels.', cta: 'Airport landing', go: 'onAirport' as const },
   { id: 'taxi', icon: Car, title: 'Private taxi', img: IMG.reykjavik, body: 'Point-to-point city and regional rides with vehicle classes sized for passengers and luggage.', cta: 'Book a taxi', go: 'onBook' as const },
-  { id: 'tours', icon: Route, title: 'Private tours', img: IMG.goldenCircle, body: 'Golden Circle, South Coast, Northern Lights and custom day tours — your pace, your stops.', cta: 'Tours landing', go: 'onTours' as const },
+  { id: 'tours', icon: Route, title: 'Private tours', img: IMG.goldenCircle, body: 'Golden Circle, South Coast, Northern Lights and custom day tours, your pace, your stops.', cta: 'Tours landing', go: 'onTours' as const },
   { id: 'driver', icon: Clock, title: 'Private driver', img: IMG.privateDriver, body: 'Hourly, half-day, full-day and multi-day chauffeur hire for itineraries that change on the road.', cta: 'Driver landing', go: 'onPrivateDriver' as const },
   { id: 'corporate', icon: Briefcase, title: 'Corporate travel', img: IMG.fleet, body: 'Staff transfers, visitor meets and invoiced company bookings. Request a quotation for recurring routes.', cta: 'Request quote', go: 'onBook' as const },
 ]

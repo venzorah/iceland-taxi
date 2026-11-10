@@ -58,7 +58,7 @@ export default function HowItWorks(props: Props) {
     >
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8">
         <h1 className="font-display text-3xl font-extrabold text-heading sm:text-4xl">How it works</h1>
-        <p className="mt-3 max-w-2xl text-base text-muted">A short path from search to arrival — designed for phones first, with the same steps on desktop.</p>
+        <p className="mt-3 max-w-2xl text-base text-muted">A short path from search to arrival, designed for phones first, with the same steps on desktop.</p>
 
         <ol className="mt-10 grid gap-4 sm:grid-cols-2">
           {STEPS.map(({ icon: Icon, title, body }) => (

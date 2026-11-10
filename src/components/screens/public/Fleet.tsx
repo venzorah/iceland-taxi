@@ -54,7 +54,7 @@ export default function Fleet(props: Props) {
           <div>
             <h1 className="font-display text-3xl font-extrabold text-heading sm:text-4xl">Our fleet</h1>
             <p className="mt-3 text-base text-muted">
-              Choose the vehicle that fits your group and luggage. Capacities are per vehicle and come from the live fleet catalogue — not hardcoded claims about ownership.
+              Choose the vehicle that fits your group and luggage. Capacities are per vehicle and come from the live fleet catalogue, not hardcoded claims about ownership.
             </p>
           </div>
           <img src={IMG.fleet} alt="Sedan, SUV and minivan parked together" className="aspect-[16/10] w-full rounded-2xl object-cover" />

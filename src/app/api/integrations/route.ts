@@ -5,11 +5,13 @@ export async function GET() {
   const teya = teyaCredentials()
   const live = {
     teya: {
-      configured: teya.configured,
+      configured: teya.configured && teya.sandboxOnly,
       environment: teya.environment,
-      message: teya.configured
-        ? 'Teya OAuth + store credentials present'
-        : 'Set TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, and TEYA_STORE_ID',
+      message: !teya.sandboxOnly
+        ? 'TEYA_ENVIRONMENT must be sandbox. Live charges are disabled.'
+        : teya.configured
+          ? 'Teya sandbox credentials present. Checkout uses api.teya.xyz only.'
+          : 'Set TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, and TEYA_STORE_ID from the staging Business Portal',
     },
     googleMaps: {
       configured: integrationConfigured('google_maps'),

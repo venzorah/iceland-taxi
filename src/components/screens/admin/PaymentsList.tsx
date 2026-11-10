@@ -69,7 +69,7 @@ export function PaymentsList() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
-                  No payments yet. Demo checkout without Teya keys still creates Awaiting Payment bookings.
+                  No payments yet. Checkout without Teya sandbox keys saves an unpaid booking and does not mark it paid.
                 </td>
               </tr>
             )}

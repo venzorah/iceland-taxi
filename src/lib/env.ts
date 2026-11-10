@@ -9,6 +9,8 @@ const serverSchema = z.object({
   TEYA_CLIENT_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
   TEYA_STORE_ID: z.preprocess(emptyToUndefined, z.string().optional()),
   TEYA_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+  /** PEM public key from the staging Business Portal webhook. Verifies x-teya-signature (RSA). */
+  TEYA_WEBHOOK_PUBLIC_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   TEYA_ENVIRONMENT: z.enum(['sandbox', 'production']).optional().default('sandbox'),
   // Legacy aliases (scaffold) — treated as client id / secret when modern vars unset
   TEYA_MERCHANT_ID: z.preprocess(emptyToUndefined, z.string().optional()),
@@ -29,6 +31,7 @@ export function getServerEnv(): ServerEnv {
     TEYA_CLIENT_SECRET: process.env.TEYA_CLIENT_SECRET,
     TEYA_STORE_ID: process.env.TEYA_STORE_ID,
     TEYA_WEBHOOK_SECRET: process.env.TEYA_WEBHOOK_SECRET,
+    TEYA_WEBHOOK_PUBLIC_KEY: process.env.TEYA_WEBHOOK_PUBLIC_KEY,
     TEYA_ENVIRONMENT: process.env.TEYA_ENVIRONMENT,
     TEYA_MERCHANT_ID: process.env.TEYA_MERCHANT_ID,
     TEYA_API_KEY: process.env.TEYA_API_KEY,
@@ -40,17 +43,27 @@ export function getServerEnv(): ServerEnv {
   })
 }
 
+function normalizePem(value: string | undefined) {
+  if (!value) return undefined
+  const pem = value.includes('\\n') ? value.replace(/\\n/g, '\n') : value
+  return pem.trim()
+}
+
 export function teyaCredentials() {
   const env = getServerEnv()
   const clientId = env.TEYA_CLIENT_ID || env.TEYA_MERCHANT_ID
   const clientSecret = env.TEYA_CLIENT_SECRET || env.TEYA_API_KEY
   const storeId = env.TEYA_STORE_ID
+  const environment = env.TEYA_ENVIRONMENT ?? 'sandbox'
   return {
     clientId,
     clientSecret,
     storeId,
-    environment: env.TEYA_ENVIRONMENT ?? 'sandbox',
+    environment,
+    /** Live hosts are refused. Checkout only calls api.teya.xyz. */
+    sandboxOnly: environment === 'sandbox',
     webhookSecret: env.TEYA_WEBHOOK_SECRET,
+    webhookPublicKey: normalizePem(env.TEYA_WEBHOOK_PUBLIC_KEY),
     configured: Boolean(clientId && clientSecret && storeId),
   }
 }
@@ -58,8 +71,10 @@ export function teyaCredentials() {
 export function integrationConfigured(key: 'teya' | 'google_maps' | 'smtp' | 'sms') {
   const env = getServerEnv()
   switch (key) {
-    case 'teya':
-      return teyaCredentials().configured
+    case 'teya': {
+      const teya = teyaCredentials()
+      return teya.configured && teya.sandboxOnly
+    }
     case 'google_maps':
       return Boolean(env.GOOGLE_MAPS_API_KEY)
     case 'smtp':

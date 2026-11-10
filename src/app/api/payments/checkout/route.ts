@@ -144,22 +144,28 @@ export async function POST(req: Request) {
   const amount = parsed.data.amount ?? booking.amountSnapshot
   const currency = parsed.data.currency ?? booking.currency
   const provider = getPaymentProvider()
+  const returnBase = `${origin}/api/payments/teya/return?ref=${encodeURIComponent(bookingRef)}`
   const result = await provider.createCheckout({
     bookingRef,
     bookingId: booking.id,
     amount,
     currency,
     description: parsed.data.description,
-    returnUrl: parsed.data.returnUrl || `${origin}/book?ref=${bookingRef}&paid=1`,
-    cancelUrl: parsed.data.cancelUrl || `${origin}/book?ref=${bookingRef}&cancelled=1`,
+    returnUrl: parsed.data.returnUrl || `${returnBase}&result=success`,
+    cancelUrl: parsed.data.cancelUrl || `${returnBase}&result=cancel`,
+    failureUrl: `${returnBase}&result=failure`,
+    customer: {
+      name: booking.guestName || undefined,
+      email: booking.guestEmail || undefined,
+      phone: booking.guestPhone || undefined,
+    },
     depositOnly: parsed.data.depositOnly,
     depositAmount: booking.depositAmount,
   })
 
   if (!result.ok) {
-    // Demo path: keep booking as Awaiting Payment when gateway credentials are missing.
-    if (result.code === 'MISSING_CREDENTIALS' && result.demoBookingAllowed) {
-      const payment = await prisma.payment.create({
+    if (result.code === 'MISSING_CREDENTIALS') {
+      await prisma.payment.create({
         data: {
           bookingId: booking.id,
           provider: provider.id,
@@ -169,18 +175,14 @@ export async function POST(req: Request) {
           failureReason: result.message,
         },
       })
-      return jsonOk({
-        ok: true,
-        demo: true,
-        booking,
-        payment,
-        provider: result.provider,
-        message: result.message,
-        next: 'Booking saved as Awaiting Payment. Configure Teya credentials to collect card payments.',
-      })
     }
-    const status = result.code === 'MISSING_CREDENTIALS' ? 503 : 502
-    return jsonError(status, result.code, result.message, { provider: result.provider, bookingRef })
+    const status = result.code === 'MISSING_CREDENTIALS' ? 503 : result.code === 'VALIDATION_ERROR' ? 400 : 502
+    return jsonError(status, result.code, result.message, {
+      provider: result.provider,
+      bookingRef,
+      paid: false,
+      gatewayCalled: false,
+    })
   }
 
   const payment = await prisma.payment.create({

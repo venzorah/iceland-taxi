@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'crypto'
+import { createVerify } from 'crypto'
 import { teyaCredentials } from '@/lib/env'
 import { toTeyaMinorUnits } from '@/lib/booking/pricing'
 import type {
@@ -12,32 +12,31 @@ type TokenCache = { accessToken: string; expiresAt: number }
 
 let tokenCache: TokenCache | null = null
 
-function apiBase(environment: 'sandbox' | 'production') {
-  return environment === 'production' ? 'https://api.teya.com' : 'https://api.teya.xyz'
-}
-
-function oauthBase(environment: 'sandbox' | 'production') {
-  return environment === 'production'
-    ? 'https://id.teya.com/oauth/v2/oauth-token'
-    : 'https://id.teya.xyz/oauth/v2/oauth-token'
-}
+const SANDBOX_API = 'https://api.teya.xyz'
+const SANDBOX_OAUTH = 'https://id.teya.xyz/oauth/v2/oauth-token'
 
 /**
- * Teya Online Payments — Hosted Checkout
- * Docs: https://docs.teya.com/online-payments/hosted-checkout/get-started
+ * Teya Online Payments — Hosted Checkout, staging only.
+ * Docs: https://developer.teya.com/online-payments/hosted-checkout/get-started
  *
- * Never stores card details; customer pays on Teya-hosted session_url.
+ * Card data stays on Teya. This client never calls api.teya.com.
+ * Merchant client id, secret, and store id are issued per store in the
+ * staging Business Portal. Teya does not publish a shared test merchant.
  */
 export class TeyaPaymentProvider implements PaymentProvider {
   readonly id = 'teya'
   readonly label = 'Teya'
 
   isConfigured() {
-    return teyaCredentials().configured
+    const creds = teyaCredentials()
+    return creds.configured && creds.sandboxOnly
   }
 
   private async getAccessToken(): Promise<string> {
     const creds = teyaCredentials()
+    if (!creds.sandboxOnly) {
+      throw new Error('Refusing Teya production OAuth')
+    }
     if (!creds.clientId || !creds.clientSecret) {
       throw new Error('Teya credentials missing')
     }
@@ -52,7 +51,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
       scope: 'checkout/sessions/create checkout/sessions/id/get refunds/create',
     })
 
-    const res = await fetch(oauthBase(creds.environment), {
+    const res = await fetch(SANDBOX_OAUTH, {
       method: 'POST',
       headers: {
         'content-type': 'application/x-www-form-urlencoded',
@@ -76,14 +75,22 @@ export class TeyaPaymentProvider implements PaymentProvider {
 
   async createCheckout(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     const creds = teyaCredentials()
+    if (!creds.sandboxOnly) {
+      return {
+        ok: false,
+        provider: this.id,
+        code: 'VALIDATION_ERROR',
+        message:
+          'Live Teya charges are disabled. Set TEYA_ENVIRONMENT=sandbox and use staging credentials from https://business.teya.xyz (Integrations).',
+      }
+    }
     if (!creds.configured) {
       return {
         ok: false,
         provider: this.id,
         code: 'MISSING_CREDENTIALS',
-        demoBookingAllowed: true,
         message:
-          'Teya is not configured. Set TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, and TEYA_STORE_ID. Booking can still be created as Awaiting Payment.',
+          'Teya sandbox is not configured. Set TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, and TEYA_STORE_ID from the staging Business Portal. No payment was taken.',
       }
     }
 
@@ -95,30 +102,44 @@ export class TeyaPaymentProvider implements PaymentProvider {
           : input.amount
       const minor = toTeyaMinorUnits(chargeAmount, input.currency)
       const idempotencyKey = `itb-${input.bookingRef}-${Date.now()}`
+      const description = input.description || 'Iceland Taxi Booking'
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         store_id: creds.storeId,
         amount: { value: minor, currency: input.currency },
         type: 'SALE',
         success_url: input.returnUrl,
         cancel_url: input.cancelUrl,
+        failure_url: input.failureUrl || input.cancelUrl,
         merchant_reference: input.bookingRef,
+        post_success_payment: 'REDIRECT',
+        language: 'en-GB',
         metadata: {
           booking_ref: input.bookingRef,
           booking_id: input.bookingId || '',
-          description: input.description,
+          description,
         },
-        line_items: (input.lineItems || []).map((li) => ({
-          name: li.name,
-          quantity: li.quantity,
-          unit_price: {
-            value: toTeyaMinorUnits(li.unitAmount, input.currency),
-            currency: input.currency,
+        line_items: [
+          {
+            description,
+            quantity: 1,
+            unit_price: minor,
           },
-        })),
+        ],
       }
 
-      const res = await fetch(`${apiBase(creds.environment)}/v2/checkout/sessions`, {
+      if (input.customer?.email || input.customer?.name || input.customer?.phone) {
+        payload.customer = {
+          name: input.customer.name,
+          email: input.customer.email,
+          phone_number: input.customer.phone,
+        }
+      }
+      if (input.customer?.email) {
+        payload.customer_success_email = input.customer.email
+      }
+
+      const res = await fetch(`${SANDBOX_API}/v2/checkout/sessions`, {
         method: 'POST',
         headers: {
           authorization: `Bearer ${token}`,
@@ -142,7 +163,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
           ok: false,
           provider: this.id,
           code: 'PROVIDER_ERROR',
-          message: `Teya checkout session failed (${res.status}): ${typeof json === 'object' ? JSON.stringify(json).slice(0, 400) : text.slice(0, 400)}`,
+          message: `Teya checkout session failed (${res.status}): ${JSON.stringify(json).slice(0, 400)}`,
         }
       }
 
@@ -154,6 +175,14 @@ export class TeyaPaymentProvider implements PaymentProvider {
           provider: this.id,
           code: 'PROVIDER_ERROR',
           message: 'Teya response missing session_url / session_id',
+        }
+      }
+      if (!sessionUrl.startsWith('https://')) {
+        return {
+          ok: false,
+          provider: this.id,
+          code: 'PROVIDER_ERROR',
+          message: 'Teya response session_url was not an https URL',
         }
       }
 
@@ -174,14 +203,28 @@ export class TeyaPaymentProvider implements PaymentProvider {
   }
 
   async getSessionStatus(providerRef: string): Promise<PaymentStatusResult> {
+    const looked = await this.lookupSession(providerRef)
+    if (!looked.ok) return looked
+    return {
+      ok: true,
+      status: looked.paymentStatus || looked.sessionStatus || 'UNKNOWN',
+      providerRef,
+      raw: looked.raw,
+    }
+  }
+
+  async lookupSession(providerRef: string): Promise<TeyaSessionLookup> {
     const creds = teyaCredentials()
+    if (!creds.sandboxOnly) {
+      return { ok: false, code: 'VALIDATION_ERROR', message: 'Live Teya lookups are disabled' }
+    }
     if (!creds.configured) {
-      return { ok: false, code: 'MISSING_CREDENTIALS', message: 'Teya is not configured' }
+      return { ok: false, code: 'MISSING_CREDENTIALS', message: 'Teya sandbox is not configured' }
     }
     try {
       const token = await this.getAccessToken()
       const res = await fetch(
-        `${apiBase(creds.environment)}/v2/checkout/sessions/${encodeURIComponent(providerRef)}`,
+        `${SANDBOX_API}/v2/checkout/sessions/${encodeURIComponent(providerRef)}`,
         {
           headers: {
             authorization: `Bearer ${token}`,
@@ -189,7 +232,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
           },
         },
       )
-      const json = await res.json()
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
       if (!res.ok) {
         return {
           ok: false,
@@ -199,8 +242,10 @@ export class TeyaPaymentProvider implements PaymentProvider {
       }
       return {
         ok: true,
-        status: String(json.payment_status || json.session_status || 'UNKNOWN'),
-        providerRef,
+        sessionId: String(json.session_id || providerRef),
+        sessionStatus: String(json.session_status || 'UNKNOWN').toUpperCase(),
+        paymentStatus: String(json.payment_status || 'NONE').toUpperCase(),
+        transactionId: json.transaction_id ? String(json.transaction_id) : undefined,
         raw: json,
       }
     } catch (error) {
@@ -213,22 +258,48 @@ export class TeyaPaymentProvider implements PaymentProvider {
   }
 }
 
+export type TeyaSessionLookup =
+  | {
+      ok: true
+      sessionId: string
+      sessionStatus: string
+      paymentStatus: string
+      transactionId?: string
+      raw: unknown
+    }
+  | { ok: false; code: string; message: string }
+
 export const teyaProvider = new TeyaPaymentProvider()
 
-/** Optional HMAC verification when TEYA_WEBHOOK_SECRET is set. */
+/**
+ * Teya signs webhook bodies with SHA256withRSA. The header is base64.
+ * The public key is issued per webhook in the Business Portal.
+ * A missing key is a failure: unsigned events must not mark a booking paid.
+ */
 export function verifyTeyaWebhookSignature(rawBody: string, signatureHeader: string | null) {
-  const secret = teyaCredentials().webhookSecret
-  if (!secret) {
-    return { ok: true as const, skipped: true as const }
+  return verifyTeyaRsaSignature(rawBody, signatureHeader, teyaCredentials().webhookPublicKey)
+}
+
+export function verifyTeyaRsaSignature(
+  rawBody: string,
+  signatureHeader: string | null,
+  publicKeyPem: string | undefined,
+) {
+  if (!publicKeyPem) {
+    return { ok: false as const, reason: 'TEYA_WEBHOOK_PUBLIC_KEY is not set' }
   }
   if (!signatureHeader) {
-    return { ok: false as const, reason: 'Missing signature header' }
+    return { ok: false as const, reason: 'Missing x-teya-signature' }
   }
-  const digest = createHmac('sha256', secret).update(rawBody).digest('hex')
-  const a = Buffer.from(digest)
-  const b = Buffer.from(signatureHeader.replace(/^sha256=/, ''))
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    return { ok: false as const, reason: 'Invalid signature' }
+  const signature = signatureHeader.replace(/^sha256=/i, '').trim()
+  try {
+    const verifier = createVerify('RSA-SHA256')
+    verifier.update(rawBody)
+    verifier.end()
+    const valid = verifier.verify(publicKeyPem, signature, 'base64')
+    if (!valid) return { ok: false as const, reason: 'Invalid signature' }
+    return { ok: true as const }
+  } catch {
+    return { ok: false as const, reason: 'Could not verify signature' }
   }
-  return { ok: true as const, skipped: false as const }
 }

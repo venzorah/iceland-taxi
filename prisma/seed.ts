@@ -462,7 +462,12 @@ async function main() {
   })
 
   const mapsKey = Boolean(process.env.GOOGLE_MAPS_API_KEY)
-  const teyaKey = Boolean(process.env.TEYA_MERCHANT_ID && process.env.TEYA_API_KEY)
+  const teyaKey = Boolean(
+    (process.env.TEYA_CLIENT_ID || process.env.TEYA_MERCHANT_ID) &&
+      (process.env.TEYA_CLIENT_SECRET || process.env.TEYA_API_KEY) &&
+      process.env.TEYA_STORE_ID &&
+      (process.env.TEYA_ENVIRONMENT || 'sandbox') === 'sandbox',
+  )
 
   await prisma.integrationStatus.createMany({
     data: [
@@ -476,7 +481,7 @@ async function main() {
         key: 'teya',
         label: 'Teya payments',
         configured: teyaKey,
-        lastError: teyaKey ? null : 'TEYA_MERCHANT_ID / TEYA_API_KEY are not set',
+        lastError: teyaKey ? null : 'TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, and TEYA_STORE_ID are not set (sandbox only)',
       },
       {
         key: 'smtp',

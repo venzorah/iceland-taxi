@@ -4,7 +4,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Download, MessageCircle, Pencil, Send, XCircle } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { PickupTimeForm, type SavedPickup } from '@/components/booking/PickupTimeForm'
 import { rememberAlertAudience } from '@/lib/alerts/client'
+import { pickupParts } from '@/lib/booking/pickup'
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { IMG, formatPrice, type Currency } from '@/lib/design/data'
@@ -51,6 +53,17 @@ const PAST = {
 
 type ChatMsg = { id: string; body: string; authorRole: string; time: string; authorName?: string }
 
+type CustomerTrip = {
+  ref: string
+  routeLabel: string
+  status: string
+  pickupAt: string | null
+  pickupDate: string
+  pickupTime: string
+  pickupLabel: string
+  canEditPickup: boolean
+}
+
 const TRIP_TABS = [
   { id: 'upcoming', label: 'Upcoming (1)' },
   { id: 'completed', label: 'Completed' },
@@ -69,6 +82,9 @@ export default function CustomerDashboard(props: Props) {
   const [composing, setComposing] = useState(false)
   const [narrow, setNarrow] = useState(false)
   const [frame, setFrame] = useState({ top: 0, height: 0 })
+  const [trips, setTrips] = useState<CustomerTrip[]>([])
+  const [tripsLoaded, setTripsLoaded] = useState(false)
+  const [fallbackDate, setFallbackDate] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   useArmMessageSoundOnPointer()
@@ -90,16 +106,54 @@ export default function CustomerDashboard(props: Props) {
     }
   }, [])
 
+  const loadTrips = useCallback(async () => {
+    await fetch('/api/auth/demo', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ role: 'guest', email: GUEST_EMAIL }),
+    })
+    const data = await fetch('/api/account/trips').then((r) => r.json()).catch(() => null)
+    if (data?.ok && Array.isArray(data.trips)) setTrips(data.trips)
+    setFallbackDate(pickupParts(new Date()).date)
+    setTripsLoaded(true)
+  }, [])
+
+  const applySaved = (saved: SavedPickup) => {
+    setTrips((list) => {
+      if (!list.some((trip) => trip.ref === saved.ref)) {
+        return [
+          ...list,
+          {
+            ref: saved.ref,
+            routeLabel: 'Keflavík Airport → Hotel Borg',
+            status: 'DRIVER_ASSIGNED',
+            pickupAt: saved.pickupAt,
+            pickupDate: saved.date,
+            pickupTime: saved.time,
+            pickupLabel: saved.label,
+            canEditPickup: true,
+          },
+        ]
+      }
+      return list.map((trip) =>
+        trip.ref === saved.ref
+          ? { ...trip, pickupAt: saved.pickupAt, pickupDate: saved.date, pickupTime: saved.time, pickupLabel: saved.label }
+          : trip,
+      )
+    })
+  }
+
   useEffect(() => {
     rememberAlertAudience('customer')
     loadChat()
+    loadTrips()
     const t = setInterval(loadChat, 5000)
     fetch('/api/company')
       .then((r) => r.json())
       .then((d) => setWaNumber(d.company?.whatsappE164 || null))
       .catch(() => {})
     return () => clearInterval(t)
-  }, [loadChat])
+  }, [loadChat, loadTrips])
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 767px)')
@@ -143,6 +197,11 @@ export default function CustomerDashboard(props: Props) {
     await loadChat()
   }
 
+  const featured = trips.find((trip) => trip.ref === BOOKING_REF && trip.canEditPickup) || trips.find((trip) => trip.canEditPickup) || null
+  const lockedTrips = trips.filter((trip) => !trip.canEditPickup && (tab === 'completed' ? trip.status === 'COMPLETED' : trip.status === 'CANCELLED'))
+  const pickupRef = featured?.ref || BOOKING_REF
+  const pickupLabel = featured?.pickupLabel || 'Today · 15:30'
+
   return (
     <div className={th === 'dark' ? 'dark' : ''}>
       <div className="min-h-screen bg-surface font-sans text-text">
@@ -182,9 +241,9 @@ export default function CustomerDashboard(props: Props) {
                 <div className="grid sm:grid-cols-[240px_1fr]">
                   <img src={IMG.airport} alt="" className="h-36 w-full object-cover sm:h-full" />
                   <div className="p-4 sm:p-6">
-                    <p className="font-mono text-xs text-muted">ITB-7K4Q2M</p>
-                    <h2 className="mt-1 font-display text-xl font-bold text-heading sm:text-2xl">Keflavík Airport → Hotel Borg</h2>
-                    <p className="mt-1 text-sm text-muted">Today · 15:30 · Flight FI 615 · Standard Sedan · 2 passengers</p>
+                    <p className="font-mono text-xs text-muted">{pickupRef}</p>
+                    <h2 className="mt-1 font-display text-xl font-bold text-heading sm:text-2xl">{featured?.routeLabel || 'Keflavík Airport → Hotel Borg'}</h2>
+                    <p className="mt-1 text-sm text-muted">{pickupLabel} · Flight FI 615 · Standard Sedan · 2 passengers</p>
                     <div className="mt-6">
                       <ol className="flex gap-1" aria-label="Booking status">
                         {TRACK.map((s, i) => <li key={s} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-mint' : 'bg-line'}`} />)}
@@ -196,14 +255,33 @@ export default function CustomerDashboard(props: Props) {
                     </div>
                     <div className="mt-6 grid grid-cols-3 items-center gap-2 border-t border-line pt-5 sm:flex sm:flex-wrap">
                       <span className="col-span-3 font-display text-xl font-extrabold text-heading sm:mr-auto">{formatPrice(22900, 'EUR')} <span className="text-xs font-semibold text-success">Paid</span></span>
-                      <button className="flex flex-col items-center gap-1 rounded-2xl bg-surface py-3 text-xs font-semibold text-heading active:bg-line sm:inline-flex sm:flex-row sm:gap-1.5 sm:rounded-full sm:border sm:border-line sm:bg-transparent sm:px-3.5 sm:py-2 sm:text-sm"><Pencil size={16} className="sm:h-3.5 sm:w-3.5" /> <span className="whitespace-nowrap"><span className="hidden sm:inline">Request </span>change</span></button>
+                      <button type="button" onClick={() => document.getElementById(`pickup-date-${pickupRef}`)?.focus()} className="flex flex-col items-center gap-1 rounded-2xl bg-surface py-3 text-xs font-semibold text-heading active:bg-line sm:inline-flex sm:flex-row sm:gap-1.5 sm:rounded-full sm:border sm:border-line sm:bg-transparent sm:px-3.5 sm:py-2 sm:text-sm"><Pencil size={16} className="sm:h-3.5 sm:w-3.5" /> <span className="whitespace-nowrap"><span className="hidden sm:inline">Change </span>pickup</span></button>
                       <button className="flex flex-col items-center gap-1 rounded-2xl bg-surface py-3 text-xs font-semibold text-heading active:bg-line sm:inline-flex sm:flex-row sm:gap-1.5 sm:rounded-full sm:border sm:border-line sm:bg-transparent sm:px-3.5 sm:py-2 sm:text-sm"><Download size={16} className="sm:h-3.5 sm:w-3.5" /> Receipt</button>
                       <button className="flex flex-col items-center gap-1 rounded-2xl bg-surface py-3 text-xs font-semibold text-error active:bg-line sm:inline-flex sm:flex-row sm:gap-1.5 sm:rounded-full sm:bg-transparent sm:px-3.5 sm:py-2 sm:text-sm"><XCircle size={16} className="sm:h-3.5 sm:w-3.5" /> Cancel</button>
                     </div>
+                    {tripsLoaded && (
+                      <PickupTimeForm
+                        bookingRef={pickupRef}
+                        date={featured?.pickupDate || fallbackDate}
+                        time={featured?.pickupTime || '15:30'}
+                        label={pickupLabel}
+                        canEdit
+                        ready={tripsLoaded}
+                        onSaved={applySaved}
+                      />
+                    )}
                   </div>
                 </div>
               </article>
             ) : (
+              <div className="space-y-4">
+                {lockedTrips.map((trip) => (
+                  <article key={trip.ref} className="rounded-2xl border border-line bg-bg p-4 sm:p-6">
+                    <p className="font-mono text-xs text-muted">{trip.ref}</p>
+                    <h2 className="mt-1 font-display text-xl font-bold text-heading">{trip.routeLabel}</h2>
+                    <PickupTimeForm bookingRef={trip.ref} date={trip.pickupDate} time={trip.pickupTime} label={trip.pickupLabel} canEdit={false} />
+                  </article>
+                ))}
               <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-bg">
                 {PAST[tab as 'completed' | 'cancelled'].map((b) => (
                   <li key={b.ref} className="flex items-center gap-4 p-4">
@@ -219,6 +297,7 @@ export default function CustomerDashboard(props: Props) {
                   </li>
                 ))}
               </ul>
+              </div>
             )}
 
             {/* Messages */}

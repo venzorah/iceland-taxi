@@ -67,10 +67,4 @@ export async function checkAvailability(window: AvailabilityWindow) {
   return { available: conflicts.length === 0, conflicts }
 }
 
-export function computeEndsAt(pickupAt: Date, durationMinutes: number, returnTrip?: boolean) {
-  const minutes = Math.max(15, durationMinutes) * (returnTrip ? 2 : 1)
-  return {
-    durationMinutes: minutes,
-    endsAt: new Date(pickupAt.getTime() + minutes * 60_000),
-  }
-}
+export { computeEndsAt } from './pickup'

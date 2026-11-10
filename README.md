@@ -25,7 +25,7 @@ All phone layouts follow a native mobile app feel (touch targets, bottom tabs, s
 - **Maps:** Google Maps (`GOOGLE_MAPS_API_KEY`)
 - **Payments:** Teya first, pluggable provider layer (`src/lib/payments`)
 - **i18n:** English (default) + Icelandic
-- **Currencies:** USD + ISK
+- **Currencies:** Public site shows **EUR** and **ISK**. New international checkouts are charged in EUR. Residents can pay in ISK or EUR. Older bookings may still be snapshotted in USD.
 - **Theme:** Light default; Dark fully supported
 
 Brand colours: Deep Navy `#061B3A`, Vibrant Yellow `#FFC400`, Emerald Mint `#00CFA5`, Cyan Blue `#00AEEF`.
@@ -38,7 +38,9 @@ Brand colours: Deep Navy `#061B3A`, Vibrant Yellow `#FFC400`, Emerald Mint `#00C
 
 ## Booking & payments
 
-Guest checkout on `/book` creates a snapshotted booking (USD for international visitors; ISK or USD for residents), runs driver/vehicle availability checks, then:
+Guest checkout on `/book` creates a snapshotted booking (EUR for international visitors; ISK or EUR for residents), runs driver/vehicle availability checks, then:
+
+Catalogue prices are stored in ISK. Public euro amounts use `ExchangeRate.iskPerEur` (seed **150** ISK = 1 EUR, admin-editable, not a live FX feed). `iskPerUsd` (seed 138) stays for older USD snapshots. Display: euros as `€153` / `€1.532` (dot thousands); Icelandic amounts as `ISK 22,900` (prefix, comma thousands, no `kr`).
 
 1. **Teya configured** → creates a Hosted Checkout session and redirects to `session_url`.
 2. **Teya missing credentials** → keeps the booking as `AWAITING_PAYMENT` and shows a clear demo message (no fake “paid”).
@@ -82,7 +84,7 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 | `GET /api/health` | Liveness + integration flags |
 | `GET /api/services` | Services, routes, destinations, FAQs, fleet |
 | `GET/POST /api/bookings` | List / create bookings (price snapshot + availability) |
-| `POST /api/bookings/quote` | Catalogue quote (USD/ISK) |
+| `POST /api/bookings/quote` | Catalogue quote (EUR/ISK; legacy USD snapshots still readable) |
 | `POST /api/bookings/availability` | Driver/vehicle overlap check |
 | `GET/PATCH /api/bookings/[ref]` | Booking detail + admin status/assign |
 | `GET /api/drivers` | Driver roster |

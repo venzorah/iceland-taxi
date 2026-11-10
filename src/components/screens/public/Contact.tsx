@@ -29,7 +29,7 @@ type Props = {
 }
 
 export default function Contact(props: Props) {
-  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'USD' as Currency, state: 'default' as const, ...props }
+  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, state: 'default' as const, ...props }
   const th = p.theme as 'light' | 'dark'
   const [sent, setSent] = useState(p.state === 'sent')
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null; phone?: string | null; addressLine1?: string | null } | null>(null)

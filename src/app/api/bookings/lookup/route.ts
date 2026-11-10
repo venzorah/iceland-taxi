@@ -44,10 +44,14 @@ export async function POST(req: Request) {
       }).format(booking.pickupAt)
     : 'Schedule TBC'
 
+  const charged = booking.currency === 'ISK' ? (booking.amountIskSnapshot ?? booking.amountSnapshot) : booking.amountSnapshot
+  const grouped = Math.round(charged).toLocaleString('en-US')
   const amountLabel =
     booking.currency === 'ISK'
-      ? `${(booking.amountIskSnapshot ?? booking.amountSnapshot).toLocaleString('en-US').replace(/,/g, '.')} kr`
-      : `$${booking.amountSnapshot.toLocaleString('en-US')}`
+      ? `ISK ${grouped}`
+      : booking.currency === 'EUR'
+        ? `€${grouped.replace(/,/g, '.')}`
+        : `$${grouped}`
 
   return jsonOk({
     ok: true,

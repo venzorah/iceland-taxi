@@ -1,4 +1,4 @@
-export type PaymentCurrency = 'USD' | 'ISK'
+export type PaymentCurrency = 'USD' | 'ISK' | 'EUR'
 
 export type CreatePaymentInput = {
   bookingRef: string

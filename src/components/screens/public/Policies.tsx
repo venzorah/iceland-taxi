@@ -45,7 +45,7 @@ const COPY: Record<PolicyId, { title: string; sections: { h: string; p: string }
     title: 'Refund policy',
     sections: [
       { h: 'Eligible refunds', p: 'Refunds follow the cancellation terms for the service and the payment method used. Historical booking prices stay snapshotted.' },
-      { h: 'Timing', p: 'Approved refunds are initiated through the payment provider. Bank and card timelines vary by issuer and currency (USD or ISK).' },
+      { h: 'Timing', p: 'Approved refunds are initiated through the payment provider. Bank and card timelines vary by issuer and currency (EUR or ISK). Older bookings charged in USD keep that snapshot.' },
       { h: 'Partial refunds', p: 'When only part of a multi-day or multi-leg booking is cancelled, the remaining legs stay charged unless operations approve a full adjustment.' },
     ],
   },
@@ -75,7 +75,7 @@ function isPolicyId(v: string): v is PolicyId {
 }
 
 export default function Policies(props: Props) {
-  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'USD' as Currency, policy: 'privacy' as PolicyId, ...props }
+  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, policy: 'privacy' as PolicyId, ...props }
   const th = p.theme as 'light' | 'dark'
   const [policy, setPolicy] = useState<PolicyId>(isPolicyId(p.policy) ? p.policy : 'privacy')
   const doc = COPY[policy]

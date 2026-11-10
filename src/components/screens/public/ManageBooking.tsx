@@ -35,7 +35,7 @@ type FoundBooking = {
 }
 
 export default function ManageBooking(props: Props) {
-  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'USD' as Currency, state: 'default' as const, ...props }
+  const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, state: 'default' as const, ...props }
   const th = p.theme as 'light' | 'dark'
   const [ref, setRef] = useState('')
   const [email, setEmail] = useState('')

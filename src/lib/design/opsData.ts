@@ -24,7 +24,7 @@ export type OpsBooking = {
   vehicle: string
   driver: string | null
   amount: number
-  currency: 'USD' | 'ISK'
+  currency: 'USD' | 'ISK' | 'EUR'
   status: BookingStatus
   flight?: string
 }
@@ -53,9 +53,12 @@ export const CONVERSATIONS = [
   { name: 'Helga Jónsdóttir', ref: 'ITB-8NB4KS', last: 'Takk! Ég greiði í kvöld.', time: '11:05', unread: 0 },
 ]
 
-export function money(amount: number, currency: 'USD' | 'ISK') {
+export function money(amount: number, currency: 'USD' | 'ISK' | 'EUR') {
   if (amount === 0) return 'Quote'
-  return currency === 'USD' ? `$${amount.toLocaleString('en-US')}` : `${amount.toLocaleString('en-US').replace(/,/g, '.')} kr`
+  const grouped = Math.round(amount).toLocaleString('en-US')
+  if (currency === 'ISK') return `ISK ${grouped}`
+  if (currency === 'EUR') return `€${grouped.replace(/,/g, '.')}`
+  return `$${grouped}`
 }
 
 /** Status → token classes. Kept in one place so every surface reads the same. */

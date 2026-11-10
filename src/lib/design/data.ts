@@ -18,14 +18,54 @@ export const IMG = {
   blueLagoon: 'https://cdn.magicpatterns.com/patterns/generated-images/7d74ce25-2bd0-4460-a6ce-62e8ff747133.jpg',
 }
 
-/** Admin-configured exchange rate (ISK per 1 USD). */
+/** Historical USD snapshots: ISK per 1 USD (admin ExchangeRate.iskPerUsd). */
 export const ISK_PER_USD = 138
 
-export type Currency = 'USD' | 'ISK'
+/**
+ * Public Euro prices: ISK per 1 EUR (admin ExchangeRate.iskPerEur).
+ * Seed demo rate, not a live FX feed. Catalogue euros = round(isk / ISK_PER_EUR).
+ */
+export const ISK_PER_EUR = 150
 
-export function formatPrice(isk: number, currency: Currency) {
-  if (currency === 'ISK') return `${isk.toLocaleString('en-US').replace(/,/g, '.')} kr`
-  return `$${Math.round(isk / ISK_PER_USD).toLocaleString('en-US')}`
+/** Public site display currencies. International visitors see EUR; residents can choose ISK. */
+export type Currency = 'EUR' | 'ISK'
+
+/** Comma thousands, no decimals: 22900 → "22,900". */
+export function groupCommas(amount: number) {
+  return Math.round(amount).toLocaleString('en-US')
+}
+
+/** Dot thousands for euro amounts, matching the public euro style: 22900 → "22.900". */
+export function groupEuro(amount: number) {
+  return groupCommas(amount).replace(/,/g, '.')
+}
+
+/** International ISK: 22900 → "ISK 22,900". */
+export function formatIsk(amount: number) {
+  return `ISK ${groupCommas(amount)}`
+}
+
+/** Whole euros from an ISK catalogue amount. */
+export function iskToEur(isk: number, iskPerEur = ISK_PER_EUR) {
+  const rate = iskPerEur > 0 ? iskPerEur : ISK_PER_EUR
+  return Math.round(isk / rate)
+}
+
+export function formatEuro(euros: number) {
+  return `€${groupEuro(euros)}`
+}
+
+/** Public catalogue price. ISK amounts stay in ISK; EUR is derived with ISK_PER_EUR. */
+export function formatPrice(isk: number, currency: Currency, iskPerEur = ISK_PER_EUR) {
+  if (currency === 'ISK') return formatIsk(isk)
+  return formatEuro(iskToEur(isk, iskPerEur))
+}
+
+/** Already-charged snapshot (EUR/ISK public, USD only for older bookings). */
+export function formatChargedAmount(amount: number, currency: 'EUR' | 'ISK' | 'USD') {
+  if (currency === 'ISK') return formatIsk(amount)
+  if (currency === 'EUR') return formatEuro(amount)
+  return `$${groupCommas(amount)}`
 }
 
 export const SERVICE_CATEGORIES = [
@@ -67,7 +107,7 @@ export const FLEET = [
 
 export const FAQS = [
   { q: 'Do I need an account to book?', a: 'No. You can book as a guest with your name, email and phone number. You will receive a booking reference that lets you look up and manage your booking later.' },
-  { q: 'Which currency will I pay in?', a: 'International visitors pay in USD. Icelandic residents can choose ISK or USD. The currency shown at checkout is the currency you are charged in.' },
+  { q: 'Which currency will I pay in?', a: 'International visitors pay in euro (EUR). Icelandic residents can choose ISK or EUR. The currency shown at checkout is the currency you are charged in.' },
   { q: 'What happens if my flight is delayed?', a: 'Add your flight number when booking. Your driver tracks the arrival time, and waiting-time rules for your booking are shown before you pay.' },
   { q: 'Can I hire a driver for several days?', a: 'Yes. Choose Private driver and select hourly, half-day, full-day or multi-day. For a custom itinerary, send a quotation request and we will reply with a price.' },
   { q: 'Can I cancel or change my booking?', a: 'You can request changes or a cancellation from your booking page or by message. Cancellation terms for each service are shown before you pay.' },

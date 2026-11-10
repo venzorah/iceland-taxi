@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 
 import Booking, { type BookingPayPayload } from '@/components/screens/booking/Booking'
 import { useAppPrefs } from '@/components/providers/AppProviders'
-import { formatPrice, type Currency } from '@/lib/design/data'
+import { formatChargedAmount, formatPrice } from '@/lib/design/data'
 
 export function BookingPageClient() {
   const prefs = useAppPrefs()
@@ -76,7 +76,7 @@ export function BookingPageClient() {
       }
 
       const booking = data.booking
-      const currency = (booking?.currency || payload.currency) as Currency
+      const charged = (booking?.currency || payload.currency) as 'EUR' | 'ISK' | 'USD'
       const amount = booking?.amountSnapshot
       const status = booking?.status || 'AWAITING_PAYMENT'
       const statusLabel =
@@ -96,10 +96,8 @@ export function BookingPageClient() {
         statusLabel,
         totalLabel:
           typeof amount === 'number'
-            ? currency === 'USD'
-              ? `$${amount.toLocaleString('en-US')}`
-              : formatPrice(booking.amountIskSnapshot || payload.totalIsk, 'ISK')
-            : formatPrice(payload.totalIsk, currency),
+            ? formatChargedAmount(amount, charged)
+            : formatPrice(payload.totalIsk, charged === 'ISK' ? 'ISK' : 'EUR'),
       })
       setPayState('confirmed')
       if (data.demo && data.message) {

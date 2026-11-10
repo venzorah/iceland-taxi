@@ -25,6 +25,7 @@ const patchExtraSchema = z.object({
 const rateSchema = z.object({
   type: z.literal('rate'),
   iskPerUsd: z.number().positive(),
+  iskPerEur: z.number().positive(),
 })
 
 export async function POST(req: Request) {
@@ -35,7 +36,11 @@ export async function POST(req: Request) {
     const parsed = rateSchema.safeParse(body)
     if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Invalid exchange rate', { issues: parsed.error.flatten() })
     const rate = await prisma.exchangeRate.create({
-      data: { iskPerUsd: Math.round(parsed.data.iskPerUsd), note: 'admin' },
+      data: {
+        iskPerUsd: Math.round(parsed.data.iskPerUsd),
+        iskPerEur: Math.round(parsed.data.iskPerEur),
+        note: 'admin',
+      },
     })
     return jsonOk({ ok: true, rate })
   }

@@ -16,7 +16,7 @@ import { HeroCarousel } from './HeroCarousel'
 export const args = {
   theme: 'light',
   language: 'en',
-  currency: 'USD',
+  currency: 'EUR',
   showDemoReviews: false,
   autoplay: true,
 }
@@ -24,7 +24,7 @@ export const args = {
 export const argTypes = {
   theme: { control: 'radio', options: ['light', 'dark'] },
   language: { control: 'radio', options: ['en', 'is'] },
-  currency: { control: 'radio', options: ['USD', 'ISK'] },
+  currency: { control: 'radio', options: ['EUR', 'ISK'] },
   showDemoReviews: { control: 'boolean' },
   autoplay: { control: 'boolean' },
 }
@@ -219,7 +219,7 @@ export default function Homepage(props: Props) {
               <dl className="mt-8 divide-y divide-line border-t border-line">
                 {[
                   ['Price before you pay', 'The full breakdown — extras, surcharges and currency — is shown before checkout.'],
-                  ['Your currency, clearly', 'Pay in USD, or in ISK if you live in Iceland. You are charged in the currency you see.'],
+                  ['Your currency, clearly', 'Pay in euro (EUR), or in ISK if you live in Iceland. You are charged in the currency you see.'],
                   ['Our own drivers and vehicles', 'Every journey is run by Iceland Taxi Booking, not passed to an unknown operator.'],
                   ['A person to talk to', 'Message us in your booking or on WhatsApp before, during and after your trip.'],
                 ].map(([title, body]) => (
@@ -236,7 +236,7 @@ export default function Homepage(props: Props) {
                 {[
                   ['Tell us your journey', 'Pickup, destination, date, passengers and luggage.'],
                   ['Choose vehicle and extras', 'Child seats, extra stops, waiting time or a return trip.'],
-                  ['Pay securely', 'Card payment in USD or ISK. Custom trips start as a quotation.'],
+                  ['Pay securely', 'Card payment in EUR or ISK. Custom trips start as a quotation.'],
                   ['Meet your driver', 'Your booking reference and driver details arrive before pickup.'],
                 ].map(([title, body], i) => (
                   <li key={title} className="relative">

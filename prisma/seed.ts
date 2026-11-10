@@ -46,7 +46,11 @@ async function main() {
   })
 
   await prisma.exchangeRate.create({
-    data: { iskPerUsd: 138, note: 'Seed demo rate (admin-configurable)' },
+    data: {
+      iskPerUsd: 138,
+      iskPerEur: 150,
+      note: 'Seed demo rates (admin-configurable). iskPerUsd is for historical USD snapshots. iskPerEur prices public euros and new international charges. Not a live FX feed.',
+    },
   })
 
   const img = {
@@ -157,7 +161,7 @@ async function main() {
       {
         questionEn: 'Which currency will I pay in?',
         answerEn:
-          'International visitors pay in USD. Icelandic residents can choose ISK or USD. The currency shown at checkout is the currency you are charged in.',
+          'International visitors pay in euro (EUR). Icelandic residents can choose ISK or EUR. The currency shown at checkout is the currency you are charged in.',
         sortOrder: 2,
       },
       {
@@ -445,7 +449,7 @@ async function main() {
       { path: '/services', titleEn: 'Services — Iceland Taxi Booking', descriptionEn: 'Airport transfers, private taxis, tours, private drivers and corporate travel.' },
       { path: '/destinations', titleEn: 'Destinations — Iceland Taxi Booking', descriptionEn: 'Popular Iceland destinations for transfers, tours and private-driver days.' },
       { path: '/fleet', titleEn: 'Our fleet — Iceland Taxi Booking', descriptionEn: 'Sedan, SUV, minivan and minibus classes sized for passengers and luggage.' },
-      { path: '/how-it-works', titleEn: 'How it works — Iceland Taxi Booking', descriptionEn: 'Choose a trip, confirm details, pay in USD or ISK, then track and message.' },
+      { path: '/how-it-works', titleEn: 'How it works — Iceland Taxi Booking', descriptionEn: 'Choose a trip, confirm details, pay in EUR or ISK, then track and message.' },
       { path: '/faqs', titleEn: 'FAQs — Iceland Taxi Booking', descriptionEn: 'Answers about booking, currency, flight delays, multi-day drivers and cancellations.' },
       { path: '/blog', titleEn: 'Blog — Iceland Taxi Booking', descriptionEn: 'Practical travel notes for airport arrivals, tours and booking in Iceland.' },
       { path: '/travel-guides', titleEn: 'Travel guides — Iceland Taxi Booking', descriptionEn: 'Longer guides for Reykjavík arrivals, Blue Lagoon timing and South Coast days.' },

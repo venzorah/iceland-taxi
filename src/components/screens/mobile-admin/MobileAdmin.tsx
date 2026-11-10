@@ -235,7 +235,11 @@ export default function MobileAdmin(props: Props) {
                       <p className="text-sm font-semibold text-heading">{pay.status}</p>
                     </div>
                     <p className="text-sm font-bold tabular-nums text-heading">
-                      {pay.currency === 'USD' ? `$${pay.amount}` : `${pay.amount.toLocaleString('en-US').replace(/,/g, '.')} kr`}
+                      {pay.currency === 'EUR'
+                        ? `€${pay.amount.toLocaleString('en-US').replace(/,/g, '.')}`
+                        : pay.currency === 'ISK'
+                          ? `ISK ${pay.amount.toLocaleString('en-US')}`
+                          : `$${Number(pay.amount).toLocaleString('en-US')}`}
                     </p>
                   </div>
                 </li>
@@ -386,7 +390,7 @@ function HomeTab({ bookings, source, onOpen, onTab }: { bookings: OpsBooking[]; 
         </div>
         <div className="rounded-2xl border border-line bg-bg p-4">
           <p className="text-xs text-muted">Bookings · ISK</p>
-          <p className="font-display text-xl font-extrabold text-heading">{isk.toLocaleString('en-US').replace(/,/g, '.')} kr</p>
+          <p className="font-display text-xl font-extrabold text-heading">ISK {isk.toLocaleString('en-US')}</p>
         </div>
       </div>
 
@@ -555,7 +559,7 @@ function ServicesTab({ services, onEdit }: { services: ServiceRow[]; onEdit: (s:
               <p className="text-xs text-muted">{s.type} · {s.duration}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-bold tabular-nums text-heading">{s.isk ? `${s.isk.toLocaleString('en-US').replace(/,/g, '.')} kr` : 'Quote'}</p>
+              <p className="text-sm font-bold tabular-nums text-heading">{s.isk ? `ISK ${s.isk.toLocaleString('en-US')}` : 'Quote'}</p>
               <p className={`text-[11px] font-semibold ${s.active ? 'text-success' : 'text-muted'}`}>{s.active ? 'Live' : 'Hidden'}</p>
             </div>
           </button>

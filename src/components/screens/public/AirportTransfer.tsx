@@ -1,10 +1,12 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, Clock, Plane, Shield } from 'lucide-react'
 
+import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { AIRPORT_ROUTES, IMG, formatPrice, type Currency } from '@/lib/design/data'
+import { IMG, formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -30,6 +32,9 @@ export default function AirportTransfer(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
   const cur = p.currency as Currency
+  const router = useRouter()
+  const listings = usePublishedListings()
+  const routes = (listings || []).filter((listing) => listing.kind === 'route')
 
   return (
     <PublicPageShell
@@ -79,17 +84,19 @@ export default function AirportTransfer(props: Props) {
 
         <h2 className="mt-12 font-display text-2xl font-bold text-heading">Popular routes</h2>
         <ul className="mt-4 divide-y divide-line border-y border-line">
-          {AIRPORT_ROUTES.map((r) => (
-            <li key={r.from + r.to} className="flex items-center gap-4 py-4">
+          {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
+          {listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet. This option is unavailable.</li>}
+          {routes.map((r) => (
+            <li key={r.id} className="flex items-center gap-4 py-4">
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-heading">{r.from} → {r.to}</p>
-                <p className="text-sm text-muted">{r.minutes} min · {r.km} km</p>
+                <p className="font-semibold text-heading">{r.fromLabel} → {r.toLabel}</p>
+                <p className="text-sm text-muted">{[r.hoursLabel, r.km ? `${r.km} km` : null].filter(Boolean).join(' · ') || 'Fixed price'}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted">from</p>
+                <p className="text-xs text-muted">Price</p>
                 <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur)}</p>
               </div>
-              <button onClick={p.onBook} className="hidden rounded-full border border-line px-4 py-2 text-sm font-semibold text-heading sm:inline">Book</button>
+              <button onClick={() => router.push(`/book?listing=${encodeURIComponent(r.id)}&kind=route`)} className="hidden rounded-full border border-line px-4 py-2 text-sm font-semibold text-heading sm:inline">Book</button>
             </li>
           ))}
         </ul>

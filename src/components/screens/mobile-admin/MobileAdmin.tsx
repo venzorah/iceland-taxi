@@ -16,6 +16,10 @@ import { StaffNoticeBell } from '@/components/screens/admin/StaffNoticeBell'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 
+import { usePublishedListings } from '@/components/booking/usePublishedListings'
+import { listingLabel } from '@/lib/booking/listings'
+import { formatIsk } from '@/lib/design/data'
+import { Enquiries } from '@/components/screens/admin/Enquiries'
 import { Appearance } from '@/components/screens/admin/Appearance'
 import { Fleet } from '@/components/screens/admin/Fleet'
 import { PaymentsList } from '@/components/screens/admin/PaymentsList'
@@ -79,7 +83,7 @@ export default function MobileAdmin(props: Props) {
   const [editing, setEditing] = useState<ServiceRow | null>(null)
   const [chat, setChat] = useState<string | null>(null)
   const th = p.theme as 'light' | 'dark'
-  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | null>(null)
+  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries' | null>(null)
   const [localAnn, setLocalAnn] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
   const announcements = props.onAnnouncementsChange ? props.announcements ?? ANNOUNCEMENTS_SEED : localAnn
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
@@ -90,7 +94,9 @@ export default function MobileAdmin(props: Props) {
   const [source, setSource] = useState('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [compose, setCompose] = useState(false)
-  const [bookingDraft, setBookingDraft] = useState({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '' })
+  const listings = usePublishedListings()
+  const [bookingDraft, setBookingDraft] = useState({ guestName: '', guestEmail: '', listingId: '' })
+  const selectedListing = (listings || []).find((listing) => listing.id === bookingDraft.listingId) || null
   const [driverId, setDriverId] = useState('')
   const [statusDraft, setStatusDraft] = useState<OpsBooking['status']>('Confirmed')
 
@@ -204,7 +210,7 @@ export default function MobileAdmin(props: Props) {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto pb-24">
-          {tab === 'home' && <HomeTab bookings={bookings} source={source} onOpen={setSheet} onTab={setTab} />}
+          {tab === 'home' && <HomeTab bookings={bookings} source={source} onOpen={setSheet} onTab={setTab} onEnquiries={() => setPage('enquiries')} />}
           {tab === 'bookings' && <BookingsTab bookings={bookings} onOpen={setSheet} />}
           {tab === 'messages' && <MessagesTab chat={chat} setChat={setChat} />}
           {tab === 'services' && <ServicesTab services={services} onEdit={setEditing} />}
@@ -252,6 +258,7 @@ export default function MobileAdmin(props: Props) {
               {page === 'staff' && <Staff />}
               {page === 'appearance' && <Appearance />}
               {page === 'settings' && <SettingsSection />}
+              {page === 'enquiries' && <Enquiries />}
               {page === 'routes' && <Routes />}
               {page === 'pricing' && <Pricing />}
             </div>
@@ -274,15 +281,21 @@ export default function MobileAdmin(props: Props) {
           <form
             onSubmit={async (event) => {
               event.preventDefault()
+              if (!selectedListing) {
+                setSaveMsg('This option is unavailable')
+                return
+              }
               const res = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
                   guestName: bookingDraft.guestName,
                   guestEmail: bookingDraft.guestEmail,
-                  serviceLabel: bookingDraft.serviceLabel,
-                  routeLabel: bookingDraft.routeLabel,
-                  quote: { baseIsk: Number(bookingDraft.baseIsk), customerCategory: 'INTERNATIONAL', currency: 'EUR' },
+                  listingId: selectedListing.id,
+                  listingKind: selectedListing.kind,
+                  serviceLabel: selectedListing.title,
+                  routeLabel: listingLabel(selectedListing),
+                  quote: { customerCategory: 'INTERNATIONAL', currency: 'EUR' },
                   awaitPaymentWithoutGateway: true,
                 }),
               })
@@ -292,17 +305,21 @@ export default function MobileAdmin(props: Props) {
                 return
               }
               setCompose(false)
-              setBookingDraft({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '' })
+              setBookingDraft({ guestName: '', guestEmail: '', listingId: '' })
               setSaveMsg('Saved')
               await load()
             }}
-            className="absolute inset-x-3 bottom-24 z-30 grid gap-2 rounded-2xl border border-line bg-bg p-3 shadow-lg"
+            className="absolute inset-x-3 bottom-24 z-30 grid max-h-[70%] gap-2 overflow-y-auto rounded-2xl border border-line bg-bg p-3 shadow-lg"
           >
             <input required value={bookingDraft.guestName} onChange={(event) => setBookingDraft({ ...bookingDraft, guestName: event.target.value })} placeholder="Guest name" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
             <input required type="email" value={bookingDraft.guestEmail} onChange={(event) => setBookingDraft({ ...bookingDraft, guestEmail: event.target.value })} placeholder="Email" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
-            <input required value={bookingDraft.serviceLabel} onChange={(event) => setBookingDraft({ ...bookingDraft, serviceLabel: event.target.value })} placeholder="Service" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
-            <input required value={bookingDraft.routeLabel} onChange={(event) => setBookingDraft({ ...bookingDraft, routeLabel: event.target.value })} placeholder="Route" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
-            <input required value={bookingDraft.baseIsk} onChange={(event) => setBookingDraft({ ...bookingDraft, baseIsk: event.target.value })} inputMode="numeric" placeholder="Price in ISK" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
+            <select required value={bookingDraft.listingId} onChange={(event) => setBookingDraft({ ...bookingDraft, listingId: event.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none">
+              <option value="">Choose a published listing</option>
+              {(listings || []).map((listing) => (
+                <option key={listing.id} value={listing.id}>{listingLabel(listing)}</option>
+              ))}
+            </select>
+            <p className="text-xs font-semibold text-heading">{selectedListing ? `Fixed price ${formatIsk(selectedListing.fromIsk)}` : 'This option is unavailable'}</p>
             <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">Save booking</button>
           </form>
         )}
@@ -415,7 +432,7 @@ export default function MobileAdmin(props: Props) {
   )
 }
 
-function HomeTab({ bookings, source, onOpen, onTab }: { bookings: OpsBooking[]; source: string; onOpen: (b: OpsBooking) => void; onTab: (t: string) => void }) {
+function HomeTab({ bookings, source, onOpen, onTab, onEnquiries }: { bookings: OpsBooking[]; source: string; onOpen: (b: OpsBooking) => void; onTab: (t: string) => void; onEnquiries: () => void }) {
   const unassigned = bookings.filter((b) => !b.driver && b.status !== 'Pending' && b.status !== 'Cancelled')
   const upcoming = [...bookings].filter((b) => b.time !== '—' && b.status !== 'Completed' && b.status !== 'Cancelled').sort((a, b) => a.time.localeCompare(b.time))
   const usd = bookings.filter((b) => b.currency === 'USD').reduce((s, b) => s + b.amount, 0)
@@ -450,6 +467,16 @@ function HomeTab({ bookings, source, onOpen, onTab }: { bookings: OpsBooking[]; 
           <p className="font-display text-xl font-extrabold text-heading">ISK {isk.toLocaleString('en-US')}</p>
         </div>
       </div>
+
+      <section>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-base font-bold text-heading">Custom enquiries</h2>
+          <button onClick={onEnquiries} className="text-sm font-semibold text-link">See all</button>
+        </div>
+        <div className="mt-3">
+          <Enquiries compact limit={3} />
+        </div>
+      </section>
 
       <section>
         <div className="flex items-center justify-between">
@@ -678,6 +705,7 @@ const MORE_TITLES: Record<string, string> = {
   settings: 'Settings',
   routes: 'Routes',
   pricing: 'Pricing',
+  enquiries: 'Custom enquiries',
 }
 
 function MoreTab({
@@ -695,9 +723,10 @@ function MoreTab({
   liveAnnouncements: number
   onOpenAnnouncements: () => void
   onOpenPayments: () => void
-  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing') => void
+  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries') => void
 }) {
   const items = [
+    ['Custom enquiries', MessageSquare, () => onOpenPage('enquiries')],
     ['Drivers', UserSquare2, () => onOpenPage('drivers')],
     ['Vehicles', Car, () => onOpenPage('vehicles')],
     ['Routes', Route, () => onOpenPage('routes')],

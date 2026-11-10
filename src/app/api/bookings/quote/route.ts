@@ -3,7 +3,10 @@ import { jsonError, jsonOk } from '@/lib/api'
 import { quoteFromCatalogue } from '@/lib/booking/service'
 
 const schema = z.object({
+  listingId: z.string().optional(),
+  listingKind: z.enum(['route', 'service']).optional(),
   routeId: z.string().optional(),
+  serviceId: z.string().optional(),
   vehicleId: z.string().optional(),
   pickup: z.string().optional(),
   destination: z.string().optional(),
@@ -31,6 +34,7 @@ export async function POST(req: Request) {
 
   try {
     const result = await quoteFromCatalogue(parsed.data)
+    if (!result.available) return jsonError(409, 'UNAVAILABLE', result.message)
     return jsonOk({ ok: true, ...result })
   } catch (error) {
     console.error(error)

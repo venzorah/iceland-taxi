@@ -6,7 +6,8 @@ import { ArrowRight, Clock, Luggage, MessageCircle, Plane, Users } from 'lucide-
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteFooter } from '@/components/site/SiteFooter'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
-import { AIRPORT_ROUTES, DESTINATIONS, FLEET, IMG, TOURS, formatPrice, type Currency } from '@/lib/design/data'
+import { usePublishedListings } from '@/components/booking/usePublishedListings'
+import { DESTINATIONS, FLEET, IMG, formatPrice, type Currency } from '@/lib/design/data'
 import { type Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 import { whatsappHref } from '@/lib/whatsapp'
@@ -49,6 +50,10 @@ export default function Homepage(props: Props) {
   const th = theme as 'light' | 'dark'
   const lang = language as Lang
   const cur = currency as Currency
+  const listings = usePublishedListings()
+  const routes = (listings || []).filter((listing) => listing.kind === 'route')
+  const tours = (listings || []).filter((listing) => listing.category === 'tour')
+  const driverListing = (listings || []).find((listing) => listing.category === 'driver')
   const book = () => onSearch?.({ category: 'airport', pickup: 'Keflavík Airport (KEF)', destination: 'Reykjavík city centre', date: '', time: '', passengers: 2, luggage: 2 })
 
   return (
@@ -78,22 +83,24 @@ export default function Homepage(props: Props) {
                 Private transfers between KEF, Reykjavík, the Blue Lagoon and hotels across the southwest. Add your flight number and your driver follows your arrival time.
               </p>
               <ul className="mt-8 divide-y divide-line border-y border-line">
-                {AIRPORT_ROUTES.map((r) => (
-                  <li key={r.from + r.to} onClick={book} className="flex cursor-pointer items-center gap-4 py-4 active:bg-surface sm:cursor-auto sm:active:bg-transparent">
+                {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
+                {listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet.</li>}
+                {routes.map((r) => (
+                  <li key={r.id} onClick={() => onSearch?.({ category: 'airport', pickup: r.fromLabel, destination: r.toLabel, listingId: r.id, listingKind: 'route', date: '', time: '', passengers: 2, luggage: 0 })} className="flex cursor-pointer items-center gap-4 py-4 active:bg-surface">
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold leading-snug text-heading">{r.from} → {r.to}</p>
-                      <p className="mt-0.5 text-sm text-muted">{r.minutes} min · {r.km} km</p>
+                      <p className="font-semibold leading-snug text-heading">{r.fromLabel} → {r.toLabel}</p>
+                      <p className="mt-0.5 text-sm text-muted">{[r.hoursLabel, r.km ? `${r.km} km` : null].filter(Boolean).join(' · ') || 'Fixed price'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted">from</p>
+                      <p className="text-xs text-muted">Price</p>
                       <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur)}</p>
                     </div>
                   </li>
                 ))}
               </ul>
-              <button onClick={book} className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-link hover:underline">
+              <a href="/airport-transfer" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-link hover:underline">
                 See all airport routes <ArrowRight size={16} />
-              </button>
+              </a>
             </div>
           </div>
         </section>
@@ -109,24 +116,26 @@ export default function Homepage(props: Props) {
               <a href="/private-tours" className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-bold text-link hover:underline">Discover Private Tours <ArrowRight size={16} /></a>
             </div>
             <div className="no-scrollbar mt-8 flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mt-10 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-6 lg:px-8">
-              {TOURS.map((tour) => (
+              {listings === null && <p className="px-4 text-sm text-muted">Loading published prices…</p>}
+              {listings !== null && tours.length === 0 && <p className="px-4 text-sm text-muted">No published tour price yet.</p>}
+              {tours.map((tour) => (
                 <article key={tour.id} className="group flex w-[min(82%,20rem)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card sm:w-[60%] md:w-auto md:shrink">
                   <div className="overflow-hidden">
-                    <img src={tour.img} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
+                    <img src={tour.imageUrl || IMG.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                   </div>
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
                     <h3 className="font-display text-lg font-bold text-heading sm:text-xl">{tour.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-muted">{tour.blurb}</p>
                     <div className="mt-4 flex gap-4 text-sm text-muted">
-                      <span className="flex items-center gap-1.5"><Clock size={14} /> {tour.hours}</span>
-                      <span className="flex items-center gap-1.5"><Users size={14} /> {tour.pax}</span>
+                      {tour.hoursLabel && <span className="flex items-center gap-1.5"><Clock size={14} /> {tour.hoursLabel}</span>}
+                      {tour.paxLabel && <span className="flex items-center gap-1.5"><Users size={14} /> {tour.paxLabel}</span>}
                     </div>
                     <div className="mt-auto flex items-end justify-between pt-6">
                       <div>
-                        <p className="text-xs text-muted">from, per vehicle</p>
+                        <p className="text-xs text-muted">Price</p>
                         <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur)}</p>
                       </div>
-                      <button onClick={() => onSearch?.({ category: 'tour', pickup: 'Reykjavík hotel', destination: tour.title, date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
+                      <button onClick={() => onSearch?.({ category: 'tour', pickup: tour.title, destination: tour.title, listingId: tour.id, listingKind: 'service', date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
                         Book tour
                       </button>
                     </div>
@@ -151,10 +160,10 @@ export default function Homepage(props: Props) {
                 ))}
               </div>
               <div className="mt-10 grid gap-3 sm:flex sm:flex-wrap">
-                <button onClick={() => onSearch?.({ category: 'driver', pickup: 'Reykjavík hotel', destination: 'Custom itinerary', date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
+                <button onClick={() => driverListing ? onSearch?.({ category: 'driver', pickup: driverListing.title, destination: driverListing.title, listingId: driverListing.id, listingKind: 'service', date: '', time: '', passengers: 2, luggage: 2 }) : onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
                   Hire a Private Driver
                 </button>
-                <a href="/private-driver" className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</a>
+                <button onClick={() => onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</button>
               </div>
             </div>
             <img src={IMG.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />

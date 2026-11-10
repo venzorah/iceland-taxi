@@ -20,6 +20,7 @@ import { Staff } from './Staff'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, type AnnouncementState } from '@/lib/design/announcements'
 import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from './Workspace'
+import { Enquiries } from './Enquiries'
 
 export const args = {
   section: 'overview',
@@ -55,13 +56,14 @@ export default function AdminDashboard(props: Props) {
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
 
   const titles: Record<string, string> = {
-    overview: 'Today', bookings: 'Bookings', messages: 'Messages', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
+    overview: 'Today', bookings: 'Bookings', enquiries: 'Enquiries', messages: 'Messages', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
     vehicles: 'Vehicles', destinations: 'Destinations', customers: 'Customers', reports: 'Reports', reviews: 'Reviews', announcements: 'Announcements', pages: 'Pages & blog', seo: 'SEO & landing pages', languages: 'Languages', staff: 'Staff & permissions', appearance: 'Appearance & Theme', settings: 'System settings',
   }
   const body = (() => {
     switch (section) {
       case 'overview': return <Overview onOpenBookings={() => go('bookings')} />
       case 'bookings': return <BookingsTable />
+      case 'enquiries': return <Enquiries />
       case 'messages': return <Messages focusRef={focusRef} onOpenSettings={() => go('settings')} />
       case 'services': return <Services />
       case 'pricing': return <Pricing />

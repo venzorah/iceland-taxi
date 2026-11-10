@@ -3,6 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { makeBookingRef } from './refs'
 import { buildQuote, type QuoteInput } from './pricing'
 import { checkAvailability, computeEndsAt } from './availability'
+import {
+  UNAVAILABLE_MESSAGE,
+  matchListing,
+  publishedListings,
+  shownAdminPrice,
+  type ListingKind,
+  type PublishedListing,
+} from './listings'
 
 export type CreateBookingInput = {
   guestName: string
@@ -23,6 +31,10 @@ export type CreateBookingInput = {
   isQuote?: boolean
   extras?: QuoteInput['extras']
   quote: QuoteInput
+  listingId?: string
+  listingKind?: ListingKind | string
+  pickup?: string
+  destination?: string
   /** When true and Teya is unset, status becomes AWAITING_PAYMENT instead of failing pay. */
   awaitPaymentWithoutGateway?: boolean
 }
@@ -39,94 +51,81 @@ export async function getIskPerUsd() {
   return (await getExchangeRates()).iskPerUsd
 }
 
+export async function loadPublishedListings(): Promise<PublishedListing[]> {
+  const [routes, services] = await Promise.all([
+    prisma.route.findMany({ include: { service: true } }),
+    prisma.service.findMany({ orderBy: { sortOrder: 'asc' } }),
+  ])
+  return publishedListings(routes, services)
+}
+
 export async function quoteFromCatalogue(params: {
+  listingId?: string
+  listingKind?: string
   routeId?: string
-  vehicleId?: string
+  serviceId?: string
   pickup?: string
   destination?: string
-  extras?: QuoteInput['extras']
   customerCategory: QuoteInput['customerCategory']
   currency?: QuoteInput['currency']
   depositPct?: number
 }) {
+  const listings = await loadPublishedListings()
+  const listing = matchListing(listings, params)
+  const price = shownAdminPrice(listing, params.pickup)
+  if (!listing || price == null) {
+    return { available: false as const, message: UNAVAILABLE_MESSAGE }
+  }
+
   const { iskPerUsd, iskPerEur } = await getExchangeRates()
-  let baseIsk = 22900
-  let durationMinutes = 45
-  let routeLabel = `${params.pickup || 'Pickup'} → ${params.destination || 'Destination'}`
-  let serviceLabel = 'Airport transfer'
-  let serviceId: string | undefined
-  let routeId = params.routeId
-
-  if (params.routeId) {
-    const route = await prisma.route.findUnique({
-      where: { id: params.routeId },
-      include: { service: true },
-    })
-    if (route) {
-      baseIsk = route.fromIsk
-      durationMinutes = route.minutes ?? 45
-      routeLabel = `${route.fromLabel} → ${route.toLabel}`
-      serviceLabel = route.service?.titleEn || serviceLabel
-      serviceId = route.serviceId || undefined
-      routeId = route.id
-    }
-  } else if (params.pickup && params.destination) {
-    const route = await prisma.route.findFirst({
-      where: {
-        active: true,
-        fromLabel: { equals: params.pickup, mode: 'insensitive' },
-        toLabel: { equals: params.destination, mode: 'insensitive' },
-      },
-      include: { service: true },
-    })
-    if (route) {
-      baseIsk = route.fromIsk
-      durationMinutes = route.minutes ?? 45
-      routeLabel = `${route.fromLabel} → ${route.toLabel}`
-      serviceLabel = route.service?.titleEn || serviceLabel
-      serviceId = route.serviceId || undefined
-      routeId = route.id
-    }
-  }
-
-  let vehicleUpgradeIsk = 0
-  let vehicleLabel: string | undefined
-  if (params.vehicleId) {
-    const vehicle = await prisma.vehicle.findUnique({ where: { id: params.vehicleId } })
-    if (vehicle) {
-      vehicleUpgradeIsk = vehicle.upgradeIsk
-      vehicleLabel = vehicle.name
-    }
-  }
-
-  const extrasRows = await prisma.pricingExtra.findMany({ where: { active: true } })
-  const childSeatIsk = extrasRows.find((e) => e.key === 'childSeat')?.isk
-  const meetGreetIsk = extrasRows.find((e) => e.key === 'meetGreet')?.isk
-
+  const routeLabel = listing.kind === 'route' ? `${listing.fromLabel} → ${listing.toLabel}` : listing.title
   const quote = buildQuote({
-    baseIsk,
-    vehicleUpgradeIsk,
-    vehicleLabel,
-    extras: params.extras,
-    childSeatIsk,
-    meetGreetIsk,
+    baseIsk: price,
+    baseLabel: routeLabel,
     customerCategory: params.customerCategory,
     currency: params.currency,
     iskPerUsd,
     iskPerEur,
     depositPct: params.depositPct,
+    durationMinutes: listing.minutes ?? undefined,
   })
 
   return {
+    available: true as const,
     quote,
-    meta: { baseIsk, durationMinutes, routeLabel, serviceLabel, serviceId, routeId, vehicleLabel, vehicleUpgradeIsk },
+    meta: {
+      baseIsk: price,
+      adminPriceIsk: price,
+      durationMinutes: listing.minutes ?? 60,
+      routeLabel,
+      serviceLabel: listing.title,
+      serviceId: listing.serviceId || undefined,
+      routeId: listing.routeId || undefined,
+      listingId: listing.id,
+      listingKind: listing.kind,
+      vehicleUpgradeIsk: 0,
+    },
   }
 }
 
 export async function createBooking(input: CreateBookingInput) {
-  const quoted = buildQuote(input.quote)
+  const resolved = await quoteFromCatalogue({
+    listingId: input.listingId,
+    listingKind: input.listingKind,
+    routeId: input.routeId,
+    serviceId: input.serviceId,
+    pickup: input.pickup,
+    destination: input.destination,
+    customerCategory: input.quote.customerCategory,
+    currency: input.quote.currency,
+    depositPct: input.quote.depositPct,
+  })
+  if (!resolved.available) {
+    return { ok: false as const, code: 'UNAVAILABLE' as const, message: resolved.message }
+  }
+  const quoted = resolved.quote
   const pickupAt = input.pickupAt ? new Date(input.pickupAt) : null
-  const durationMinutes = input.quote.durationMinutes ?? 60
+  const durationMinutes = resolved.meta.durationMinutes || input.quote.durationMinutes || 60
   const window = pickupAt
     ? computeEndsAt(pickupAt, durationMinutes, Boolean(input.extras?.returnTrip))
     : { durationMinutes, endsAt: null as Date | null }
@@ -148,14 +147,11 @@ export async function createBooking(input: CreateBookingInput) {
     }
   }
 
-  let status: BookingStatus = BookingStatus.PENDING
-  if (input.isQuote || quoted.amountSnapshot === 0) {
-    status = BookingStatus.PENDING
-  } else if (input.awaitPaymentWithoutGateway) {
-    status = BookingStatus.AWAITING_PAYMENT
-  } else {
-    status = BookingStatus.AWAITING_PAYMENT
+  if (quoted.amountSnapshot <= 0 || resolved.meta.adminPriceIsk <= 0) {
+    return { ok: false as const, code: 'UNAVAILABLE' as const, message: UNAVAILABLE_MESSAGE }
   }
+
+  const status: BookingStatus = BookingStatus.AWAITING_PAYMENT
 
   const booking = await prisma.booking.create({
     data: {
@@ -163,10 +159,13 @@ export async function createBooking(input: CreateBookingInput) {
       guestName: input.guestName,
       guestEmail: input.guestEmail,
       guestPhone: input.guestPhone,
-      serviceId: input.serviceId,
-      routeId: input.routeId,
-      serviceLabel: input.serviceLabel,
-      routeLabel: input.routeLabel,
+      serviceId: resolved.meta.serviceId,
+      routeId: resolved.meta.routeId,
+      listingId: resolved.meta.listingId,
+      listingKind: resolved.meta.listingKind,
+      adminPriceIsk: resolved.meta.adminPriceIsk,
+      serviceLabel: resolved.meta.serviceLabel,
+      routeLabel: resolved.meta.routeLabel,
       pickupAt,
       passengers: input.passengers,
       luggage: input.luggage ?? 0,
@@ -185,7 +184,7 @@ export async function createBooking(input: CreateBookingInput) {
       priceLines: quoted.lines as unknown as Prisma.InputJsonValue,
       durationMinutes: window.durationMinutes,
       endsAt: window.endsAt,
-      isQuote: Boolean(input.isQuote) || quoted.amountSnapshot === 0,
+      isQuote: false,
     },
     include: { payments: true, vehicle: true, driver: true },
   })

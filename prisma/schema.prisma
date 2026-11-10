@@ -1,6 +1,8 @@
 // Iceland Taxi Booking — PostgreSQL schema (production-bound scaffold)
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // native = local/CI; rhel-openssl-3.0.x = Vercel Node runtimes
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

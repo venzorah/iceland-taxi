@@ -20,6 +20,11 @@ const serverSchema = z.object({
   SMS_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   NEXT_PUBLIC_APP_URL: z.preprocess(emptyToUndefined, z.string().optional()),
   PAYMENT_PROVIDER: z.preprocess(emptyToUndefined, z.string().optional()),
+  /// Web Push (optional). Public key is safe to expose. Private key stays on the server.
+  VAPID_PUBLIC_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  VAPID_PRIVATE_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  /// mailto: or https: contact for the push service. Do not invent a company address.
+  VAPID_SUBJECT: z.preprocess(emptyToUndefined, z.string().optional()),
 })
 
 export type ServerEnv = z.infer<typeof serverSchema>
@@ -40,6 +45,9 @@ export function getServerEnv(): ServerEnv {
     SMS_API_KEY: process.env.SMS_API_KEY,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
+    VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: process.env.VAPID_SUBJECT,
   })
 }
 

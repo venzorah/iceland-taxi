@@ -7,6 +7,8 @@ import {
   Settings, Shield, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft,
 } from 'lucide-react'
 
+import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { rememberAlertAudience } from '@/lib/alerts/client'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 
@@ -456,6 +458,10 @@ function BookingRow({ b, onOpen }: { b: OpsBooking; onOpen: (b: OpsBooking) => v
 }
 
 function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: string | null) => void }) {
+  useArmMessageSoundOnPointer()
+  useEffect(() => {
+    rememberAlertAudience('staff')
+  }, [])
   const [threads, setThreads] = useState<Array<{ ref: string; customer: string; preview: string; time: string; unread: number }>>([])
   const [messages, setMessages] = useState<Array<{ id: string; body: string; authorRole: string; time: string }>>([])
   const [draft, setDraft] = useState('')
@@ -526,7 +532,11 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
     )
   }
   return (
-    <ul className="divide-y divide-line bg-bg">
+    <div>
+      <div className="border-b border-line bg-bg px-4 py-3">
+        <MessageAlertControl />
+      </div>
+      <ul className="divide-y divide-line bg-bg">
       {threads.map((x) => (
         <li key={x.ref}>
           <button onClick={() => setChat(x.ref)} className="flex w-full items-center gap-3 px-4 py-4 text-left">
@@ -540,7 +550,8 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
         </li>
       ))}
       {threads.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No message threads yet.</li>}
-    </ul>
+      </ul>
+    </div>
   )
 }
 

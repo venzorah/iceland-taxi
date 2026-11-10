@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { MessageCircle, Search, Send } from 'lucide-react'
 
+import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { rememberAlertAudience } from '@/lib/alerts/client'
 import { bookingWhatsAppText, whatsappHref } from '@/lib/whatsapp'
 
 type Thread = {
@@ -24,6 +26,7 @@ export function Messages() {
   const [q, setQ] = useState('')
   const [waNumber, setWaNumber] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  useArmMessageSoundOnPointer()
 
   const boot = useCallback(async () => {
     await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
@@ -48,6 +51,7 @@ export function Messages() {
   }, [])
 
   useEffect(() => {
+    rememberAlertAudience('staff')
     boot()
   }, [boot])
 
@@ -88,6 +92,7 @@ export function Messages() {
             <Search size={15} className="text-muted" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search messages…" className="w-full bg-transparent text-sm outline-none placeholder:text-muted" />
           </div>
+          <MessageAlertControl className="mt-3" />
           {err && <p className="mt-2 text-xs text-error">{err}</p>}
         </div>
         <ul>

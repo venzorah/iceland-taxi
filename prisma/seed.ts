@@ -254,16 +254,23 @@ async function main() {
       ref: 'ITB-7K4Q2M',
       guestName: 'Emma Larsen',
       guestEmail: 'emma@example.local',
+      guestPhone: '+45 20 12 34 56',
       serviceLabel: 'Airport transfer',
       routeLabel: 'KEF → Hotel Borg',
-      pickupAt: new Date(),
+      pickupAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      endsAt: new Date(Date.now() + 2 * 60 * 60 * 1000 + 45 * 60 * 1000),
+      durationMinutes: 45,
       passengers: 2,
-      vehicleLabel: 'Standard Sedan',
-      driverId: null as string | null,
+      luggage: 2,
+      vehicleLabel: 'Comfort Sedan',
+      vehicleId: comfort.id,
+      driverId: ari.id,
       amountSnapshot: 166,
       currency: CurrencyCode.USD,
-      status: BookingStatus.CONFIRMED,
+      status: BookingStatus.DRIVER_ASSIGNED,
       flightNumber: 'FI 615',
+      notes: 'Meet & greet with name sign: Larsen. Flight may land early.',
+      extras: { meetGreet: true },
       customerCategory: CustomerCategory.INTERNATIONAL,
     },
     {
@@ -362,6 +369,53 @@ async function main() {
   for (const b of bookings) {
     await prisma.booking.create({ data: b })
   }
+
+  const emma = await prisma.booking.findUnique({ where: { ref: 'ITB-7K4Q2M' } })
+  if (emma) {
+    await prisma.message.createMany({
+      data: [
+        {
+          bookingId: emma.id,
+          authorRole: 'customer',
+          guestEmail: 'emma@example.local',
+          guestName: 'Emma Larsen',
+          body: 'Our flight is now landing 20 minutes early — is that okay?',
+          unread: true,
+        },
+        {
+          bookingId: emma.id,
+          authorId: admin.id,
+          authorRole: 'staff',
+          body: 'No problem — your driver tracks the flight and will be waiting at arrivals with a name sign.',
+          unread: false,
+        },
+      ],
+    })
+  }
+
+  // Second job later today for Ari (Hotel → KEF)
+  await prisma.booking.create({
+    data: {
+      ref: 'ITB-ARI-1815',
+      guestName: 'Nora Berg',
+      guestEmail: 'nora@example.local',
+      guestPhone: '+354 555 0100',
+      serviceLabel: 'Airport transfer',
+      routeLabel: 'Hotel Saga → KEF',
+      pickupAt: new Date(Date.now() + 5 * 60 * 60 * 1000),
+      endsAt: new Date(Date.now() + 5 * 60 * 60 * 1000 + 50 * 60 * 1000),
+      durationMinutes: 50,
+      passengers: 2,
+      luggage: 3,
+      vehicleLabel: 'SUV',
+      vehicleId: suv2.id,
+      driverId: ari.id,
+      amountSnapshot: 180,
+      currency: CurrencyCode.USD,
+      status: BookingStatus.DRIVER_ASSIGNED,
+      customerCategory: CustomerCategory.INTERNATIONAL,
+    },
+  })
 
   await prisma.announcement.createMany({
     data: [

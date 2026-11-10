@@ -16,6 +16,7 @@ export function AccountPageClient() {
       onCurrencyChange={prefs.setCurrency}
       onHome={() => prefs.go('/')}
       onBook={() => prefs.go('/book')}
+      onMessages={() => prefs.go('/messages')}
     />
   )
 }

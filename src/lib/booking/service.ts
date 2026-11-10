@@ -253,6 +253,7 @@ export function toOpsBooking(b: {
     AWAITING_PAYMENT: 'Awaiting Payment',
     CONFIRMED: 'Confirmed',
     DRIVER_ASSIGNED: 'Driver Assigned',
+    ACKNOWLEDGED: 'Acknowledged',
     DRIVER_EN_ROUTE: 'Driver En Route',
     IN_PROGRESS: 'In Progress',
     COMPLETED: 'Completed',

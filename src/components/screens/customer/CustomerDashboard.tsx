@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Download, MessageCircle, Pencil, Send, XCircle } from 'lucide-react'
 
 import { SiteHeader } from '@/components/site/SiteHeader'
@@ -8,6 +8,7 @@ import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { IMG, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
+import { bookingWhatsAppText, whatsappHref } from '@/lib/whatsapp'
 
 export const args = {
   tab: 'upcoming',
@@ -29,10 +30,13 @@ type Props = Partial<typeof args> & {
   onCurrencyChange?: (c: Currency) => void
   onHome?: () => void
   onBook?: () => void
+  onMessages?: () => void
   announcements?: AnnouncementState
 }
 
 const TRACK = ['Confirmed', 'Driver Assigned', 'Driver En Route', 'In Progress', 'Completed']
+const BOOKING_REF = 'ITB-7K4Q2M'
+const GUEST_EMAIL = 'emma@example.local'
 
 const PAST = {
   completed: [
@@ -42,11 +46,47 @@ const PAST = {
   cancelled: [{ ref: 'ITB-2ZC8RU', title: 'Northern Lights Experience', date: '11 Mar 2025', amount: 'Refunded $434', img: IMG.northernLights }],
 }
 
+type ChatMsg = { id: string; body: string; authorRole: string; time: string }
+
 export default function CustomerDashboard(props: Props) {
   const p = { ...args, ...props }
   const [tab, setTab] = useState(p.tab)
   const th = p.theme as 'light' | 'dark'
   const step = 1
+  const [chat, setChat] = useState<ChatMsg[]>([])
+  const [draft, setDraft] = useState('')
+  const [waNumber, setWaNumber] = useState<string | null>(null)
+
+  const loadChat = useCallback(async () => {
+    await fetch('/api/auth/demo', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ role: 'guest', email: GUEST_EMAIL }),
+    })
+    const data = await fetch(`/api/messages/${BOOKING_REF}`).then((r) => r.json()).catch(() => null)
+    if (data?.ok) setChat(data.messages || [])
+  }, [])
+
+  useEffect(() => {
+    loadChat()
+    const t = setInterval(loadChat, 5000)
+    fetch('/api/company')
+      .then((r) => r.json())
+      .then((d) => setWaNumber(d.company?.whatsappE164 || null))
+      .catch(() => {})
+    return () => clearInterval(t)
+  }, [loadChat])
+
+  const send = async () => {
+    if (!draft.trim()) return
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bookingRef: BOOKING_REF, body: draft.trim(), as: 'customer', guestEmail: GUEST_EMAIL }),
+    })
+    setDraft('')
+    await loadChat()
+  }
 
   return (
     <div className={th === 'dark' ? 'dark' : ''}>
@@ -123,23 +163,39 @@ export default function CustomerDashboard(props: Props) {
               <div className="flex items-center justify-between border-b border-line px-5 py-4">
                 <div>
                   <h2 className="font-display text-base font-bold text-heading">Messages</h2>
-                  <p className="text-xs text-muted">About ITB-7K4Q2M · usually replies within minutes</p>
+                  <p className="text-xs text-muted">About {BOOKING_REF} · usually replies within minutes</p>
                 </div>
-                <a href={`https://wa.me/?text=${encodeURIComponent('Hello, about booking ITB-7K4Q2M')}`} aria-label="Open WhatsApp" className="grid h-9 w-9 place-items-center rounded-full bg-mint text-navy"><MessageCircle size={17} /></a>
+                <a href={whatsappHref({ e164: waNumber, text: bookingWhatsAppText(BOOKING_REF) })} aria-label="Open WhatsApp" className="grid h-9 w-9 place-items-center rounded-full bg-mint text-navy"><MessageCircle size={17} /></a>
               </div>
               <div className="flex-1 space-y-3 overflow-y-auto bg-surface p-4">
-                <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-navy px-4 py-2.5 text-sm text-white dark:bg-primary dark:text-navy">Our flight is now landing 20 minutes early — is that okay?<p className="mt-1 text-[10px] opacity-70">14:52 · Read</p></div>
-                <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-bg px-4 py-2.5 text-sm text-heading">No problem — your driver tracks the flight and will be waiting at arrivals with a name sign.<p className="mt-1 text-[10px] text-muted">14:55 · Iceland Taxi Booking</p></div>
+                {chat.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${m.authorRole === 'customer' ? 'ml-auto rounded-br-sm bg-navy text-white dark:bg-primary dark:text-navy' : 'rounded-bl-sm bg-bg text-heading'}`}
+                  >
+                    {m.body}
+                    <p className={`mt-1 text-[10px] ${m.authorRole === 'customer' ? 'opacity-70' : 'text-muted'}`}>
+                      {m.time}{m.authorRole === 'staff' ? ' · Iceland Taxi Booking' : ''}
+                    </p>
+                  </div>
+                ))}
+                {chat.length === 0 && <p className="text-sm text-muted">No messages yet — say hello about your booking.</p>}
               </div>
               <div className="flex items-center gap-2 border-t border-line p-3">
-                <input placeholder="Write a message…" className="flex-1 rounded-full border border-input-line bg-input px-4 py-2.5 text-sm text-heading placeholder:text-muted" />
-                <button aria-label="Send" className="grid h-10 w-10 place-items-center rounded-full bg-primary text-on-primary"><Send size={16} /></button>
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && send()}
+                  placeholder="Write a message…"
+                  className="flex-1 rounded-full border border-input-line bg-input px-4 py-2.5 text-sm text-heading placeholder:text-muted"
+                />
+                <button onClick={send} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-full bg-primary text-on-primary"><Send size={16} /></button>
               </div>
             </aside>
           </div>
         </main>
       </div>
-      <SiteTabBar active="trips" onHome={p.onHome} onBook={p.onBook} />
+      <SiteTabBar active="trips" onHome={p.onHome} onBook={p.onBook} onTrips={() => setTab('upcoming')} onHelp={p.onMessages} />
     </div>
   )
 }

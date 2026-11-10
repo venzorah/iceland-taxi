@@ -6,6 +6,7 @@ export type BookingStatus =
   | 'Awaiting Payment'
   | 'Confirmed'
   | 'Driver Assigned'
+  | 'Acknowledged'
   | 'Driver En Route'
   | 'In Progress'
   | 'Completed'
@@ -64,6 +65,7 @@ export function statusClass(s: BookingStatus) {
       return 'bg-success/12 text-success'
     case 'Confirmed':
     case 'Driver Assigned':
+    case 'Acknowledged':
       return 'bg-link/12 text-link'
     case 'Driver En Route':
     case 'In Progress':

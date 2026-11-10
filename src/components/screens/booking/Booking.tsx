@@ -348,7 +348,7 @@ function Confirmed({
           ))}
         </dl>
         <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-          <a href={`https://wa.me/?text=${encodeURIComponent(`Hello, I have a question about booking ${ref}`)}`} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-mint px-5 py-3.5 text-sm font-bold text-navy sm:py-3">
+          <a href={`https://wa.me/?text=${encodeURIComponent(`Hello Iceland Taxi Booking, about booking ${ref}`)}`} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-mint px-5 py-3.5 text-sm font-bold text-navy sm:py-3">
             <MessageCircle size={16} /> Message us on WhatsApp
           </a>
           <button onClick={onBack} className="whitespace-nowrap rounded-full border border-line px-5 py-3 text-sm font-semibold text-heading transition-colors duration-150 hover:bg-surface">Back to homepage</button>

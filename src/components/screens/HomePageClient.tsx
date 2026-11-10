@@ -33,6 +33,7 @@ export function HomePageClient() {
       onStaff={() => prefs.go('/admin')}
       onStaffMobile={() => prefs.go('/m')}
       onDriver={() => prefs.go('/driver')}
+      onMessages={() => prefs.go('/messages')}
     />
   )
 }

@@ -36,10 +36,10 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
     <>
     {/* Holds the page content below the fixed bar + menu */}
     <div aria-hidden className={hasBar ? 'h-[92px] sm:h-[116px] lg:h-[132px]' : 'h-14 sm:h-20 lg:h-24'} />
-    <div className="fixed inset-x-0 top-0 z-40">
+    <div className="fixed inset-x-0 top-0 z-40 w-full max-w-full overflow-x-clip">
     <AnnouncementBar state={announcements} language={language} />
     <header className="border-b border-line bg-bg/95 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-3 sm:h-20 sm:gap-6 sm:px-6 lg:h-24 lg:px-8">
+      <div className="mx-auto flex h-14 w-full min-w-0 max-w-7xl items-center gap-2 px-3 sm:h-20 sm:gap-6 sm:px-6 lg:h-24 lg:px-8">
         {mobileTitle && (
           <div className="flex min-w-0 flex-1 items-center gap-1 sm:hidden">
             <button onClick={onMobileBack} aria-label="Back" className="-ml-1 grid h-10 w-10 shrink-0 place-items-center rounded-full text-heading active:bg-surface">
@@ -49,7 +49,7 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
           </div>
         )}
         <button onClick={onHome} className={`shrink-0 ${mobileTitle ? 'hidden sm:block' : ''}`} aria-label="Iceland Taxi Booking home">
-          <img src={theme === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-10 w-auto sm:h-14 lg:h-[72px]" />
+          <img src={theme === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-10 w-auto max-w-[11.5rem] object-contain object-left sm:h-14 sm:max-w-none lg:h-[72px]" />
         </button>
 
         <nav className="hidden flex-1 items-center gap-6 xl:flex">

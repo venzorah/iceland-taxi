@@ -20,6 +20,11 @@ const dict = {
     passengers: 'Passengers',
     luggage: 'Luggage',
     search: 'Search availability',
+    profile: 'Profile',
+    logOut: 'Log out',
+    signedIn: 'Signed in',
+    profileHint: 'Use the email on your booking.',
+    profileEmail: 'Email',
   },
   is: {
     services: 'Þjónusta',
@@ -40,6 +45,11 @@ const dict = {
     passengers: 'Farþegar',
     luggage: 'Farangur',
     search: 'Leita að lausum ferðum',
+    profile: 'Prófíll',
+    logOut: 'Útskrá',
+    signedIn: 'Innskráð(ur)',
+    profileHint: 'Notaðu netfangið á bókuninni.',
+    profileEmail: 'Netfang',
   },
 }
 

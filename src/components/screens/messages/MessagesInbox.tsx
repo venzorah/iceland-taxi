@@ -274,7 +274,7 @@ export default function MessagesInbox(props: Props) {
           </div>
         </main>
       </div>
-      {!isStaff && <SiteTabBar active="help" onHome={p.onHome} onBook={p.onBook} onTrips={p.onAccount} onHelp={() => setActive(null)} />}
+      {!isStaff && <SiteTabBar language={p.language as Lang} active="help" onHome={p.onHome} onBook={p.onBook} onTrips={p.onAccount} onHelp={() => setActive(null)} />}
     </div>
   )
 }

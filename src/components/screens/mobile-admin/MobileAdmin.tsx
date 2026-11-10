@@ -226,7 +226,7 @@ export default function MobileAdmin(props: Props) {
               <h1 className="font-display text-base font-bold text-heading">Payments</h1>
             </header>
             <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto bg-bg">
-              {payments.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No payments yet · Teya demo path creates rows when checkout runs.</li>}
+              {payments.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No payments yet. Checkout without sandbox keys does not mark a booking paid.</li>}
               {payments.map((pay) => (
                 <li key={pay.id} className="px-4 py-3.5">
                   <div className="flex items-center justify-between gap-3">

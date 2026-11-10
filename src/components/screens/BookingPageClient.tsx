@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import Booking, { type BookingPayPayload } from '@/components/screens/booking/Booking'
 import { useAppPrefs } from '@/components/providers/AppProviders'
@@ -32,6 +32,42 @@ export function BookingPageClient() {
       return undefined
     }
   }, [date, time])
+
+  useEffect(() => {
+    const ref = params.get('ref')
+    const payment = params.get('payment')
+    if (!ref || !payment) return
+    let cancelled = false
+    setPayState('paying')
+    setError(null)
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/payments/teya/status?ref=${encodeURIComponent(ref)}`)
+        const data = await res.json()
+        if (cancelled) return
+        if (data.paid === true && data.outcome === 'success') {
+          setConfirmation({
+            ref: data.ref || ref,
+            email: data.email || '',
+            statusLabel: data.statusLabel || 'Confirmed · payment received',
+            totalLabel: data.totalLabel || '',
+          })
+          setPayState('confirmed')
+          return
+        }
+        setPayState('default')
+        setError(data.message || 'Teya did not confirm this payment. It was not marked paid.')
+      } catch {
+        if (!cancelled) {
+          setPayState('default')
+          setError('Could not confirm the payment with Teya. It was not marked paid.')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [params])
 
   const onPay = async (payload: BookingPayPayload) => {
     setPayState('paying')
@@ -70,8 +106,20 @@ export function BookingPageClient() {
         return
       }
 
-      if (data.checkoutUrl && !data.demo) {
+      if (data.demo && !payload.isQuote) {
+        setPayState('default')
+        setError(data.message || 'Payment was not sent to Teya.')
+        return
+      }
+
+      if (data.checkoutUrl && data.demo !== true) {
         window.location.href = data.checkoutUrl
+        return
+      }
+
+      if (!data.checkoutUrl && !payload.isQuote) {
+        setPayState('default')
+        setError('Teya did not return a checkout session. The booking was not marked paid.')
         return
       }
 
@@ -83,9 +131,7 @@ export function BookingPageClient() {
         status === 'PENDING'
           ? 'Quotation pending'
           : status === 'AWAITING_PAYMENT'
-            ? data.demo
-              ? 'Awaiting Payment · Teya credentials not configured (demo path)'
-              : 'Awaiting Payment'
+            ? 'Awaiting Payment'
             : status === 'CONFIRMED'
               ? 'Confirmed · awaiting driver assignment'
               : String(status)
@@ -100,9 +146,6 @@ export function BookingPageClient() {
             : formatPrice(payload.totalIsk, charged === 'ISK' ? 'ISK' : 'EUR'),
       })
       setPayState('confirmed')
-      if (data.demo && data.message) {
-        setError(data.message)
-      }
     } catch (e) {
       console.error(e)
       setPayState('default')

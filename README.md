@@ -34,7 +34,7 @@ Brand colours: Deep Navy `#061B3A`, Vibrant Yellow `#FFC400`, Emerald Mint `#00C
 
 - **Do not invent** company phone, email, address, registration, VAT, testimonials, or fleet ownership claims. Those fields live in `CompanySettings` / Admin CMS and stay `null` until set.
 - Services, prices, routes, vehicles, and theme defaults come from the database (seed for demo). Historical booking amounts are snapshotted on the booking row.
-- Integrations without credentials **fail clearly** — Teya checkout still creates bookings as **Awaiting Payment** (demo path) when credentials are missing; card PANs are never stored.
+- Integrations without credentials **fail clearly**. Checkout without Teya sandbox keys does not mark a booking paid and does not pretend the gateway succeeded. Card numbers are never stored.
 
 ## Booking & payments
 
@@ -46,7 +46,7 @@ Catalogue prices are stored in ISK. Public euro amounts use `ExchangeRate.iskPer
 2. **Teya missing credentials** → keeps the booking as `AWAITING_PAYMENT` and shows a clear demo message (no fake “paid”).
 3. **Quotation** → saves as `PENDING` with amount `0` / quote flag.
 
-Webhook: `POST /api/payments/webhook/teya` (optional `TEYA_WEBHOOK_SECRET` HMAC). Admin desktop `/admin` and mobile `/m` share the same booking/services/routes/pricing/payments APIs.
+Webhook: `POST /api/payments/webhook/teya` (RSA, `TEYA_WEBHOOK_PUBLIC_KEY`). Admin desktop `/admin` and mobile `/m` share the same booking/services/routes/pricing/payments APIs.
 
 ## Quick start
 
@@ -94,8 +94,10 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 | `GET/POST /api/admin/routes` · `PATCH …/[id]` | Routes CRUD |
 | `GET/POST /api/admin/pricing` | Extras + exchange rate + vehicle upgrades |
 | `GET /api/admin/payments` | Payments list |
-| `POST /api/payments/checkout` | Create booking (optional) + Teya hosted session / demo path |
-| `POST /api/payments/webhook/teya` | Payment status sync (no card data) |
+| `POST /api/payments/checkout` | Create booking + Teya sandbox hosted session. Missing keys return 503 and do not mark the booking paid |
+| `GET /api/payments/teya/return` | Browser return. Confirms via session lookup, then redirects |
+| `GET /api/payments/teya/status` | Re-check the latest sandbox session for a booking ref |
+| `POST /api/payments/webhook/teya` | `payment.succeeded.v1` only, after RSA signature verification |
 | `POST /api/maps/geocode` | Google geocode stub (fails clearly if unset) |
 | `POST/DELETE /api/driver/auth` | Demo driver login cookie (`ari.driver@example.local`) |
 | `GET /api/driver/me` · `GET/PATCH /api/driver/bookings` | Assigned jobs + journey status advances |
@@ -109,17 +111,23 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 - Messaging is **in-app** with HTTP polling (not claimed as WhatsApp Business API sync). Conversations are keyed to booking refs.
 - WhatsApp buttons use `CompanySettings.whatsappE164` when set; otherwise `wa.me/?text=…` with booking ref only (no fake number).
 
-### Teya env keys (required for live card checkout)
+### Teya sandbox checkout
+
+Checkout charges only the Teya **staging** API (`https://api.teya.xyz`, OAuth `https://id.teya.xyz/oauth/v2/oauth-token`). `TEYA_ENVIRONMENT=production` is rejected and `api.teya.com` is never called. Card numbers are not stored. A booking is marked paid only after `GET /v2/checkout/sessions/{id}` reports `session_status=COMPLETED` and `payment_status=SUCCESS`, or after a signature-valid `payment.succeeded.v1` webhook. The browser return URL is not treated as proof of payment. If the gateway is not called, the API responds with an error and the confirmation screen is not shown.
+
+Teya does not publish shared test merchant credentials. Each development store has its own client id, client secret, and store id.
 
 | Variable | Purpose |
 | --- | --- |
-| `TEYA_CLIENT_ID` | OAuth client id |
-| `TEYA_CLIENT_SECRET` | OAuth client secret |
-| `TEYA_STORE_ID` | Store UUID |
-| `TEYA_ENVIRONMENT` | `sandbox` or `production` |
-| `TEYA_WEBHOOK_SECRET` | Optional webhook HMAC |
+| `TEYA_CLIENT_ID` | OAuth client id from the staging Business Portal |
+| `TEYA_CLIENT_SECRET` | OAuth client secret (shown once when created) |
+| `TEYA_STORE_ID` | Store UUID from the same Integrations screen |
+| `TEYA_ENVIRONMENT` | Must be `sandbox` |
+| `TEYA_WEBHOOK_PUBLIC_KEY` | PEM public key for `x-teya-signature` (SHA256withRSA). Optional for the return-url lookup; required before a webhook can mark a booking paid |
 
-Staging API: `https://api.teya.xyz` · OAuth: `https://id.teya.xyz/oauth/v2/oauth-token`
+Where to create them: request a development store with an ecommerce subscription from Teya, then open [business.teya.xyz](https://business.teya.xyz) → the store → Integrations → ecommerce API credentials. Point the webhook at `https://<your-host>/api/payments/webhook/teya` and copy that webhook's public key. Docs: [Hosted Checkout](https://developer.teya.com/online-payments/hosted-checkout/get-started) and [Testing](https://developer.teya.com/online-payments/testing).
+
+Sandbox card that completes without a 3DS challenge: Visa `4427800000180034`, any future expiry, any 3-digit CVC. More cards are on the testing page. These cards do nothing until the three merchant values above are set.
 
 ## Project layout
 
@@ -149,7 +157,7 @@ Repo layout is a **single Next.js app at the repository root** (`package.json`, 
 4. Environment variables in the Vercel project (do not commit secrets):
    - `DATABASE_URL` — Postgres connection string (required for live booking/admin persistence; UI still boots without it)
    - `NEXT_PUBLIC_APP_URL` — public site URL (payment return links)
-   - Optional: `GOOGLE_MAPS_API_KEY`, `TEYA_CLIENT_ID`, `TEYA_CLIENT_SECRET`, `TEYA_STORE_ID`, `TEYA_ENVIRONMENT`, `TEYA_WEBHOOK_SECRET`
+   - Optional: `GOOGLE_MAPS_API_KEY`, `TEYA_CLIENT_ID`, `TEYA_CLIENT_SECRET`, `TEYA_STORE_ID`, `TEYA_ENVIRONMENT` (`sandbox` only), `TEYA_WEBHOOK_PUBLIC_KEY`
 5. After first deploy, open Admin and set company contact fields (phone/email/WhatsApp/address) — never invent them in code.
 6. If a deployment fails with a React Server Components / Next security gate, upgrade `next` to a patched release (see Vercel automated CVE PRs) before redeploying.
 

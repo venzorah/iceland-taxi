@@ -8,6 +8,8 @@ export type CreatePaymentInput = {
   description: string
   returnUrl: string
   cancelUrl: string
+  failureUrl?: string
+  customer?: { name?: string; email?: string; phone?: string }
   /** When true, charge depositAmount instead of full amount if provided. */
   depositOnly?: boolean
   depositAmount?: number | null

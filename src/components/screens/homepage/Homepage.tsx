@@ -9,6 +9,7 @@ import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { AIRPORT_ROUTES, DESTINATIONS, FLEET, IMG, TOURS, formatPrice, type Currency } from '@/lib/design/data'
 import { type Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
+import { whatsappHref } from '@/lib/whatsapp'
 import { BookingSearch, type SearchPayload } from './BookingSearch'
 import { Faq } from './Faq'
 import { HeroCarousel } from './HeroCarousel'
@@ -301,7 +302,7 @@ export default function Homepage(props: Props) {
             <h2 className="font-display text-3xl font-extrabold text-white sm:text-5xl">Your Journey Across Iceland Starts Here.</h2>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap sm:justify-center">
               <button onClick={book} className="whitespace-nowrap rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Book Your Ride</button>
-              <a href="#" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-7 py-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10"><MessageCircle size={16} /> Ask on WhatsApp</a>
+              <a href={whatsappHref({ text: 'Hello Iceland Taxi Booking' })} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-7 py-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10"><MessageCircle size={16} /> Ask on WhatsApp</a>
             </div>
           </div>
         </section>

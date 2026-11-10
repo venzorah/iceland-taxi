@@ -4,7 +4,8 @@ import React from 'react'
 import { ArrowRight, BookOpen } from 'lucide-react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { IMG, type Currency } from '@/lib/design/data'
+import { TRAVEL_GUIDES } from '@/lib/content/editorial'
+import type { Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -25,13 +26,6 @@ type Props = {
   onHelp?: () => void
   announcements?: AnnouncementState
 }
-
-const GUIDES = [
-  { title: 'First night in Reykjavík after a late flight', img: IMG.reykjavik, minutes: '6 min', body: 'Hotel meets, luggage, and when a private transfer beats a taxi queue.' },
-  { title: 'Blue Lagoon before or after KEF', img: IMG.blueLagoon, minutes: '5 min', body: 'Timing a lagoon stop around arrivals and departures without missing a flight.' },
-  { title: 'South Coast in one long day', img: IMG.southCoast, minutes: '8 min', body: 'Waterfalls, black sand and daylight windows by season.' },
-  { title: 'Glacier Lagoon as a private-driver day', img: IMG.glacierLagoon, minutes: '7 min', body: 'Distance, stops and why fixed tours vs multi-stop driver days differ.' },
-]
 
 export default function TravelGuides(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
@@ -61,20 +55,22 @@ export default function TravelGuides(props: Props) {
           <BookOpen size={16} /> Travel guides
         </div>
         <h1 className="mt-2 font-display text-3xl font-extrabold text-heading sm:text-4xl">Plan the journey, then book the car</h1>
-        <p className="mt-3 max-w-2xl text-base text-muted">Longer CMS guides for itineraries and logistics. Seed titles only, publish full articles from Admin → Pages.</p>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">Longer CMS guides for itineraries and logistics. These are editorial notes, not customer testimonials.</p>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          {GUIDES.map((g) => (
-            <article key={g.title} className="flex gap-4 overflow-hidden rounded-2xl border border-line bg-card p-3 sm:gap-5 sm:p-4">
-              <img src={g.img} alt="" className="h-28 w-28 shrink-0 rounded-xl object-cover sm:h-32 sm:w-40" />
-              <div className="min-w-0 py-1">
-                <p className="text-xs font-semibold text-muted">{g.minutes} read</p>
-                <h2 className="mt-1 font-display text-lg font-bold text-heading">{g.title}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-muted">{g.body}</p>
-                <button type="button" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-link hover:underline">
-                  Open guide <ArrowRight size={14} />
-                </button>
-              </div>
+          {TRAVEL_GUIDES.map((g) => (
+            <article key={g.slug} className="overflow-hidden rounded-2xl border border-line bg-card">
+              <a href={`/travel-guides/${g.slug}`} className="flex gap-4 p-3 sm:gap-5 sm:p-4">
+                <img src={g.img} alt="" className="h-28 w-28 shrink-0 rounded-xl object-cover sm:h-32 sm:w-40" />
+                <div className="min-w-0 py-1">
+                  <p className="text-xs font-semibold text-muted">{g.minutes} read</p>
+                  <h2 className="mt-1 font-display text-lg font-bold leading-snug text-heading">{g.title}</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">{g.excerpt}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-link">
+                    Open guide <ArrowRight size={14} />
+                  </span>
+                </div>
+              </a>
             </article>
           ))}
         </div>

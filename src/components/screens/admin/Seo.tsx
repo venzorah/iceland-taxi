@@ -29,7 +29,11 @@ export function Seo() {
               <button onClick={() => setSel(p)} className={`flex w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-150 ${sel.slug === p.slug ? 'bg-surface' : 'hover:bg-surface/60'}`}>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-heading">{p.title}</p>
-                  <p className="truncate font-mono text-xs text-muted">/en/{p.slug}</p>
+                  {p.published ? (
+                    <a href={`/en/${p.slug}`} className="truncate font-mono text-xs text-link hover:underline">/en/{p.slug}</a>
+                  ) : (
+                    <p className="truncate font-mono text-xs text-muted">/en/{p.slug}</p>
+                  )}
                 </div>
                 <span className="hidden whitespace-nowrap text-xs text-muted sm:inline">{p.lang}</span>
                 <span className={`shrink-0 sm:w-20 text-right text-xs font-semibold ${p.published ? 'text-success' : 'text-muted'}`}>{p.published ? 'Published' : 'Draft'}</span>

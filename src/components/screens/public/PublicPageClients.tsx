@@ -1,6 +1,7 @@
 'use client'
 
 import About from '@/components/screens/public/About'
+import Article from '@/components/screens/public/Article'
 import AirportTransfer from '@/components/screens/public/AirportTransfer'
 import Blog from '@/components/screens/public/Blog'
 import Contact from '@/components/screens/public/Contact'
@@ -75,6 +76,11 @@ export function FaqsPageClient() {
 export function BlogPageClient() {
   const c = usePublicChrome()
   return <Blog {...chromeProps(c)} />
+}
+
+export function ArticlePageClient({ kind, slug }: { kind: 'blog' | 'guide'; slug: string }) {
+  const c = usePublicChrome()
+  return <Article {...chromeProps(c)} kind={kind} slug={slug} />
 }
 
 export function TravelGuidesPageClient() {

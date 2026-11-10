@@ -18,6 +18,7 @@ import { Seo } from './Seo'
 import { Staff } from './Staff'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, type AnnouncementState } from '@/lib/design/announcements'
+import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from './Workspace'
 
 export const args = {
   section: 'overview',
@@ -53,7 +54,7 @@ export default function AdminDashboard(props: Props) {
 
   const titles: Record<string, string> = {
     overview: 'Today', bookings: 'Bookings', messages: 'Messages', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
-    vehicles: 'Vehicles', announcements: 'Announcements', seo: 'SEO & landing pages', staff: 'Staff & permissions', appearance: 'Appearance & Theme',
+    vehicles: 'Vehicles', destinations: 'Destinations', customers: 'Customers', reports: 'Reports', reviews: 'Reviews', announcements: 'Announcements', pages: 'Pages & blog', seo: 'SEO & landing pages', languages: 'Languages', staff: 'Staff & permissions', appearance: 'Appearance & Theme', settings: 'System settings',
   }
   const body = (() => {
     switch (section) {
@@ -63,6 +64,13 @@ export default function AdminDashboard(props: Props) {
       case 'services': return <Services />
       case 'pricing': return <Pricing />
       case 'routes': return <Routes />
+      case 'destinations': return <DestinationsSection />
+      case 'customers': return <CustomersSection />
+      case 'reports': return <ReportsSection />
+      case 'reviews': return <ReviewsSection />
+      case 'pages': return <PagesSection />
+      case 'languages': return <LanguagesSection />
+      case 'settings': return <SettingsSection />
       case 'payments': return <PaymentsList />
       case 'drivers': return <Fleet view="drivers" />
       case 'vehicles': return <Fleet view="vehicles" />
@@ -104,13 +112,13 @@ export default function AdminDashboard(props: Props) {
               <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="grid h-10 w-10 sm:h-9 sm:w-9 place-items-center rounded-lg text-heading transition-colors duration-150 hover:bg-surface">
                 {th === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
               </button>
-              <button aria-label="Notifications" className="relative grid h-10 w-10 sm:h-9 sm:w-9 place-items-center rounded-lg text-heading transition-colors duration-150 hover:bg-surface">
+              <button onClick={() => go('messages')} aria-label="Notifications" className="relative grid h-10 w-10 sm:h-9 sm:w-9 place-items-center rounded-lg text-heading transition-colors duration-150 hover:bg-surface">
                 <Bell size={17} />
                 <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-error" />
               </button>
-              <button className="hidden items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover sm:flex">
+              <a href="/book" className="hidden items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover sm:flex">
                 <Plus size={16} /> New booking
-              </button>
+              </a>
             </div>
           </header>
 

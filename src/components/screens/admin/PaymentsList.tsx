@@ -41,7 +41,7 @@ export function PaymentsList() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-line text-xs font-semibold text-muted">
             <tr>
-              {['Created', 'Booking', 'Provider', 'Amount', 'Status', 'Provider ref'].map((h) => (
+              {['Created', 'Booking', 'Provider', 'Amount', 'Status', 'Provider ref', ''].map((h) => (
                 <th key={h} className="px-4 py-3">{h}</th>
               ))}
             </tr>
@@ -64,11 +64,38 @@ export function PaymentsList() {
                 </td>
                 <td className="px-4 py-3 text-xs font-semibold text-heading">{p.status}</td>
                 <td className="px-4 py-3 font-mono text-xs text-muted">{p.providerRef || '—'}</td>
+                <td className="px-4 py-3 text-right">
+                  {p.status === 'REFUNDED' ? (
+                    <span className="text-xs font-semibold text-muted">Refunded</span>
+                  ) : p.status === 'FAILED' || p.status === 'REQUIRES_CREDENTIALS' ? (
+                    <span className="text-xs text-muted">Not captured</span>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        const res = await fetch(`/api/admin/payments/${p.id}`, {
+                          method: 'PATCH',
+                          headers: { 'content-type': 'application/json' },
+                          body: JSON.stringify({ status: 'REFUNDED' }),
+                        })
+                        const body = await res.json().catch(() => null)
+                        if (!res.ok || !body?.ok) {
+                          setMsg(body?.message || 'Could not save the refund')
+                          return
+                        }
+                        setRows((current) => current.map((row) => (row.id === p.id ? { ...row, status: 'REFUNDED' } : row)))
+                        setMsg('Refund saved')
+                      }}
+                      className="text-xs font-semibold text-link"
+                    >
+                      Mark refunded
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
+                <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted">
                   No payments yet. Checkout without Teya sandbox keys saves an unpaid booking and does not mark it paid.
                 </td>
               </tr>

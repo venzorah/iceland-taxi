@@ -34,6 +34,8 @@ export function BookingsTable() {
   const [loading, setLoading] = useState(true)
   const [source, setSource] = useState<string>('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [draft, setDraft] = useState({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '', category: 'INTERNATIONAL' })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -126,6 +128,54 @@ export function BookingsTable() {
             <Filter size={14} /> <span className="hidden md:inline">Date · Service · Currency</span>
           </button>
         </div>
+        <div className="mt-3 flex justify-end">
+          <button onClick={() => setCreating((value) => !value)} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New booking</button>
+        </div>
+        {creating && (
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault()
+              setSaveMsg(null)
+              const res = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  guestName: draft.guestName,
+                  guestEmail: draft.guestEmail,
+                  serviceLabel: draft.serviceLabel,
+                  routeLabel: draft.routeLabel,
+                  quote: {
+                    baseIsk: Number(draft.baseIsk),
+                    customerCategory: draft.category,
+                    currency: draft.category === 'RESIDENT' ? 'ISK' : 'EUR',
+                  },
+                  awaitPaymentWithoutGateway: true,
+                }),
+              })
+              const data = await res.json().catch(() => null)
+              if (!res.ok || !data?.ok) {
+                setSaveMsg(data?.message || 'Could not save the booking')
+                return
+              }
+              setCreating(false)
+              setDraft({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '', category: 'INTERNATIONAL' })
+              setSaveMsg('Saved')
+              await load()
+            }}
+            className="mt-3 grid gap-2 rounded-xl border border-line bg-bg p-4 sm:grid-cols-2"
+          >
+            <input required value={draft.guestName} onChange={(event) => setDraft({ ...draft, guestName: event.target.value })} placeholder="Guest name" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <input required type="email" value={draft.guestEmail} onChange={(event) => setDraft({ ...draft, guestEmail: event.target.value })} placeholder="Email" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <input required value={draft.serviceLabel} onChange={(event) => setDraft({ ...draft, serviceLabel: event.target.value })} placeholder="Service" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <input required value={draft.routeLabel} onChange={(event) => setDraft({ ...draft, routeLabel: event.target.value })} placeholder="Route" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <input required value={draft.baseIsk} onChange={(event) => setDraft({ ...draft, baseIsk: event.target.value })} inputMode="numeric" placeholder="Price in ISK" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus">
+              <option value="INTERNATIONAL">International · EUR</option>
+              <option value="RESIDENT">Resident · ISK</option>
+            </select>
+            <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary sm:col-span-2">Save booking</button>
+          </form>
+        )}
         <p className="mt-2 text-xs text-muted">
           {loading ? 'Loading bookings…' : `${filtered.length} bookings · source: ${source}`}
           {saveMsg ? ` · ${saveMsg}` : ''}

@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
@@ -30,7 +30,21 @@ type Props = {
 }
 
 export default function Article(props: Props) {
-  const article = findEditorial(props.kind, props.slug)
+  const [article, setArticle] = useState(() => findEditorial(props.kind, props.slug))
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/content/editorial?kind=${props.kind}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const match = (data.posts || []).find((post: { slug: string }) => post.slug === props.slug)
+        if (!cancelled && match) setArticle(match)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [props.kind, props.slug])
   const back = props.kind === 'blog' ? '/blog' : '/travel-guides'
   const backLabel = props.kind === 'blog' ? 'Blog' : 'Travel guides'
 
@@ -59,7 +73,7 @@ export default function Article(props: Props) {
           <>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-mint-text">{article.tag} · {article.date} · {article.minutes}</p>
             <h1 className="mt-2 font-display text-3xl font-extrabold leading-tight text-heading sm:text-4xl">{article.title}</h1>
-            <img src={article.img} alt="" className="mt-6 aspect-[16/9] w-full rounded-2xl object-cover" />
+            {article.img ? <img src={article.img} alt="" className="mt-6 aspect-[16/9] w-full rounded-2xl object-cover" /> : null}
             <div className="mt-6 space-y-4 text-base leading-relaxed text-text">
               {article.body.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>

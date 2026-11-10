@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
-import { GUEST_EMAIL_COOKIE, STAFF_COOKIE } from '@/lib/auth/demo'
+import { DRIVER_COOKIE, GUEST_EMAIL_COOKIE, STAFF_COOKIE } from '@/lib/auth/demo'
 
 const schema = z.object({
   role: z.enum(['staff', 'guest', 'clear', 'logout']),
@@ -57,7 +57,8 @@ export async function POST(req: Request) {
 
   if (parsed.data.role === 'staff') {
     jar.set(STAFF_COOKIE, '1', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 14 })
-    return jsonOk({ ok: true, role: 'staff', demo: true })
+    jar.delete(DRIVER_COOKIE)
+    return jsonOk({ ok: true, role: 'staff', demo: true, email: 'admin@example.local' })
   }
 
   if (!parsed.data.email) return jsonError(400, 'VALIDATION_ERROR', 'Guest email required')
@@ -79,6 +80,7 @@ export async function GET() {
   return jsonOk({
     ok: true,
     staff: jar.get(STAFF_COOKIE)?.value === '1',
+    driver: Boolean(jar.get(DRIVER_COOKIE)?.value),
     guestEmail: guest?.email || guestEmail,
     guestName: guest?.name || null,
   })

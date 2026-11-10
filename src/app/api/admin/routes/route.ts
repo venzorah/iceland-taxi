@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 export async function GET() {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
@@ -20,6 +21,8 @@ const createSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const blocked = await rejectDriverOnly()
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = await req.json().catch(() => null)
   const parsed = createSchema.safeParse(body)

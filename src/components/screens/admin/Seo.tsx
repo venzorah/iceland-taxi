@@ -1,86 +1,135 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 
-const PAGES = [
-  { title: 'Keflavík Airport Transfer', slug: 'keflavik-airport-transfer', lang: 'EN · IS', index: true, published: true },
-  { title: 'Keflavík Airport to Reykjavík', slug: 'keflavik-airport-to-reykjavik', lang: 'EN · IS', index: true, published: true },
-  { title: 'Private Driver Iceland', slug: 'private-driver-iceland', lang: 'EN', index: true, published: true },
-  { title: 'Golden Circle Private Tour', slug: 'golden-circle-private-tour', lang: 'EN · IS', index: true, published: true },
-  { title: 'Private Chauffeur Iceland', slug: 'private-chauffeur-iceland', lang: 'EN', index: false, published: false },
-]
+type SeoPage = {
+  id: string
+  path: string
+  titleEn: string | null
+  titleIs: string | null
+  descriptionEn: string | null
+  descriptionIs: string | null
+  noIndex: boolean
+}
+
+const inputClass = 'mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus'
 
 export function Seo() {
-  const [sel, setSel] = useState(PAGES[0])
-  const [title, setTitle] = useState('Keflavík Airport Transfer to Reykjavík | Private & Fixed Price')
-  const [desc, setDesc] = useState('Book a private transfer from Keflavík Airport to Reykjavík or your hotel. Fixed prices in EUR or ISK, flight tracking and meet & greet.')
+  const [pages, setPages] = useState<SeoPage[]>([])
+  const [selId, setSelId] = useState<string | null>(null)
+  const [msg, setMsg] = useState('Loading…')
+  const [creating, setCreating] = useState(false)
+  const [draft, setDraft] = useState({ path: '', titleEn: '', descriptionEn: '', titleIs: '', descriptionIs: '', noIndex: false })
+
+  const load = useCallback(async () => {
+    const res = await fetch('/api/admin/seo')
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.ok) {
+      setMsg(data?.message || 'Could not load SEO pages')
+      setPages([])
+      return
+    }
+    setPages(data.pages)
+    setSelId((prev) => prev || data.pages[0]?.id || null)
+    setMsg('Live database')
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const selected = pages.find((page) => page.id === selId) || pages[0]
+
+  useEffect(() => {
+    if (!selected) return
+    setDraft({
+      path: selected.path,
+      titleEn: selected.titleEn || '',
+      descriptionEn: selected.descriptionEn || '',
+      titleIs: selected.titleIs || '',
+      descriptionIs: selected.descriptionIs || '',
+      noIndex: selected.noIndex,
+    })
+  }, [selected])
+
+  const save = async () => {
+    setMsg('Saving…')
+    const payload = {
+      path: draft.path,
+      titleEn: draft.titleEn || null,
+      titleIs: draft.titleIs || null,
+      descriptionEn: draft.descriptionEn || null,
+      descriptionIs: draft.descriptionIs || null,
+      noIndex: draft.noIndex,
+    }
+    const res = await fetch(creating || !selected ? '/api/admin/seo' : `/api/admin/seo/${selected.id}`, {
+      method: creating || !selected ? 'POST' : 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.ok) {
+      setMsg(data?.message || 'Could not save the page')
+      return
+    }
+    setCreating(false)
+    setMsg('Saved')
+    await load()
+    if (data.page?.id) setSelId(data.page.id)
+  }
 
   return (
     <div className="grid min-h-0 lg:h-full lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px]">
       <div className="min-h-0 p-3 sm:p-6 lg:overflow-y-auto">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-base font-bold text-heading">Landing pages</h2>
-          <button className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary"><Plus size={15} /> New page</button>
+          <button
+            onClick={() => {
+              setCreating(true)
+              setSelId(null)
+              setDraft({ path: '/', titleEn: '', descriptionEn: '', titleIs: '', descriptionIs: '', noIndex: false })
+            }}
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary"
+          >
+            <Plus size={15} /> New page
+          </button>
         </div>
+        <p className="mt-2 text-xs text-muted">{msg}</p>
         <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
-          {PAGES.map((p) => (
-            <li key={p.slug}>
-              <button onClick={() => setSel(p)} className={`flex w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-150 ${sel.slug === p.slug ? 'bg-surface' : 'hover:bg-surface/60'}`}>
+          {pages.map((page) => (
+            <li key={page.id}>
+              <button onClick={() => { setCreating(false); setSelId(page.id) }} className={`flex w-full items-center gap-4 px-4 py-3 text-left ${selId === page.id && !creating ? 'bg-surface' : ''}`}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-heading">{p.title}</p>
-                  {p.published ? (
-                    <a href={`/en/${p.slug}`} className="truncate font-mono text-xs text-link hover:underline">/en/{p.slug}</a>
-                  ) : (
-                    <p className="truncate font-mono text-xs text-muted">/en/{p.slug}</p>
-                  )}
+                  <p className="truncate text-sm font-semibold text-heading">{page.titleEn || page.path}</p>
+                  <p className="truncate font-mono text-xs text-muted">{page.path}</p>
                 </div>
-                <span className="hidden whitespace-nowrap text-xs text-muted sm:inline">{p.lang}</span>
-                <span className={`shrink-0 sm:w-20 text-right text-xs font-semibold ${p.published ? 'text-success' : 'text-muted'}`}>{p.published ? 'Published' : 'Draft'}</span>
+                <span className={`shrink-0 text-xs font-semibold ${page.noIndex ? 'text-muted' : 'text-success'}`}>{page.noIndex ? 'No index' : 'Index'}</span>
               </button>
             </li>
           ))}
+          {pages.length === 0 && <li className="px-4 py-8 text-center text-sm text-muted">No SEO pages saved yet.</li>}
         </ul>
-        <p className="mt-3 text-xs text-muted">Sitemap, robots.txt, hreflang and canonical tags are generated from these settings.</p>
+        <p className="mt-3 text-xs text-muted">Titles and descriptions are stored on the SEO page record. Sitemap and robots still follow the published public routes.</p>
       </div>
 
       <aside className="min-h-0 border-t border-line bg-bg p-4 sm:p-6 lg:overflow-y-auto lg:border-l lg:border-t-0">
-        <p className="text-xs font-semibold text-muted">Editing</p>
-        <h2 className="font-display text-lg font-bold text-heading">{sel.title}</h2>
-        <div className="mt-4 inline-flex rounded-lg border border-line p-0.5 text-xs font-semibold">
-          <span className="rounded-md bg-navy px-3 py-1.5 text-white dark:bg-white dark:text-navy">English</span>
-          <span className="px-3 py-1.5 text-muted">Íslenska</span>
-        </div>
-        <label className="mt-5 block">
-          <span className="flex justify-between text-xs font-semibold text-muted">SEO title <span className={title.length > 60 ? 'text-error' : ''}>{title.length}/60</span></span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
+        <p className="text-xs font-semibold text-muted">{creating ? 'New page' : 'Editing'}</p>
+        <label className="mt-4 block text-xs font-semibold text-muted">Path<input value={draft.path} onChange={(event) => setDraft({ ...draft, path: event.target.value })} className={inputClass} /></label>
+        <label className="mt-4 block text-xs font-semibold text-muted">SEO title · English <span className={draft.titleEn.length > 60 ? 'text-error' : ''}>{draft.titleEn.length}/60</span><input value={draft.titleEn} onChange={(event) => setDraft({ ...draft, titleEn: event.target.value })} className={inputClass} /></label>
+        <label className="mt-4 block text-xs font-semibold text-muted">Meta description · English <span className={draft.descriptionEn.length > 160 ? 'text-error' : ''}>{draft.descriptionEn.length}/160</span><textarea rows={3} value={draft.descriptionEn} onChange={(event) => setDraft({ ...draft, descriptionEn: event.target.value })} className={inputClass} /></label>
+        <label className="mt-4 block text-xs font-semibold text-muted">SEO title · Icelandic<input value={draft.titleIs} onChange={(event) => setDraft({ ...draft, titleIs: event.target.value })} className={inputClass} /></label>
+        <label className="mt-4 block text-xs font-semibold text-muted">Meta description · Icelandic<textarea rows={3} value={draft.descriptionIs} onChange={(event) => setDraft({ ...draft, descriptionIs: event.target.value })} className={inputClass} /></label>
+        <label className="mt-4 flex items-center justify-between text-sm text-heading">
+          Hide from search engines
+          <input type="checkbox" checked={draft.noIndex} onChange={(event) => setDraft({ ...draft, noIndex: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" />
         </label>
-        <label className="mt-4 block">
-          <span className="flex justify-between text-xs font-semibold text-muted">Meta description <span className={desc.length > 160 ? 'text-error' : ''}>{desc.length}/160</span></span>
-          <textarea rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
-        </label>
-        <label className="mt-4 block">
-          <span className="text-xs font-semibold text-muted">URL slug</span>
-          <div className="mt-1 flex rounded-lg border border-input-line bg-input text-sm">
-            <span className="border-r border-input-line px-3 py-2 text-muted">/en/</span>
-            <input key={sel.slug} defaultValue={sel.slug} className="w-full bg-transparent px-3 py-2 text-heading outline-none" />
-          </div>
-        </label>
-        <div className="mt-4 space-y-2">
-          {[['Allow search engines to index', sel.index], ['Published', sel.published]].map(([l, v]) => (
-            <label key={String(l)} className="flex items-center justify-between text-sm text-heading">
-              {l} <input type="checkbox" key={sel.slug + l} defaultChecked={Boolean(v)} className="h-4 w-4 accent-[var(--mint)]" />
-            </label>
-          ))}
+        <div className="mt-6 rounded-lg border border-line bg-white p-4">
+          <p className="truncate text-xs text-[#4d5156]">icelandtaxibooking.com{draft.path || '/'}</p>
+          <p className="mt-1 truncate text-lg text-[#1a0dab]">{draft.titleEn || 'Untitled'}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-[#4d5156]">{draft.descriptionEn}</p>
         </div>
-
-        <p className="mt-6 text-xs font-semibold text-muted">Search preview</p>
-        <div className="mt-2 rounded-lg border border-line bg-white p-4">
-          <p className="truncate text-xs text-[#4d5156]">icelandtaxibooking.com › en › {sel.slug}</p>
-          <p className="mt-1 truncate text-lg text-[#1a0dab]">{title}</p>
-          <p className="mt-1 line-clamp-2 text-sm text-[#4d5156]">{desc}</p>
-        </div>
-        <button className="mt-6 w-full rounded-lg bg-primary py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Save page</button>
+        <button onClick={save} className="mt-6 w-full rounded-lg bg-primary py-2.5 text-sm font-bold text-on-primary">Save page</button>
       </aside>
     </div>
   )

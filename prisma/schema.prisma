@@ -310,6 +310,7 @@ model Announcement {
   textEn      String
   textIs      String?
   href        String?
+  linkLabel   String?
   enabled     Boolean  @default(true)
   sortOrder   Int      @default(0)
   startsAt    DateTime?
@@ -345,7 +346,30 @@ model ThemeSettings {
   defaultMode        ThemeMode @default(LIGHT)
   darkModeEnabled    Boolean   @default(true)
   adminCanOverride   Boolean   @default(true)
+  /// Brand colours, light/dark switches, per-surface defaults, and the site language.
+  appearance         Json?
+  /// Announcement bar settings. Items stay on Announcement. Null until an admin saves the bar.
+  announcementBar    Json?
   updatedAt          DateTime  @updatedAt
+}
+
+/// Blog posts and travel guides an admin can create and edit. Seed copy is the fallback until a row exists.
+model EditorialPost {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  /// blog | guide
+  kind      String   @default("blog")
+  title     String
+  excerpt   String   @default("")
+  /// Paragraphs separated by a blank line.
+  body      String   @default("")
+  tag       String?
+  dateLabel String?
+  minutes   String?
+  imageUrl  String?
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ExchangeRate {

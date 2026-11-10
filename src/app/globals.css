@@ -126,15 +126,15 @@ html.itb-welcome {
 
 .itb-splash-logo {
   display: block;
-  width: min(16rem, 72vw);
-  max-height: 58dvh;
+  width: min(13.25rem, 60vw);
+  max-height: 46dvh;
   height: auto;
   object-fit: contain;
 }
 
 @media (min-width: 640px) {
   .itb-splash-logo {
-    width: 22rem;
+    width: 17.5rem;
   }
 }
 

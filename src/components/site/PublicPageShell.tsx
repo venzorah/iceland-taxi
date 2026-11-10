@@ -72,7 +72,7 @@ export function PublicPageShell({
           onMobileBack={onHome}
           announcements={announcements}
         />
-        <div className="page-shell">
+        <div className="page-shell break-words leading-relaxed">
           {children}
           {!hideFooter && (
             <SiteFooter onStaff={onStaff} onStaffMobile={onStaffMobile} onDriver={onDriver} onAccount={onAccount} />

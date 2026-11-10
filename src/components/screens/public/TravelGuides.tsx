@@ -70,7 +70,7 @@ export default function TravelGuides(props: Props) {
               <div className="min-w-0 py-1">
                 <p className="text-xs font-semibold text-muted">{g.minutes} read</p>
                 <h2 className="mt-1 font-display text-lg font-bold text-heading">{g.title}</h2>
-                <p className="mt-1 line-clamp-2 text-sm text-muted">{g.body}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{g.body}</p>
                 <button type="button" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-link hover:underline">
                   Open guide <ArrowRight size={14} />
                 </button>

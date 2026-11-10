@@ -34,7 +34,7 @@ export function AppTabBar({ tabs, active, hideFrom = 'md' }: { tabs: AppTab[]; a
               <span className="grid h-10 w-14 place-items-center rounded-full bg-primary text-on-primary">
                 <Icon size={20} strokeWidth={2.4} />
               </span>
-              <span className="max-w-full truncate text-[11px] font-semibold leading-tight text-heading">{t.label}</span>
+              <span className="max-w-full text-center text-[11px] font-semibold leading-tight text-heading">{t.label}</span>
             </>
           ) : (
             <>
@@ -45,10 +45,10 @@ export function AppTabBar({ tabs, active, hideFrom = 'md' }: { tabs: AppTab[]; a
                 )}
                 {t.dot && !t.badge && <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-mint" />}
               </span>
-              <span className={`max-w-full truncate px-0.5 text-[11px] leading-tight ${on ? 'font-bold text-heading' : 'font-medium text-muted'}`}>{t.label}</span>
+              <span className={`max-w-full px-0.5 text-center text-[11px] leading-tight ${on ? 'font-bold text-heading' : 'font-medium text-muted'}`}>{t.label}</span>
             </>
           )
-          const cls = 'flex min-h-11 w-full min-w-0 flex-col items-center gap-0.5 overflow-hidden px-0.5 pb-1 transition-transform duration-100 ease-out active:scale-[0.94]'
+          const cls = 'flex min-h-11 w-full min-w-0 flex-col items-center gap-0.5 px-0.5 pb-1 transition-transform duration-100 ease-out active:scale-[0.94]'
           return (
             <li key={t.id}>
               {t.href ? (

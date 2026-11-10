@@ -54,7 +54,7 @@ export default function Homepage(props: Props) {
     <div className={th === 'dark' ? 'dark' : ''}>
       <div className="bg-bg pb-[calc(5.5rem+env(safe-area-inset-bottom))] font-sans text-text md:pb-0">
         <SiteHeader theme={th} language={lang} currency={cur} onThemeChange={onThemeChange} onLanguageChange={onLanguageChange} onCurrencyChange={onCurrencyChange} onBook={book} onSignIn={onSignIn} announcements={announcements} />
-        <div className="page-shell">
+        <div className="page-shell break-words leading-relaxed">
 
         {/* Hero */}
         <HeroCarousel language={lang} autoplay={autoplay} onSearch={onSearch} />
@@ -72,7 +72,7 @@ export default function Homepage(props: Props) {
             </div>
             <div>
               <p className="flex items-center gap-2 text-sm font-semibold text-mint-text"><Plane size={16} /> Keflavík International Airport</p>
-              <h2 className="mt-3 font-display text-2xl font-bold text-heading sm:text-4xl">Airport transfers, met at arrivals</h2>
+              <h2 className="mt-3 text-balance font-display text-2xl font-bold leading-tight text-heading sm:text-4xl">Airport transfers, met at arrivals</h2>
               <p className="mt-4 text-base leading-relaxed text-muted">
                 Private transfers between KEF, Reykjavík, the Blue Lagoon and hotels across the southwest. Add your flight number and your driver follows your arrival time.
               </p>
@@ -80,7 +80,7 @@ export default function Homepage(props: Props) {
                 {AIRPORT_ROUTES.map((r) => (
                   <li key={r.from + r.to} onClick={book} className="flex cursor-pointer items-center gap-4 py-4 active:bg-surface sm:cursor-auto sm:active:bg-transparent">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-heading">{r.from} → {r.to}</p>
+                      <p className="font-semibold leading-snug text-heading">{r.from} → {r.to}</p>
                       <p className="mt-0.5 text-sm text-muted">{r.minutes} min · {r.km} km</p>
                     </div>
                     <div className="text-right">
@@ -144,7 +144,7 @@ export default function Homepage(props: Props) {
               <p className="mt-4 max-w-lg text-base leading-relaxed text-white/80">
                 Keep the same driver and vehicle for a few hours or several days. Plan your itinerary together, or ask for a custom quotation.
               </p>
-              <div className="no-scrollbar mt-8 flex w-full min-w-0 gap-2 overflow-x-auto overscroll-x-contain sm:flex-wrap sm:overflow-visible">
+              <div className="mt-8 flex w-full min-w-0 flex-wrap gap-2">
                 {['2 hours', '4 hours', '8 hours', 'Full day', 'Multi-day'].map((d) => (
                   <span key={d} className="whitespace-nowrap rounded-full border border-white/25 px-4 py-2 text-sm font-medium text-white">{d}</span>
                 ))}

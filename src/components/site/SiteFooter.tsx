@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Mail, MessageCircle } from 'lucide-react'
 
+import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
 import { LOGO_DARK } from '@/lib/design/data'
 import { FOOTER_COLUMNS } from '@/lib/design/routes'
 import { whatsappHref } from '@/lib/whatsapp'
@@ -15,12 +16,6 @@ export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { on
       .then((d) => setCompany(d.company || null))
       .catch(() => {})
   }, [])
-  const portals: [string, (() => void) | undefined][] = [
-    ['Customer account', onAccount],
-    ['Driver portal', onDriver],
-    ['Admin (desktop)', onStaff],
-    ['Admin (mobile)', onStaffMobile],
-  ]
   return (
     <footer className="bg-navy text-white">
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-6 sm:py-16 lg:px-8">
@@ -61,18 +56,7 @@ export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { on
           </div>
         </div>
         <div className="mt-12 border-t border-white/15 pt-6 sm:mt-14">
-          <p className="text-xs font-semibold text-white/60">Portals</p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-            {portals.map(([label, go]) => (
-              <button
-                key={label}
-                onClick={go}
-                className="whitespace-nowrap rounded-xl border border-white/15 px-3 py-2.5 text-left text-sm font-semibold text-white/85 transition-colors duration-150 hover:border-white/30 hover:text-cyan active:bg-white/10 sm:rounded-full sm:px-4 sm:py-2"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <DemoPortalButtons tone="dark" />
           <p className="mt-6 text-xs text-white/60">© {new Date().getFullYear()} Iceland Taxi Booking</p>
         </div>
       </div>

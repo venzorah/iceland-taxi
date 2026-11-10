@@ -104,10 +104,10 @@ export function visibleAnnouncements(state: AnnouncementState) {
   return state.items.filter((a) => statusOf(a) === 'live')
 }
 
-/** Seconds per loop, scaled to how much text there is so the reading pace stays constant. */
+/** Seconds per loop. Normal is a little quicker than the original 14 characters per second. */
 export function loopSeconds(chars: number, speed: BarSpeed) {
-  const charsPerSecond = speed === 'slow' ? 9 : speed === 'fast' ? 20 : 14
-  return Math.max(12, Math.round(chars / charsPerSecond))
+  const charsPerSecond = speed === 'slow' ? 12 : speed === 'fast' ? 28 : 20
+  return Math.max(8, Math.round(chars / charsPerSecond))
 }
 
 export const BAR_STYLES: Record<BarStyle, { label: string; bar: string; link: string; dot: string }> = {

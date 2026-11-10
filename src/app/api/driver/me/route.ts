@@ -1,8 +1,7 @@
-import { jsonError, jsonOk } from '@/lib/api'
+import { jsonOk } from '@/lib/api'
 import { getDemoDriver } from '@/lib/auth/demo'
 
 export async function GET() {
-  if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const driver = await getDemoDriver()
   if (!driver) {
     return jsonOk({

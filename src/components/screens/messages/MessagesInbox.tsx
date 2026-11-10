@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { ChevronLeft, MessageCircle, Search, Send } from 'lucide-react'
 
+import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { rememberAlertAudience } from '@/lib/alerts/client'
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
 import type { AnnouncementState } from '@/lib/design/announcements'
@@ -54,6 +56,7 @@ export default function MessagesInbox(props: Props) {
   const [waNumber, setWaNumber] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [q, setQ] = useState('')
+  useArmMessageSoundOnPointer()
 
   const thread = threads.find((t) => t.ref === active || t.id === active)
 
@@ -89,6 +92,15 @@ export default function MessagesInbox(props: Props) {
     setMessages(data.messages || [])
     setNote(null)
   }, [ensureSession, role])
+
+  useEffect(() => {
+    rememberAlertAudience(role === 'staff' ? 'staff' : 'customer')
+  }, [role])
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref')
+    if (ref) setActive(ref)
+  }, [])
 
   useEffect(() => {
     loadThreads()
@@ -157,6 +169,7 @@ export default function MessagesInbox(props: Props) {
             <div>
               <h1 className="font-display text-2xl font-bold text-heading">{isStaff ? 'Staff inbox' : 'Messages'}</h1>
               <p className="text-sm text-muted">{isStaff ? 'Booking threads assigned to operations and support' : 'Conversations linked to your bookings and quotations'}</p>
+              <MessageAlertControl className="mt-3" />
               {note && <p className="mt-1 text-xs text-muted">{note}</p>}
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -193,6 +206,7 @@ export default function MessagesInbox(props: Props) {
                   <button onClick={() => { setRole('customer'); setActive(null) }} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${!isStaff ? 'bg-navy text-white' : 'border border-line text-muted'}`}>Customer</button>
                   <button onClick={() => { setRole('staff'); setActive(null) }} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${isStaff ? 'bg-navy text-white' : 'border border-line text-muted'}`}>Staff</button>
                 </div>
+                <MessageAlertControl className="mt-3 md:hidden" />
               </div>
               <ul className="flex-1 overflow-y-auto">
                 {filtered.map((t) => (

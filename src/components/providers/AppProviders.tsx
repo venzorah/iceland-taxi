@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { MessageAlerts } from '@/components/alerts/MessageAlerts'
 import { ANNOUNCEMENTS_SEED, type AnnouncementState } from '@/lib/design/announcements'
 import type { Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
@@ -58,7 +59,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     [theme, language, currency, customerCategory, announcements, setTheme, go],
   )
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+  return (
+    <AppContext.Provider value={value}>
+      <MessageAlerts />
+      {children}
+    </AppContext.Provider>
+  )
 }
 
 export function useAppPrefs() {

@@ -359,3 +359,21 @@ model IntegrationStatus {
   lastError String?
   updatedAt DateTime @updatedAt
 }
+
+/// Browser Web Push subscription. Never stores message bodies.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  endpoint   String
+  p256dh     String
+  auth       String
+  /// staff | customer | driver
+  audience   String
+  guestEmail String?
+  driverId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([endpoint, audience])
+  @@index([audience, guestEmail])
+  @@index([audience, driverId])
+}

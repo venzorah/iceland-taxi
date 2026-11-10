@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Download, MessageCircle, Pencil, Send, XCircle } from 'lucide-react'
 
+import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { rememberAlertAudience } from '@/lib/alerts/client'
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { IMG, formatPrice, type Currency } from '@/lib/design/data'
@@ -56,6 +58,7 @@ export default function CustomerDashboard(props: Props) {
   const [chat, setChat] = useState<ChatMsg[]>([])
   const [draft, setDraft] = useState('')
   const [waNumber, setWaNumber] = useState<string | null>(null)
+  useArmMessageSoundOnPointer()
 
   const loadChat = useCallback(async () => {
     await fetch('/api/auth/demo', {
@@ -68,6 +71,7 @@ export default function CustomerDashboard(props: Props) {
   }, [])
 
   useEffect(() => {
+    rememberAlertAudience('customer')
     loadChat()
     const t = setInterval(loadChat, 5000)
     fetch('/api/company')
@@ -98,6 +102,7 @@ export default function CustomerDashboard(props: Props) {
             <div>
               <p className="text-sm text-muted">Welcome back</p>
               <h1 className="font-display text-2xl font-bold text-heading sm:text-3xl">Emma Larsen</h1>
+              <MessageAlertControl className="mt-3" />
             </div>
             <div className="hidden gap-2 sm:flex">
               <button className="whitespace-nowrap rounded-full border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading">Request a custom trip</button>

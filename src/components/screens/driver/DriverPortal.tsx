@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Briefcase, History, LogIn, Moon, Navigation, Phone, Plane, StickyNote, Sun, Users, CalendarDays } from 'lucide-react'
 
+import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { armMessageSound, rememberAlertAudience } from '@/lib/alerts/client'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 
 export const viewport = 'mobile'
@@ -60,6 +62,7 @@ export default function DriverPortal(props: Props) {
   const [email, setEmail] = useState('ari.driver@example.local')
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  useArmMessageSoundOnPointer()
 
   const load = useCallback(async () => {
     const me = await fetch('/api/driver/me').then((r) => r.json())
@@ -78,10 +81,15 @@ export default function DriverPortal(props: Props) {
   }, [])
 
   useEffect(() => {
+    if (driver) rememberAlertAudience('driver')
+  }, [driver])
+
+  useEffect(() => {
     load()
   }, [load])
 
   const login = async () => {
+    armMessageSound()
     setBusy(true)
     setMsg(null)
     try {
@@ -187,6 +195,7 @@ export default function DriverPortal(props: Props) {
               <div>
                 <p className="text-sm text-muted">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {driver.displayName}</p>
                 <h1 className="font-display text-2xl font-bold text-heading lg:text-3xl">Next pickup</h1>
+                <MessageAlertControl className="mt-3" />
                 {msg && <p className="mt-2 text-sm text-error">{msg}</p>}
 
                 {!primary ? (

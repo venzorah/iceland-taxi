@@ -126,7 +126,72 @@ export async function postMessage(opts: {
 
   await prisma.booking.update({ where: { id: booking.id }, data: { updatedAt: new Date() } })
 
+  const { pushMessageAlert } = await import('@/lib/push/send')
+  void pushMessageAlert({
+    bookingRef: booking.ref,
+    messageId: message.id,
+    authorRole: message.authorRole,
+    guestEmail: booking.guestEmail,
+    driverId: booking.driverId,
+  }).catch(() => {})
+
   return { ok: true as const, message }
+}
+
+export type MessageAlertItem = { id: string; bookingRef: string; href: string }
+
+/** Unread alerts for the signed-in surfaces. Ids and booking refs only. */
+export async function listMessageAlerts(viewer: {
+  staff: boolean
+  guestEmail: string | null
+  driverId: string | null
+}) {
+  const roles: string[] = []
+  const items = new Map<string, MessageAlertItem>()
+
+  const add = (id: string, bookingRef: string | undefined, href: string) => {
+    if (!bookingRef || items.has(id)) return
+    items.set(id, { id, bookingRef, href })
+  }
+
+  if (viewer.staff) {
+    roles.push('staff')
+    const rows = await prisma.message.findMany({
+      where: { unread: true, authorRole: 'customer', bookingId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, booking: { select: { ref: true } } },
+    })
+    for (const row of rows) add(row.id, row.booking?.ref, `/messages?ref=${encodeURIComponent(row.booking?.ref || '')}`)
+  }
+
+  if (viewer.guestEmail) {
+    roles.push('customer')
+    const rows = await prisma.message.findMany({
+      where: {
+        unread: true,
+        authorRole: 'staff',
+        booking: { guestEmail: { equals: viewer.guestEmail, mode: 'insensitive' } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, booking: { select: { ref: true } } },
+    })
+    for (const row of rows) add(row.id, row.booking?.ref, `/messages?ref=${encodeURIComponent(row.booking?.ref || '')}`)
+  }
+
+  if (viewer.driverId) {
+    roles.push('driver')
+    const rows = await prisma.message.findMany({
+      where: { unread: true, booking: { driverId: viewer.driverId } },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, booking: { select: { ref: true } } },
+    })
+    for (const row of rows) add(row.id, row.booking?.ref, '/driver')
+  }
+
+  return { viewer: roles.join('+') || 'none', items: [...items.values()] }
 }
 
 export async function markThreadRead(bookingRef: string, reader: 'staff' | 'customer') {

@@ -103,12 +103,16 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 | `GET /api/driver/me` · `GET/PATCH /api/driver/bookings` | Assigned jobs + journey status advances |
 | `GET/POST /api/auth/demo` | Demo staff / guest messaging session cookies |
 | `GET/POST /api/messages` · `GET/PATCH /api/messages/[ref]` | Booking-linked threads (polling ~4s); staff or guest email gate |
+| `GET /api/messages/alerts` | Unread alert ids and booking refs only (no message text) |
+| `GET /api/push/config` · `POST /api/push/subscribe` | Optional Web Push. Needs `VAPID_*` |
 | `GET/PATCH /api/admin/company` | Company CMS incl. `whatsappE164` (null until set — never invented) |
 
 ### Driver & messaging notes
 
 - Driver portal is **ops-only**: acknowledge → en route → in progress → completed. No admin catalogue powers. Double-assign conflicts reuse availability checks.
 - Messaging is **in-app** with HTTP polling (not claimed as WhatsApp Business API sync). Conversations are keyed to booking refs.
+- A new message plays `/sounds/message.wav` after the person turns alerts on or taps inside messages, account, admin, or the driver portal. The same event shows an in-app banner. If they allow notifications, a backgrounded tab uses the service worker to put **New message on &lt;booking ref&gt;** at the top of the phone. The private message text is not included and is not cached in the service worker.
+- Background delivery when the site is fully closed needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` (`mailto:` or `https:` you control). Without them, sound and notifications still work while the site is open. Generate keys with `npx web-push generate-vapid-keys`. Do not commit the private key.
 - WhatsApp buttons use `CompanySettings.whatsappE164` when set; otherwise `wa.me/?text=…` with booking ref only (no fake number).
 
 ### Teya sandbox checkout
@@ -158,6 +162,7 @@ Repo layout is a **single Next.js app at the repository root** (`package.json`, 
    - `DATABASE_URL` — Postgres connection string (required for live booking/admin persistence; UI still boots without it)
    - `NEXT_PUBLIC_APP_URL` — public site URL (payment return links)
    - Optional: `GOOGLE_MAPS_API_KEY`, `TEYA_CLIENT_ID`, `TEYA_CLIENT_SECRET`, `TEYA_STORE_ID`, `TEYA_ENVIRONMENT` (`sandbox` only), `TEYA_WEBHOOK_PUBLIC_KEY`
+   - Optional Web Push: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
 5. After first deploy, open Admin and set company contact fields (phone/email/WhatsApp/address) — never invent them in code.
 6. If a deployment fails with a React Server Components / Next security gate, upgrade `next` to a patched release (see Vercel automated CVE PRs) before redeploying.
 

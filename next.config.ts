@@ -1,0 +1,18 @@
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'cdn.magicpatterns.com' },
+      { protocol: 'https', hostname: 'fonts.googleapis.com' },
+      { protocol: 'https', hostname: 'fonts.gstatic.com' },
+    ],
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+}
+
+export default nextConfig

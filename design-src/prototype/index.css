@@ -1,0 +1,114 @@
+/* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORT — DO NOT DELETE THIS COMMENT */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORT MUST NEVER BE DELETED — DO NOT DELETE THIS COMMENT */
+@import 'tailwindcss';
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Iceland Taxi Booking — central design tokens (light is default) */
+:root {
+  --navy: #061b3a;
+  --navy-2: #0b294f;
+  --bg: #ffffff;
+  --surface: #f4f7fb;
+  --card: #ffffff;
+  --heading: #061b3a;
+  --text: #1d2f4a;
+  --muted: #5a6b82;
+  --primary: #ffc400;
+  --primary-hover: #ffd23f;
+  --on-primary: #061b3a;
+  --mint: #00cfa5;
+  --mint-text: #007a62;
+  --cyan: #00aeef;
+  --link: #0073a3;
+  --border: #e3e9f1;
+  --input: #ffffff;
+  --input-border: #cfd8e4;
+  --focus: #00aeef;
+  --success: #007a62;
+  --warning: #9a6a00;
+  --error: #c62f3d;
+}
+
+.dark {
+  --bg: #061b3a;
+  --surface: #0b294f;
+  --card: #0e2f5a;
+  --heading: #ffffff;
+  --text: #dbe5f3;
+  --muted: #9bb0cc;
+  --mint-text: #00cfa5;
+  --link: #00aeef;
+  --border: #1a3c68;
+  --input: #0b294f;
+  --input-border: #24507f;
+  --success: #00cfa5;
+  --warning: #ffc400;
+  --error: #ff7a85;
+}
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-heading: var(--heading);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-mint: var(--mint);
+  --color-mint-text: var(--mint-text);
+  --color-cyan: var(--cyan);
+  --color-link: var(--link);
+  --color-line: var(--border);
+  --color-input: var(--input);
+  --color-input-line: var(--input-border);
+  --color-focus: var(--focus);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --font-display: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Native-app feel on touch devices */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+button,
+a,
+label,
+[role='tab'] {
+  touch-action: manipulation;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.pb-safe {
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+}
+@media (max-width: 767px) {
+  /* 16px stops iOS from zooming into a field on focus */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

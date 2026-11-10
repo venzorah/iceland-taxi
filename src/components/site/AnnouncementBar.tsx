@@ -19,6 +19,9 @@ export function AnnouncementBar({ state, language = 'en' }: Props) {
   const s = BAR_STYLES[state.settings.style]
   const textOf = (text: string, textIs: string) => (language === 'is' && textIs ? textIs : text)
   const chars = items.reduce((n, a) => n + textOf(a.text, a.textIs).length + a.linkLabel.length + 8, 0)
+  const seconds = loopSeconds(chars, state.settings.speed)
+  // Phones only. 80% of the desktop loop is a little faster (homepage seed: 15s → 12s).
+  const mobileSeconds = Math.max(6, Math.round(seconds * 0.8))
 
   const copy = (hidden: boolean) => (
     <ul aria-hidden={hidden || undefined} className="flex min-w-full shrink-0 items-center justify-around">
@@ -46,7 +49,10 @@ export function AnnouncementBar({ state, language = 'en' }: Props) {
       <div
         className="itb-marquee-track flex w-max min-w-full max-w-none"
         data-pause={state.settings.pauseOnHover ? 'true' : 'false'}
-        style={{ ['--itb-loop' as string]: `${loopSeconds(chars, state.settings.speed)}s` }}
+        style={{
+          ['--itb-loop' as string]: `${seconds}s`,
+          ['--itb-loop-mobile' as string]: `${mobileSeconds}s`,
+        }}
       >
         {copy(false)}
         {copy(true)}
@@ -59,6 +65,9 @@ const MARQUEE_CSS = `
 @keyframes itb-marquee { from { transform: translate3d(0,0,0) } to { transform: translate3d(-50%,0,0) } }
 .itb-marquee { max-width: 100%; }
 .itb-marquee-track { animation: itb-marquee var(--itb-loop, 30s) linear infinite; will-change: transform; }
+@media (max-width: 767px) {
+  .itb-marquee-track { animation-duration: var(--itb-loop-mobile, var(--itb-loop, 30s)); }
+}
 .itb-marquee:hover .itb-marquee-track[data-pause="true"],
 .itb-marquee:focus-within .itb-marquee-track { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {

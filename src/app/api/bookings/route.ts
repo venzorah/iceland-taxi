@@ -1,38 +1,80 @@
 import { z } from 'zod'
-import { TODAY_BOOKINGS } from '@/lib/design/opsData'
 import { jsonError, jsonOk, prisma, withDb } from '@/lib/api'
+import { createBooking, toOpsBooking } from '@/lib/booking/service'
+import { TODAY_BOOKINGS } from '@/lib/design/opsData'
 
 const createSchema = z.object({
   guestName: z.string().min(1),
   guestEmail: z.string().email(),
   guestPhone: z.string().optional(),
+  serviceId: z.string().optional(),
+  routeId: z.string().optional(),
   serviceLabel: z.string().min(1),
   routeLabel: z.string().min(1),
-  pickupAt: z.string().datetime().optional(),
+  pickupAt: z.string().datetime().optional().nullable(),
   passengers: z.number().int().positive().default(1),
   luggage: z.number().int().nonnegative().default(0),
   flightNumber: z.string().optional(),
-  currency: z.enum(['USD', 'ISK']),
-  amountSnapshot: z.number().int().nonnegative(),
-  customerCategory: z.enum(['INTERNATIONAL', 'RESIDENT']).default('INTERNATIONAL'),
+  vehicleId: z.string().optional(),
+  vehicleLabel: z.string().optional(),
+  driverId: z.string().optional(),
+  notes: z.string().optional(),
+  isQuote: z.boolean().optional(),
+  extras: z
+    .object({
+      childSeat: z.boolean().optional(),
+      returnTrip: z.boolean().optional(),
+      meetGreet: z.boolean().optional(),
+    })
+    .optional(),
+  quote: z.object({
+    baseIsk: z.number().int().nonnegative(),
+    vehicleUpgradeIsk: z.number().int().nonnegative().optional(),
+    vehicleLabel: z.string().optional(),
+    extras: z
+      .object({
+        childSeat: z.boolean().optional(),
+        returnTrip: z.boolean().optional(),
+        meetGreet: z.boolean().optional(),
+      })
+      .optional(),
+    childSeatIsk: z.number().int().optional(),
+    meetGreetIsk: z.number().int().optional(),
+    durationMinutes: z.number().int().positive().optional(),
+    customerCategory: z.enum(['INTERNATIONAL', 'RESIDENT', 'international', 'resident']),
+    currency: z.enum(['USD', 'ISK']).optional(),
+    iskPerUsd: z.number().positive().optional(),
+    depositPct: z.number().min(0).max(100).optional(),
+  }),
+  awaitPaymentWithoutGateway: z.boolean().optional().default(true),
 })
 
-function makeRef() {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let out = 'ITB-'
-  for (let i = 0; i < 6; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)]
-  return out
-}
+export async function GET(req: Request) {
+  const url = new URL(req.url)
+  const email = url.searchParams.get('email') || undefined
+  const ref = url.searchParams.get('ref') || undefined
 
-export async function GET() {
   const data = await withDb(
     async () => {
-      const bookings = await prisma.booking.findMany({ orderBy: { createdAt: 'desc' }, take: 50 })
-      return { source: 'database' as const, bookings }
+      const bookings = await prisma.booking.findMany({
+        where: {
+          ...(email ? { guestEmail: email } : {}),
+          ...(ref ? { ref } : {}),
+        },
+        include: { driver: true, vehicle: true, payments: true },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      })
+      return {
+        source: 'database' as const,
+        bookings,
+        ops: bookings.map(toOpsBooking),
+      }
     },
     () => ({
       source: 'seed-fallback' as const,
       bookings: TODAY_BOOKINGS,
+      ops: TODAY_BOOKINGS,
       note: 'DATABASE_URL unset or unreachable — serving design ops seed fallback.',
     }),
   )
@@ -47,41 +89,24 @@ export async function POST(req: Request) {
   }
 
   if (!process.env.DATABASE_URL) {
-    return jsonOk(
-      {
-        ok: true,
-        source: 'stub',
-        booking: {
-          ref: makeRef(),
-          status: 'PENDING',
-          ...parsed.data,
-        },
-        note: 'DATABASE_URL unset — booking accepted as in-memory stub only.',
-      },
-      { status: 201 },
-    )
+    return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required to create bookings')
   }
 
   try {
-    const booking = await prisma.booking.create({
-      data: {
-        ref: makeRef(),
-        guestName: parsed.data.guestName,
-        guestEmail: parsed.data.guestEmail,
-        guestPhone: parsed.data.guestPhone,
-        serviceLabel: parsed.data.serviceLabel,
-        routeLabel: parsed.data.routeLabel,
-        pickupAt: parsed.data.pickupAt ? new Date(parsed.data.pickupAt) : null,
-        passengers: parsed.data.passengers,
-        luggage: parsed.data.luggage,
-        flightNumber: parsed.data.flightNumber,
-        currency: parsed.data.currency,
-        amountSnapshot: parsed.data.amountSnapshot,
-        customerCategory: parsed.data.customerCategory,
-        status: 'PENDING',
+    const result = await createBooking(parsed.data)
+    if (!result.ok) {
+      return jsonError(409, result.code, result.message, { conflicts: result.conflicts })
+    }
+    return jsonOk(
+      {
+        ok: true,
+        source: 'database',
+        booking: result.booking,
+        quote: result.quote,
+        ops: toOpsBooking(result.booking),
       },
-    })
-    return jsonOk({ ok: true, source: 'database', booking }, { status: 201 })
+      { status: 201 },
+    )
   } catch (error) {
     console.error(error)
     return jsonError(503, 'DATABASE_ERROR', 'Could not create booking')

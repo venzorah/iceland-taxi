@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 import { Input, Panel, Select } from './Services'
@@ -11,13 +11,72 @@ const SEASONS = [
   { name: 'Christmas & New Year', range: '20 Dec – 2 Jan', adj: '+25%' },
 ]
 
+type Extra = { id: string; key: string; labelEn: string; isk: number; active: boolean }
+
 export function Pricing() {
   const [rate, setRate] = useState(138)
   const [usd, setUsd] = useState(true)
   const [isk, setIsk] = useState(true)
+  const [extras, setExtras] = useState<Extra[]>([])
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/pricing')
+      const data = await res.json()
+      if (!data.ok) {
+        setMsg(data.message || 'Could not load pricing')
+        return
+      }
+      if (data.rate?.iskPerUsd) setRate(data.rate.iskPerUsd)
+      setExtras(data.extras || [])
+      setMsg(null)
+    } catch (e) {
+      console.error(e)
+      setMsg('Failed to load pricing')
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const save = async () => {
+    setMsg(null)
+    const rateRes = await fetch('/api/admin/pricing', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'rate', iskPerUsd: rate }),
+    })
+    const rateData = await rateRes.json()
+    if (!rateRes.ok || !rateData.ok) {
+      setMsg(rateData.message || 'Could not save rate')
+      return
+    }
+    for (const extra of extras) {
+      const res = await fetch('/api/admin/pricing', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          key: extra.key,
+          labelEn: extra.labelEn,
+          isk: extra.isk,
+          active: extra.active,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setMsg(data.message || `Could not save ${extra.key}`)
+        return
+      }
+    }
+    setMsg('Pricing saved')
+    await load()
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-3 sm:space-y-6 sm:p-6">
+      {msg && <p className="text-xs text-muted">{msg}</p>}
       <Panel title="Currencies" hint="Customers see the transaction currency before paying, and are charged in exactly that currency.">
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-3">
@@ -37,14 +96,14 @@ export function Pricing() {
               <span className="text-xs font-semibold text-muted">Exchange rate · ISK per 1 USD</span>
               <input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 font-display text-2xl font-bold text-heading outline-none focus:border-focus" />
             </label>
-            <p className="mt-2 text-xs text-muted">Set manually · last changed 12 Mar by Demo admin</p>
+            <p className="mt-2 text-xs text-muted">Persisted via admin pricing API · used for USD snapshots</p>
             <div className="mt-4 rounded-lg bg-surface p-4 text-sm">
               <p className="text-muted">Example: KEF → Reykjavík, 22.900 kr</p>
               <p className="mt-1 font-display text-xl font-bold text-heading">${Math.round(22900 / (rate || 1))} USD</p>
             </div>
             <div className="mt-4 flex gap-2 rounded-lg border border-line p-3 text-xs text-text">
               <AlertTriangle size={16} className="shrink-0 text-warning" />
-              Confirm your payment provider supports charging in both USD and ISK, and your payout currency, before enabling a currency.
+              Confirm Teya supports charging in both USD and ISK, and your payout currency, before enabling a currency.
             </div>
           </div>
         </div>
@@ -78,17 +137,33 @@ export function Pricing() {
 
       <Panel title="Optional extras">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Input label="Child seat" value="2.500 kr" />
-          <Input label="Meet & greet sign" value="Free" />
-          <Input label="Extra stop" value="4.900 kr" />
-          <Input label="Wi-Fi hotspot" value="1.900 kr / day" />
-          <Input label="Ski / bike rack" value="3.500 kr" />
-          <Input label="Pet transport" value="3.000 kr" />
+          {extras.length === 0 && (
+            <>
+              <Input label="Child seat" value="2.500 kr" />
+              <Input label="Meet & greet sign" value="Free" />
+              <Input label="Extra stop" value="4.900 kr" />
+            </>
+          )}
+          {extras.map((extra) => (
+            <label key={extra.id} className="block min-w-0">
+              <span className="text-xs font-semibold text-muted">{extra.labelEn}</span>
+              <input
+                type="number"
+                value={extra.isk}
+                onChange={(e) =>
+                  setExtras((list) =>
+                    list.map((x) => (x.id === extra.id ? { ...x, isk: Number(e.target.value) || 0 } : x)),
+                  )
+                }
+                className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus"
+              />
+            </label>
+          ))}
         </div>
       </Panel>
 
       <div className="flex justify-end pb-6">
-        <button className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Save pricing</button>
+        <button onClick={save} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Save pricing</button>
       </div>
     </div>
   )

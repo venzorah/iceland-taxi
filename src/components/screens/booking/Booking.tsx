@@ -32,11 +32,31 @@ export const argTypes = {
 
 type Props = Partial<typeof args> & {
   onBack?: () => void
-  onPay?: () => void
+  onPay?: (payload: BookingPayPayload) => void
   onThemeChange?: (t: 'light' | 'dark') => void
   onLanguageChange?: (l: Lang) => void
   onCurrencyChange?: (c: Currency) => void
   announcements?: AnnouncementState
+  confirmation?: {
+    ref: string
+    email: string
+    statusLabel: string
+    totalLabel: string
+  }
+}
+
+export type BookingPayPayload = {
+  category: string
+  currency: Currency
+  vehicle: string
+  extras: { childSeat: boolean; returnTrip: boolean; meetGreet: boolean }
+  flight: string
+  totalIsk: number
+  guestName: string
+  guestEmail: string
+  guestPhone: string
+  hotel: string
+  isQuote?: boolean
 }
 
 const VEHICLES = [
@@ -54,6 +74,10 @@ export default function Booking(props: Props) {
   const [vehicle, setVehicle] = useState('Standard Sedan')
   const [extras, setExtras] = useState({ childSeat: false, returnTrip: false, meetGreet: true })
   const [flight, setFlight] = useState('FI 615')
+  const [guestName, setGuestName] = useState('Emma Larsen')
+  const [guestEmail, setGuestEmail] = useState('emma.larsen@example.com')
+  const [guestPhone, setGuestPhone] = useState('+45 20 12 34 56')
+  const [hotel, setHotel] = useState('Hotel Borg, Pósthússtræti 11')
 
   const currency: Currency = category === 'international' ? 'USD' : (p.currency as Currency)
   const vehicleSpec = FLEET.find((v) => v.name === vehicle)!
@@ -72,13 +96,40 @@ export default function Booking(props: Props) {
   }, [vehicle, extras, p.pickup, p.destination])
   const total = lines.reduce((s, l) => s + l.isk, 0)
 
+  const payPayload = (): BookingPayPayload => ({
+    category,
+    currency,
+    vehicle,
+    extras,
+    flight,
+    totalIsk: total,
+    guestName,
+    guestEmail,
+    guestPhone,
+    hotel,
+  })
+  const submitPay = () => p.onPay?.(payPayload())
+  const submitQuote = () => p.onPay?.({ ...payPayload(), isQuote: true })
+
   return (
     <div className={th === 'dark' ? 'dark' : ''}>
       <div className="min-h-screen bg-surface font-sans text-text">
         <SiteHeader theme={th} language={p.language as Lang} currency={currency} onThemeChange={p.onThemeChange} onLanguageChange={p.onLanguageChange} onCurrencyChange={p.onCurrencyChange} onHome={p.onBack} mobileTitle={p.state === 'confirmed' ? 'Booking confirmed' : 'Checkout'} onMobileBack={p.onBack} announcements={p.announcements} />
 
         {p.state === 'confirmed' ? (
-          <Confirmed total={formatPrice(total, currency)} currency={currency} pickup={p.pickup} destination={p.destination} date={p.date} time={p.time} vehicle={vehicle} onBack={p.onBack} />
+          <Confirmed
+            total={p.confirmation?.totalLabel || formatPrice(total, currency)}
+            currency={currency}
+            pickup={p.pickup}
+            destination={p.destination}
+            date={p.date}
+            time={p.time}
+            vehicle={vehicle}
+            bookingRef={p.confirmation?.ref}
+            email={p.confirmation?.email || guestEmail}
+            statusLabel={p.confirmation?.statusLabel || 'Confirmed · awaiting driver assignment'}
+            onBack={p.onBack}
+          />
         ) : (
           <main className="mx-auto max-w-7xl px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-6 sm:pt-8 lg:px-8 lg:py-12">
             <button onClick={p.onBack} className="hidden items-center gap-2 text-sm font-semibold text-link hover:underline sm:inline-flex"><ArrowLeft size={16} /> Change search</button>
@@ -143,10 +194,22 @@ export default function Booking(props: Props) {
                 {/* Customer */}
                 <Section title="Your details">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Input label="Full name" defaultValue="Emma Larsen" />
-                    <Input label="Email" defaultValue="emma.larsen@example.com" />
-                    <Input label="Phone (with country code)" defaultValue="+45 20 12 34 56" />
-                    <Input label="Hotel or address (optional)" defaultValue="Hotel Borg, Pósthússtræti 11" />
+                    <label className="block">
+                      <span className="text-xs font-medium text-muted">Full name</span>
+                      <input value={guestName} onChange={(e) => setGuestName(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-medium text-muted">Email</span>
+                      <input value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-medium text-muted">Phone (with country code)</span>
+                      <input value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-medium text-muted">Hotel or address (optional)</span>
+                      <input value={hotel} onChange={(e) => setHotel(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                    </label>
                   </div>
                   <p className="mt-6 text-sm font-semibold text-heading">Where do you live?</p>
                   <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -195,8 +258,11 @@ export default function Booking(props: Props) {
                     You will be charged in <strong className="text-heading">{currency}</strong>.{currency === 'USD' && ` Rate used: 1 USD = ${ISK_PER_USD} ISK.`}
                   </p>
                   <p className="mt-1 text-xs text-muted">{vehicleSpec.name}: {vehicleSpec.pax} seats, {vehicleSpec.bags} bags</p>
-                  <button onClick={p.onPay} disabled={p.state === 'paying'} className="mt-6 hidden w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover disabled:opacity-70 lg:flex">
+                  <button onClick={submitPay} disabled={p.state === 'paying'} className="mt-6 hidden w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover disabled:opacity-70 lg:flex">
                     <Lock size={15} /> {p.state === 'paying' ? 'Processing payment…' : `Pay ${formatPrice(total, currency)}`}
+                  </button>
+                  <button onClick={submitQuote} disabled={p.state === 'paying'} className="mt-2 hidden w-full rounded-full border border-line py-3 text-sm font-semibold text-heading hover:bg-surface disabled:opacity-70 lg:block">
+                    Request a quotation instead
                   </button>
                   <p className="mt-3 text-xs text-muted lg:text-center">Free cancellation up to 24 hours before pickup</p>
                 </div>
@@ -210,7 +276,7 @@ export default function Booking(props: Props) {
                   <p className="text-xs text-muted">Total · {currency}</p>
                   <p className="font-display text-xl font-extrabold text-heading">{formatPrice(total, currency)}</p>
                 </div>
-                <button onClick={p.onPay} disabled={p.state === 'paying'} className="ml-auto flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-primary py-3.5 text-base font-bold text-on-primary transition-transform duration-100 ease-out active:scale-[0.98] disabled:opacity-70 sm:max-w-xs">
+                <button onClick={submitPay} disabled={p.state === 'paying'} className="ml-auto flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-primary py-3.5 text-base font-bold text-on-primary transition-transform duration-100 ease-out active:scale-[0.98] disabled:opacity-70 sm:max-w-xs">
                   <Lock size={16} /> {p.state === 'paying' ? 'Processing…' : 'Pay now'}
                 </button>
               </div>
@@ -222,28 +288,58 @@ export default function Booking(props: Props) {
   )
 }
 
-function Confirmed({ total, currency, pickup, destination, date, time, vehicle, onBack }: { total: string; currency: string; pickup: string; destination: string; date: string; time: string; vehicle: string; onBack?: () => void }) {
-  const ref = 'ITB-7K4Q2M'
+function Confirmed({
+  total,
+  currency,
+  pickup,
+  destination,
+  date,
+  time,
+  vehicle,
+  bookingRef,
+  email,
+  statusLabel,
+  onBack,
+}: {
+  total: string
+  currency: string
+  pickup: string
+  destination: string
+  date: string
+  time: string
+  vehicle: string
+  bookingRef?: string
+  email: string
+  statusLabel: string
+  onBack?: () => void
+}) {
+  const ref = bookingRef || 'ITB-PENDING'
   return (
     <main className="mx-auto max-w-2xl px-3 py-6 sm:px-6 sm:py-16">
       <div className="rounded-2xl border border-line bg-card p-5 sm:p-10">
         <CheckCircle2 size={40} className="text-mint-text" />
         <h1 className="mt-4 font-display text-3xl font-bold text-heading">Your transfer is booked</h1>
-        <p className="mt-2 text-muted">A confirmation has been sent to emma.larsen@example.com. Driver details follow before pickup.</p>
+        <p className="mt-2 text-muted">A confirmation has been sent to {email}. Driver details follow before pickup.</p>
         <div className="mt-8 flex items-center justify-between rounded-xl bg-surface px-5 py-4">
           <div>
             <p className="text-xs text-muted">Booking reference</p>
             <p className="font-display text-2xl font-extrabold tracking-wide text-heading">{ref}</p>
           </div>
-          <button className="grid h-10 w-10 place-items-center rounded-full text-muted transition-colors duration-150 hover:bg-card hover:text-heading" aria-label="Copy reference"><Copy size={18} /></button>
+          <button
+            onClick={() => navigator.clipboard?.writeText(ref)}
+            className="grid h-10 w-10 place-items-center rounded-full text-muted transition-colors duration-150 hover:bg-card hover:text-heading"
+            aria-label="Copy reference"
+          >
+            <Copy size={18} />
+          </button>
         </div>
         <dl className="mt-6 divide-y divide-line text-sm">
           {[
             ['Route', `${pickup} → ${destination}`],
             ['Pickup', `${date} · ${time}`],
             ['Vehicle', vehicle],
-            ['Paid', `${total} (${currency})`],
-            ['Status', 'Confirmed · awaiting driver assignment'],
+            ['Amount', `${total} (${currency})`],
+            ['Status', statusLabel],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4 py-3">
               <dt className="text-muted">{k}</dt>
@@ -277,15 +373,6 @@ function ReadOnly({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-medium text-muted">{label}</p>
       <p className="mt-1 rounded-xl bg-surface px-3 py-2.5 text-sm font-semibold text-heading">{value}</p>
     </div>
-  )
-}
-
-function Input({ label, defaultValue }: { label: string; defaultValue: string }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-medium text-muted">{label}</span>
-      <input defaultValue={defaultValue} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
-    </label>
   )
 }
 

@@ -55,7 +55,6 @@ export function MobileNav({ active, role, onSelect, onViewSite }: { active: stri
                   >
                     <Icon size={18} className={on ? 'text-heading' : 'text-muted'} />
                     <span className="truncate">{label}</span>
-                    {id === 'messages' && <span className="ml-auto rounded-full bg-primary px-1.5 text-[11px] font-bold text-navy">3</span>}
                   </button>
                 )
               })}
@@ -91,7 +90,6 @@ export function Sidebar({ active, role, onSelect, onViewSite }: { active: string
                 >
                   <Icon size={16} className={on ? 'text-primary' : ''} />
                   <span className="truncate">{label}</span>
-                  {id === 'messages' && <span className="ml-auto rounded-full bg-primary px-1.5 text-[11px] font-bold text-navy">3</span>}
                 </button>
               )
             })}

@@ -18,6 +18,12 @@ const serverSchema = z.object({
   GOOGLE_MAPS_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   SMTP_URL: z.preprocess(emptyToUndefined, z.string().optional()),
   SMS_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  /// Meta WhatsApp Cloud API. Outbound staff notices only. Leave unset to use the deep-link path.
+  WHATSAPP_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
+  WHATSAPP_PHONE_NUMBER_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+  /// Handset that receives the short notice. When empty, the company WhatsApp number from CMS is used.
+  WHATSAPP_NOTIFY_E164: z.preprocess(emptyToUndefined, z.string().optional()),
+  WHATSAPP_API_VERSION: z.preprocess(emptyToUndefined, z.string().optional()),
   NEXT_PUBLIC_APP_URL: z.preprocess(emptyToUndefined, z.string().optional()),
   PAYMENT_PROVIDER: z.preprocess(emptyToUndefined, z.string().optional()),
   /// Web Push (optional). Public key is safe to expose. Private key stays on the server.
@@ -43,6 +49,10 @@ export function getServerEnv(): ServerEnv {
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
     SMTP_URL: process.env.SMTP_URL,
     SMS_API_KEY: process.env.SMS_API_KEY,
+    WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN,
+    WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID,
+    WHATSAPP_NOTIFY_E164: process.env.WHATSAPP_NOTIFY_E164,
+    WHATSAPP_API_VERSION: process.env.WHATSAPP_API_VERSION,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
     VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
@@ -76,7 +86,21 @@ export function teyaCredentials() {
   }
 }
 
-export function integrationConfigured(key: 'teya' | 'google_maps' | 'smtp' | 'sms') {
+export function whatsappCloudCredentials() {
+  const env = getServerEnv()
+  const token = env.WHATSAPP_TOKEN
+  const phoneNumberId = env.WHATSAPP_PHONE_NUMBER_ID
+  const version = env.WHATSAPP_API_VERSION || 'v21.0'
+  return {
+    token,
+    phoneNumberId,
+    notifyE164: env.WHATSAPP_NOTIFY_E164,
+    version,
+    configured: Boolean(token && phoneNumberId),
+  }
+}
+
+export function integrationConfigured(key: 'teya' | 'google_maps' | 'smtp' | 'sms' | 'whatsapp') {
   const env = getServerEnv()
   switch (key) {
     case 'teya': {
@@ -89,5 +113,7 @@ export function integrationConfigured(key: 'teya' | 'google_maps' | 'smtp' | 'sm
       return Boolean(env.SMTP_URL)
     case 'sms':
       return Boolean(env.SMS_API_KEY)
+    case 'whatsapp':
+      return whatsappCloudCredentials().configured
   }
 }

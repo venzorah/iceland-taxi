@@ -5,6 +5,7 @@ const prisma = new PrismaClient()
 async function main() {
   await prisma.integrationStatus.deleteMany()
   await prisma.payment.deleteMany()
+  await prisma.staffNotification.deleteMany()
   await prisma.message.deleteMany()
   await prisma.booking.deleteMany()
   await prisma.route.deleteMany()
@@ -247,7 +248,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       email: 'admin@example.local',
-      name: 'Platform Admin',
+      name: 'Juliet',
       role: Role.SUPER_ADMIN,
       staffProfile: { create: { title: 'Super Admin', modules: ['*'] } },
     },

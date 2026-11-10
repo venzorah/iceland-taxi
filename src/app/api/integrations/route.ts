@@ -27,6 +27,12 @@ export async function GET() {
       configured: integrationConfigured('sms'),
       message: integrationConfigured('sms') ? 'Credentials present' : 'Set SMS_API_KEY',
     },
+    whatsapp: {
+      configured: integrationConfigured('whatsapp'),
+      message: integrationConfigured('whatsapp')
+        ? 'Cloud API credentials present. Outbound booking notices only. Inbound WhatsApp is not synced.'
+        : 'No Cloud API credentials. Staff use a WhatsApp link after the company number is saved in System settings. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID to send.',
+    },
   }
 
   const stored = await withDb(

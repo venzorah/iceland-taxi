@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { chatAuthorName, staffInboxWhere, threadReadState } from '@/lib/messaging/read-state'
+import { notifyStaffWhatsApp } from '@/lib/messaging/whatsapp-notify'
 
 export type MessageActor =
   | { kind: 'staff'; userId: string; name?: string | null }
@@ -13,23 +15,40 @@ export async function listThreads(opts: {
   const bookings = await prisma.booking.findMany({
     where:
       opts.role === 'staff'
-        ? { messages: { some: {} } }
+        ? staffInboxWhere()
         : {
             guestEmail: { equals: opts.guestEmail!, mode: 'insensitive' },
             messages: { some: {} },
           },
     include: {
-      messages: { orderBy: { createdAt: 'desc' }, take: 40 },
+      messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+      _count: { select: { messages: true } },
     },
     orderBy: { updatedAt: 'desc' },
     take: 50,
   })
 
+  const ids = bookings.map((b) => b.id)
+  const grouped = ids.length
+    ? await prisma.message.groupBy({
+        by: ['bookingId'],
+        where: {
+          bookingId: { in: ids },
+          unread: true,
+          authorRole: opts.role === 'staff' ? 'customer' : 'staff',
+        },
+        _count: { _all: true },
+      })
+    : []
+  const unreadByBooking = new Map<string, number>()
+  for (const row of grouped) {
+    if (row.bookingId) unreadByBooking.set(row.bookingId, row._count._all)
+  }
+
   return bookings.map((b) => {
     const last = b.messages[0]
-    const unread = b.messages.filter(
-      (m) => m.unread && m.authorRole === (opts.role === 'staff' ? 'customer' : 'staff'),
-    ).length
+    const unread = unreadByBooking.get(b.id) || 0
+    const messageCount = b._count.messages
     return {
       id: b.id,
       bookingId: b.id,
@@ -41,6 +60,7 @@ export async function listThreads(opts: {
         ? last.createdAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
         : '',
       unread,
+      readState: threadReadState(unread, messageCount),
       who: opts.role === 'staff' ? b.guestName || 'Customer' : 'Operations',
     }
   })
@@ -64,6 +84,7 @@ export async function listStaffInbox() {
     preview: 'Start a conversation',
     time: '',
     unread: 0,
+    readState: null,
     who: b.guestName || 'Customer',
   }))
 }
@@ -87,7 +108,11 @@ export async function getThreadMessages(bookingRef: string) {
       authorRole: m.authorRole,
       guestName: m.guestName,
       guestEmail: m.guestEmail,
-      authorName: m.author?.name || m.guestName || (m.authorRole === 'staff' ? 'Staff' : 'Customer'),
+      authorName: chatAuthorName({
+        authorRole: m.authorRole,
+        authorName: m.author?.name,
+        guestName: m.guestName,
+      }),
       unread: m.unread,
       channel: m.channel,
       createdAt: m.createdAt.toISOString(),
@@ -135,7 +160,16 @@ export async function postMessage(opts: {
     driverId: booking.driverId,
   }).catch(() => {})
 
-  return { ok: true as const, message }
+  let whatsapp: Awaited<ReturnType<typeof notifyStaffWhatsApp>> | null = null
+  if (opts.actor.kind === 'customer') {
+    try {
+      whatsapp = await notifyStaffWhatsApp({ bookingRef: booking.ref, messageId: message.id })
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  return { ok: true as const, message, whatsapp }
 }
 
 export type MessageAlertItem = { id: string; bookingRef: string; href: string }
@@ -205,5 +239,11 @@ export async function markThreadRead(bookingRef: string, reader: 'staff' | 'cust
     },
     data: { unread: false },
   })
-  return { ok: true as const }
+  if (reader === 'staff') {
+    await prisma.staffNotification.updateMany({
+      where: { bookingRef, read: false },
+      data: { read: true },
+    }).catch(() => {})
+  }
+  return { ok: true as const, readState: 'read' as const }
 }

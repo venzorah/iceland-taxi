@@ -4,8 +4,10 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { MessageCircle, Search, Send } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { ReadBadge } from '@/components/messages/ReadBadge'
 import { rememberAlertAudience } from '@/lib/alerts/client'
-import { bookingWhatsAppText, whatsappHref } from '@/lib/whatsapp'
+import { markThreadOpen } from '@/lib/messaging/read-state'
+import { staffMessageNotice, whatsappHref } from '@/lib/whatsapp'
 
 type Thread = {
   id: string
@@ -14,11 +16,17 @@ type Thread = {
   preview: string
   time: string
   unread: number
+  readState?: 'read' | 'unread' | null
+}
+
+type Props = {
+  focusRef?: string | null
+  onOpenSettings?: () => void
 }
 
 type Msg = { id: string; body: string; authorRole: string; time: string }
 
-export function Messages() {
+export function Messages({ focusRef, onOpenSettings }: Props) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [active, setActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
@@ -26,34 +34,43 @@ export function Messages() {
   const [q, setQ] = useState('')
   const [waNumber, setWaNumber] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [openRef, setOpenRef] = useState<string | null>(null)
   useArmMessageSoundOnPointer()
 
-  const boot = useCallback(async () => {
+  const loadThreads = useCallback(async () => {
     await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
     const [list, company] = await Promise.all([
       fetch('/api/messages?as=staff').then((r) => r.json()),
       fetch('/api/company').then((r) => r.json()),
     ])
-    setThreads(list.threads || [])
+    setThreads(markThreadOpen(list.threads || [], openRef))
     setWaNumber(company.company?.whatsappE164 || null)
-    if (!active && list.threads?.[0]) setActive(list.threads[0].ref)
-  }, [active])
+  }, [openRef])
 
   const loadThread = useCallback(async (ref: string) => {
     await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
-    const data = await fetch(`/api/messages/${ref}`).then((r) => r.json())
+    const data = await fetch(`/api/messages/${ref}?as=staff`).then((r) => r.json())
     if (!data.ok) {
       setErr(data.message || 'Failed to load')
+      setOpenRef(null)
       return
     }
     setMessages(data.messages || [])
+    setOpenRef(ref)
+    setThreads((prev) => markThreadOpen(prev, ref))
     setErr(null)
   }, [])
 
   useEffect(() => {
     rememberAlertAudience('staff')
-    boot()
-  }, [boot])
+    loadThreads()
+    const timer = setInterval(loadThreads, 8000)
+    return () => clearInterval(timer)
+  }, [loadThreads])
+
+  useEffect(() => {
+    if (focusRef) setActive(focusRef)
+  }, [focusRef])
 
   useEffect(() => {
     if (!active) return
@@ -76,7 +93,7 @@ export function Messages() {
     }
     setDraft('')
     await loadThread(active)
-    await boot()
+    await loadThreads()
   }
 
   const thread = threads.find((t) => t.ref === active) || threads[0]
@@ -110,7 +127,7 @@ export function Messages() {
                   <p className="font-mono text-[11px] text-muted">{t.ref}</p>
                   <p className="mt-0.5 truncate text-xs text-muted">{t.preview}</p>
                 </div>
-                {t.unread > 0 && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                <ReadBadge state={t.readState} />
               </button>
             </li>
           ))}
@@ -126,9 +143,15 @@ export function Messages() {
                 <p className="font-display text-base font-bold text-heading">{thread.customer}</p>
                 <p className="font-mono text-xs text-muted">{thread.ref}</p>
               </div>
-              <a href={whatsappHref({ e164: waNumber, text: bookingWhatsAppText(thread.ref) })} className="inline-flex items-center gap-1.5 rounded-lg bg-mint px-3 py-2 text-xs font-bold text-navy">
-                <MessageCircle size={14} /> WhatsApp
-              </a>
+              {waNumber ? (
+                <a href={whatsappHref({ e164: waNumber, text: staffMessageNotice(thread.ref) })} className="inline-flex items-center gap-1.5 rounded-lg bg-mint px-3 py-2 text-xs font-bold text-navy">
+                  <MessageCircle size={14} /> WhatsApp
+                </a>
+              ) : (
+                <button type="button" onClick={onOpenSettings} className="rounded-lg border border-line px-3 py-2 text-xs font-bold text-heading">
+                  Add WhatsApp number
+                </button>
+              )}
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto bg-surface p-5">
               {messages.map((m) => (

@@ -3,7 +3,8 @@ import { BLOG_POSTS, SEO_SLUG_PAGES, TRAVEL_GUIDES } from '@/lib/content/editori
 import { DESTINATIONS } from '@/lib/design/data'
 import { SEO_PUBLIC_PAGES } from '@/lib/design/routes'
 import { integrationConfigured, teyaCredentials, whatsappCloudCredentials } from '@/lib/env'
-import { describeWhatsAppFeature } from '@/lib/whatsapp'
+import { ensureOfficialWhatsApp } from '@/lib/company-whatsapp'
+import { describeWhatsAppFeature, OFFICIAL_WHATSAPP_E164 } from '@/lib/whatsapp'
 
 function moneyLabel(currency: string, amount: number) {
   if (currency === 'EUR') return `€${amount.toLocaleString('en-US').replace(/,/g, '.')}`
@@ -63,7 +64,7 @@ function emptyCompany() {
     displayName: 'Iceland Taxi Booking',
     email: null as string | null,
     phone: null as string | null,
-    whatsappE164: null as string | null,
+    whatsappE164: OFFICIAL_WHATSAPP_E164,
     addressLine1: null as string | null,
     city: null as string | null,
     registrationNumber: null as string | null,
@@ -94,7 +95,10 @@ export async function GET() {
           _count: { _all: true },
           _sum: { amountSnapshot: true },
         }),
-        prisma.companySettings.findUnique({ where: { id: 'singleton' } }),
+        prisma.companySettings.findUnique({ where: { id: 'singleton' } }).then(async (company) => {
+          const whatsappE164 = await ensureOfficialWhatsApp()
+          return { ...company, whatsappE164 }
+        }),
       ])
 
       const guestSeen = new Set<string>()

@@ -1,8 +1,21 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { describeWhatsAppFeature, planStaffWhatsApp, staffMessageNotice } from './whatsapp'
+import { companyWhatsAppNumber, describeWhatsAppFeature, OFFICIAL_WHATSAPP_E164, planStaffWhatsApp, staffMessageNotice } from './whatsapp'
 
 const PRIVATE = 'Our flight is now landing 20 minutes early, is that okay?'
+
+describe('official company WhatsApp number', () => {
+  it('uses +3548353111 when company settings have no number', () => {
+    assert.equal(OFFICIAL_WHATSAPP_E164, '+3548353111')
+    assert.equal(companyWhatsAppNumber(null), '+3548353111')
+    assert.equal(companyWhatsAppNumber('  '), '+3548353111')
+    assert.equal(companyWhatsAppNumber('+354 835 3111'), '+3548353111')
+  })
+
+  it('keeps a different number already saved in admin', () => {
+    assert.equal(companyWhatsAppNumber('+3545550100'), '+3545550100')
+  })
+})
 
 describe('staff WhatsApp delivery', () => {
   it('stays off when the company number is unset, even if API credentials exist', () => {

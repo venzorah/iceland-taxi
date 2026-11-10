@@ -1,3 +1,11 @@
+/** Official Iceland Taxi WhatsApp. Other contact fields stay empty until set in admin. */
+export const OFFICIAL_WHATSAPP_E164 = '+3548353111'
+
+/** Stored company number, or the official number when the setting is empty. */
+export function companyWhatsAppNumber(stored: string | null | undefined) {
+  return normalizeStoredE164(stored) || OFFICIAL_WHATSAPP_E164
+}
+
 /** Build a wa.me deep link. Never invent a company number — omit the path when unset. */
 export function whatsappHref(opts: {
   e164?: string | null

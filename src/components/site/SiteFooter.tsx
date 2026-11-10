@@ -4,14 +4,8 @@ import React, { useEffect, useState } from 'react'
 import { Mail, MessageCircle } from 'lucide-react'
 
 import { LOGO_DARK } from '@/lib/design/data'
+import { FOOTER_COLUMNS } from '@/lib/design/routes'
 import { whatsappHref } from '@/lib/whatsapp'
-
-const COLUMNS = [
-  { title: 'Services', links: ['Airport transfers', 'Private taxi', 'Private tours', 'Private driver', 'Corporate travel'] },
-  { title: 'Explore', links: ['Destinations', 'Our fleet', 'How it works', 'Travel guides', 'Blog'] },
-  { title: 'Company', links: ['About us', 'Contact', 'FAQs', 'Manage booking'] },
-  { title: 'Policies', links: ['Privacy policy', 'Terms & conditions', 'Cancellation policy', 'Refund policy'] },
-]
 
 export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { onStaff?: () => void; onStaffMobile?: () => void; onDriver?: () => void; onAccount?: () => void }) {
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null } | null>(null)
@@ -52,13 +46,13 @@ export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { on
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
-            {COLUMNS.map((c) => (
+            {FOOTER_COLUMNS.map((c) => (
               <div key={c.title}>
                 <p className="text-sm font-bold text-white">{c.title}</p>
                 <ul className="mt-3 space-y-1 sm:mt-4 sm:space-y-2.5">
                   {c.links.map((l) => (
-                    <li key={l}>
-                      <a href="#" className="block py-1 text-sm text-white/70 transition-colors duration-150 hover:text-cyan sm:inline sm:py-0">{l}</a>
+                    <li key={l.href + l.label}>
+                      <a href={l.href} className="block py-1 text-sm text-white/70 transition-colors duration-150 hover:text-cyan sm:inline sm:py-0">{l.label}</a>
                     </li>
                   ))}
                 </ul>

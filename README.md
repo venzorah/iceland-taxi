@@ -137,12 +137,21 @@ public/brand/            # Official logos
 
 `prisma/seed.ts` loads catalogue and ops demo records aligned with the Magic Patterns shared data. Company contact/legal fields are explicitly left empty. Demo driver emails use `@example.local` only.
 
-## Deploy notes
+## Deploy notes (Vercel)
 
-- Frontend + API: Vercel (or any Node host for Next.js)
-- Database: managed Postgres
-- Set all secrets in the host env — never commit `.env`
-- Configure company contact details in Admin after deploy
+Repo layout is a **single Next.js app at the repository root** (`package.json`, `next.config.ts`, `src/app`). It is **not** a monorepo — Root Directory in Vercel must be `.` / empty (not `apps/…`).
+
+1. Import `venzorah/iceland-taxi` with the **Vercel GitHub App** installed for this repo (team `padicheck-7557` already has a linked project `iceland-taxi`).
+2. Framework preset: **Next.js**. Build uses `prisma generate && next build` (see `vercel.json`).
+3. Set **Node.js 20+**.
+4. Environment variables in the Vercel project (do not commit secrets):
+   - `DATABASE_URL` — Postgres connection string (required for live booking/admin persistence; UI still boots without it)
+   - `NEXT_PUBLIC_APP_URL` — public site URL (payment return links)
+   - Optional: `GOOGLE_MAPS_API_KEY`, `TEYA_CLIENT_ID`, `TEYA_CLIENT_SECRET`, `TEYA_STORE_ID`, `TEYA_ENVIRONMENT`, `TEYA_WEBHOOK_SECRET`
+5. After first deploy, open Admin and set company contact fields (phone/email/WhatsApp/address) — never invent them in code.
+6. If a deployment fails with a React Server Components / Next security gate, upgrade `next` to a patched release (see Vercel automated CVE PRs) before redeploying.
+
+Local production check: `npm run build && npm start`.
 
 ## License
 

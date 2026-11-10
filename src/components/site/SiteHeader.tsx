@@ -8,6 +8,7 @@ import { BottomSheet } from '@/components/site/BottomSheet'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 import { LOGO_DARK, LOGO_LIGHT, type Currency } from '@/lib/design/data'
 import { t, type Lang } from '@/lib/design/i18n'
+import { HEADER_NAV } from '@/lib/design/routes'
 
 type Props = {
   theme: 'light' | 'dark'
@@ -29,7 +30,7 @@ type Props = {
 export function SiteHeader({ theme, language, currency, onThemeChange, onLanguageChange, onCurrencyChange, onBook, onHome, onSignIn, mobileTitle, onMobileBack, announcements = ANNOUNCEMENTS_SEED }: Props) {
   const [open, setOpen] = useState(false)
   const hasBar = visibleAnnouncements(announcements).length > 0
-  const nav = [t(language, 'airport'), t(language, 'tours'), t(language, 'driver'), t(language, 'fleet'), t(language, 'contact')]
+  const nav = HEADER_NAV.map((item) => ({ label: t(language, item.i18n), href: item.href }))
 
   return (
     <>
@@ -53,8 +54,8 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
 
         <nav className="hidden flex-1 items-center gap-6 xl:flex">
           {nav.map((n) => (
-            <a key={n} href="#" className="whitespace-nowrap text-sm font-medium text-text transition-colors duration-150 hover:text-link">
-              {n}
+            <a key={n.href} href={n.href} className="whitespace-nowrap text-sm font-medium text-text transition-colors duration-150 hover:text-link">
+              {n.label}
             </a>
           ))}
         </nav>
@@ -109,9 +110,9 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Menu" hideFrom="xl">
         <ul className="-mx-1">
           {nav.map((n) => (
-            <li key={n}>
-              <a href="#" onClick={() => setOpen(false)} className="flex items-center justify-between rounded-xl px-1 py-3.5 text-base font-semibold text-heading active:bg-surface">
-                {n} <ChevronRight size={18} className="text-muted" />
+            <li key={n.href}>
+              <a href={n.href} onClick={() => setOpen(false)} className="flex items-center justify-between rounded-xl px-1 py-3.5 text-base font-semibold text-heading active:bg-surface">
+                {n.label} <ChevronRight size={18} className="text-muted" />
               </a>
             </li>
           ))}

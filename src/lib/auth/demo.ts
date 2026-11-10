@@ -5,11 +5,25 @@ export const DRIVER_COOKIE = 'itb_driver_id'
 export const STAFF_COOKIE = 'itb_staff'
 export const GUEST_EMAIL_COOKIE = 'itb_guest_email'
 
-/** Demo auth only — replace with real sessions before production. */
+/** Seeded driver used when the database is not available. */
+export const DEMO_DRIVER_ID = 'demo-ari'
+export const DEMO_DRIVER_EMAIL = 'ari.driver@example.local'
+
+/** Demo auth only. Replace with real sessions before production. */
 export async function getDemoDriver() {
   const jar = await cookies()
   const id = jar.get(DRIVER_COOKIE)?.value
-  if (!id || !process.env.DATABASE_URL) return null
+  if (!id) return null
+  if (!process.env.DATABASE_URL) {
+    if (id !== DEMO_DRIVER_ID) return null
+    return {
+      id: DEMO_DRIVER_ID,
+      displayName: 'Ari Þ.',
+      status: 'Available',
+      user: { email: DEMO_DRIVER_EMAIL, name: 'Ari Þ.', phone: null },
+      vehicle: null,
+    }
+  }
   return prisma.driver.findUnique({
     where: { id },
     include: { user: { select: { email: true, name: true, phone: true } }, vehicle: true },

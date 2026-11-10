@@ -104,7 +104,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
       ))}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-black/55 via-navy/45 to-black/50" />
 
-      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 pb-36 pt-10 sm:px-6 sm:pb-40 sm:pt-28 lg:px-8 lg:pb-48 lg:pt-32">
+      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 pb-48 pt-8 sm:px-6 sm:pb-40 sm:pt-28 lg:px-8 lg:pb-48 lg:pt-32">
         <div className="min-h-[318px] sm:min-h-[340px] lg:min-h-[360px]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -116,11 +116,11 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
               aria-live="polite"
             >
               {index === 0 ? (
-                <h1 className="max-w-3xl font-display text-[2.1rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">{slide.title}</h1>
+                <h1 className="max-w-3xl text-balance font-display text-[2.1rem] font-extrabold leading-tight tracking-tight text-white sm:text-6xl sm:leading-[1.05] lg:text-7xl">{slide.title}</h1>
               ) : (
-                <p className="max-w-3xl font-display text-[2.1rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">{slide.title}</p>
+                <p className="max-w-3xl text-balance font-display text-[2.1rem] font-extrabold leading-tight tracking-tight text-white sm:text-6xl sm:leading-[1.05] lg:text-7xl">{slide.title}</p>
               )}
-              <p className="mt-4 line-clamp-3 max-w-xl text-[15px] leading-relaxed text-white/90 sm:mt-6 sm:line-clamp-none sm:text-lg">{slide.body}</p>
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-white/90 sm:mt-6 sm:text-lg">{slide.body}</p>
               <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
                 <button onClick={slide.action} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
                   {slide.cta}

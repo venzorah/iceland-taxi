@@ -5,6 +5,7 @@ import { Briefcase, History, LogIn, Moon, Navigation, Phone, Plane, StickyNote, 
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
 import { armMessageSound, rememberAlertAudience } from '@/lib/alerts/client'
+import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 
 export const viewport = 'mobile'
@@ -143,7 +144,10 @@ export default function DriverPortal(props: Props) {
           <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6">
             <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="mx-auto h-14 w-auto" />
             <h1 className="mt-4 text-center font-display text-xl font-bold text-heading">Driver portal</h1>
-            <p className="mt-1 text-center text-sm text-muted">Demo login, no admin powers. Use a seeded driver email.</p>
+            <p className="mt-1 text-center text-sm leading-relaxed text-muted">Demo login, no admin powers. Use a seeded driver email.</p>
+            <div className="mt-4">
+              <DemoPortalButtons />
+            </div>
             <label className="mt-6 block text-xs font-semibold text-muted">Driver email</label>
             <input
               value={email}

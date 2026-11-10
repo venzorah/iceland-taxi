@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { ChevronLeft, ChevronRight, Menu, Moon, Sun, UserRound } from 'lucide-react'
 
 import { AnnouncementBar } from '@/components/site/AnnouncementBar'
+import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 import { LOGO_DARK, LOGO_LIGHT, type Currency } from '@/lib/design/data'
@@ -35,11 +36,11 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
   return (
     <>
     {/* Holds the page content below the fixed bar + menu */}
-    <div aria-hidden className={hasBar ? 'h-[92px] sm:h-[116px] lg:h-[132px]' : 'h-14 sm:h-20 lg:h-24'} />
+    <div aria-hidden className={hasBar ? 'h-[112px] sm:h-[116px] lg:h-[132px]' : 'h-[4.75rem] sm:h-20 lg:h-24'} />
     <div className="fixed inset-x-0 top-0 z-40 w-full max-w-full overflow-x-clip">
     <AnnouncementBar state={announcements} language={language} />
     <header className="border-b border-line bg-white dark:bg-bg">
-      <div className="mx-auto flex h-14 w-full min-w-0 max-w-7xl items-center gap-2 px-3 sm:h-20 sm:gap-6 sm:px-6 lg:h-24 lg:px-8">
+      <div className="mx-auto flex h-[4.75rem] w-full min-w-0 max-w-7xl items-center gap-2 px-3 sm:h-20 sm:gap-6 sm:px-6 lg:h-24 lg:px-8">
         {mobileTitle && (
           <div className="flex min-w-0 flex-1 items-center gap-1 sm:hidden">
             <button onClick={onMobileBack} aria-label="Back" className="-ml-1 grid h-10 w-10 shrink-0 place-items-center rounded-full text-heading active:bg-surface">
@@ -49,7 +50,7 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
           </div>
         )}
         <button onClick={onHome} className={`shrink-0 ${mobileTitle ? 'hidden sm:block' : ''}`} aria-label="Iceland Taxi Booking home">
-          <img src={theme === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-10 w-auto max-w-[11.5rem] object-contain object-left sm:h-14 sm:max-w-none lg:h-[72px]" />
+          <img src={theme === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-16 w-auto max-w-[15.5rem] object-contain object-left sm:max-w-none lg:h-[72px]" />
         </button>
 
         <nav className="hidden flex-1 items-center gap-6 xl:flex">
@@ -131,7 +132,10 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
           onChange={(v) => onCurrencyChange?.(v as Currency)}
         />
 
-        <div className="mt-6 grid grid-cols-2 gap-2">
+        <div className="mt-6">
+          <DemoPortalButtons />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             onClick={() => {
               setOpen(false)

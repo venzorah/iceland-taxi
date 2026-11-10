@@ -36,7 +36,7 @@ export function BookingSearch({ language, onSearch }: { language: Lang; onSearch
       }}
       className="w-full min-w-0 overflow-x-clip rounded-2xl border border-line bg-card p-4 shadow-[0_20px_50px_-20px_rgba(6,27,58,0.35)] sm:p-6"
     >
-      <div className="no-scrollbar -mx-1 flex min-w-0 gap-1 overflow-x-auto overscroll-x-contain px-1 pb-1" role="tablist">
+      <div className="flex flex-wrap gap-1" role="tablist">
         {SERVICE_CATEGORIES.map((c) => (
           <button
             key={c.id}
@@ -44,7 +44,7 @@ export function BookingSearch({ language, onSearch }: { language: Lang; onSearch
             role="tab"
             aria-selected={form.category === c.id}
             onClick={() => set('category', c.id)}
-            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-150 ${
+            className={`rounded-full px-4 py-2 text-sm font-semibold leading-snug transition-colors duration-150 ${
               form.category === c.id ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted hover:bg-surface hover:text-heading'
             }`}
           >

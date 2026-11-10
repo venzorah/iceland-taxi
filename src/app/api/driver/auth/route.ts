@@ -1,19 +1,36 @@
 import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
-import { DRIVER_COOKIE } from '@/lib/auth/demo'
+import { DEMO_DRIVER_EMAIL, DEMO_DRIVER_ID, DRIVER_COOKIE } from '@/lib/auth/demo'
 
 const schema = z.object({
   email: z.string().email().optional(),
   driverId: z.string().optional(),
 })
 
-/** Demo driver login — sets httpOnly cookie. Not production auth. */
+/** Demo driver login. Sets an httpOnly cookie. Not production auth. */
 export async function POST(req: Request) {
-  if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Provide email or driverId')
+  const jar = await cookies()
+
+  if (!process.env.DATABASE_URL) {
+    if (parsed.data.email?.toLowerCase() !== DEMO_DRIVER_EMAIL) {
+      return jsonError(404, 'NOT_FOUND', `Driver not found. Try ${DEMO_DRIVER_EMAIL}`)
+    }
+    jar.set(DRIVER_COOKIE, DEMO_DRIVER_ID, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 14,
+    })
+    return jsonOk({
+      ok: true,
+      demo: true,
+      driver: { id: DEMO_DRIVER_ID, displayName: 'Ari Þ.', status: 'Available', email: DEMO_DRIVER_EMAIL, vehicle: null },
+    })
+  }
 
   const driver = parsed.data.driverId
     ? await prisma.driver.findUnique({
@@ -25,9 +42,8 @@ export async function POST(req: Request) {
         include: { user: true, vehicle: true },
       })
 
-  if (!driver) return jsonError(404, 'NOT_FOUND', 'Driver not found. Try ari.driver@example.local')
+  if (!driver) return jsonError(404, 'NOT_FOUND', `Driver not found. Try ${DEMO_DRIVER_EMAIL}`)
 
-  const jar = await cookies()
   jar.set(DRIVER_COOKIE, driver.id, {
     httpOnly: true,
     sameSite: 'lax',

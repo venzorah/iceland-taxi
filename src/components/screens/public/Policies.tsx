@@ -107,7 +107,7 @@ export default function Policies(props: Props) {
         <h1 className="font-display text-3xl font-extrabold text-heading sm:text-4xl">Policies</h1>
         <p className="mt-3 text-base text-muted">Privacy, terms, cancellation and refunds in one place. Final legal copy is CMS-editable.</p>
 
-        <div className="no-scrollbar mt-8 flex gap-1 overflow-x-auto rounded-2xl bg-surface p-1">
+        <div className="mt-8 flex flex-wrap gap-1 rounded-2xl bg-surface p-1">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -117,7 +117,7 @@ export default function Policies(props: Props) {
                 url.searchParams.set('policy', t.id)
                 window.history.replaceState({}, '', url.toString())
               }}
-              className={`whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${policy === t.id ? 'bg-bg text-heading shadow-sm' : 'text-muted'}`}
+              className={`rounded-xl px-3.5 py-2.5 text-sm font-semibold leading-snug transition-colors ${policy === t.id ? 'bg-bg text-heading shadow-sm' : 'text-muted'}`}
             >
               {t.label}
             </button>

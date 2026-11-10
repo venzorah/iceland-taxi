@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, MessageCircle, Pause, Play } from 'lucide-react'
 
 import { IMG } from '@/lib/design/data'
+import { whatsappHref } from '@/lib/whatsapp'
 import { t, type Lang } from '@/lib/design/i18n'
 import type { SearchPayload } from './BookingSearch'
 
@@ -125,7 +126,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
                 <button onClick={slide.action} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
                   {slide.cta}
                 </button>
-                <a href="#" aria-label="Chat on WhatsApp" className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-4 py-3 sm:px-6 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">
+                <a href={whatsappHref({ text: 'Hello Iceland Taxi Booking' })} aria-label="Chat on WhatsApp" className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-4 py-3 sm:px-6 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">
                   <MessageCircle size={16} /> <span className="hidden sm:inline">Chat on WhatsApp</span><span className="sm:hidden">WhatsApp</span>
                 </a>
               </div>

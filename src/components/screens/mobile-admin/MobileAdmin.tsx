@@ -3,8 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  BarChart3, Bell, Car, ChevronRight, CreditCard, FileText, Home, LayoutGrid, MessageSquare, Moon, Palette, Plus, Search,
-  Settings, Shield, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft,
+  BarChart3, Bell, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Search,
+  Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft,
 } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
@@ -12,6 +12,11 @@ import { rememberAlertAudience } from '@/lib/alerts/client'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 
+import { Appearance } from '@/components/screens/admin/Appearance'
+import { Fleet } from '@/components/screens/admin/Fleet'
+import { Seo } from '@/components/screens/admin/Seo'
+import { Staff } from '@/components/screens/admin/Staff'
+import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from '@/components/screens/admin/Workspace'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
 
@@ -67,7 +72,7 @@ export default function MobileAdmin(props: Props) {
   const [editing, setEditing] = useState<ServiceRow | null>(null)
   const [chat, setChat] = useState<string | null>(null)
   const th = p.theme as 'light' | 'dark'
-  const [page, setPage] = useState<'announcements' | 'payments' | null>(null)
+  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | null>(null)
   const [localAnn, setLocalAnn] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
   const announcements = props.onAnnouncementsChange ? props.announcements ?? ANNOUNCEMENTS_SEED : localAnn
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
@@ -186,7 +191,7 @@ export default function MobileAdmin(props: Props) {
           <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-12 w-auto" />
           <div className="ml-auto flex items-center gap-1">
             <button aria-label="Search" className="grid h-10 w-10 place-items-center rounded-full text-heading"><Search size={19} /></button>
-            <button aria-label="Notifications" className="relative grid h-10 w-10 place-items-center rounded-full text-heading">
+            <button onClick={() => { setTab('messages'); setChat(null); setPage(null) }} aria-label="Notifications" className="relative grid h-10 w-10 place-items-center rounded-full text-heading">
               <Bell size={19} /><span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-error" />
             </button>
           </div>
@@ -205,6 +210,7 @@ export default function MobileAdmin(props: Props) {
               liveAnnouncements={visibleAnnouncements(announcements).length}
               onOpenAnnouncements={() => setPage('announcements')}
               onOpenPayments={() => setPage('payments')}
+              onOpenPage={setPage}
             />
           )}
         </main>
@@ -217,6 +223,29 @@ export default function MobileAdmin(props: Props) {
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <AnnouncementsManager compact value={announcements} onChange={setAnnouncements} />
+            </div>
+          </div>
+        )}
+
+        {page && page !== 'announcements' && page !== 'payments' && (
+          <div className="absolute inset-0 z-[60] flex flex-col bg-surface">
+            <header className="flex h-16 shrink-0 items-center gap-1 border-b border-line bg-bg px-2">
+              <button onClick={() => setPage(null)} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-heading active:bg-surface"><ChevronLeft size={22} /></button>
+              <h1 className="font-display text-base font-bold text-heading">{MORE_TITLES[page]}</h1>
+            </header>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {page === 'drivers' && <Fleet view="drivers" />}
+              {page === 'vehicles' && <Fleet view="vehicles" />}
+              {page === 'customers' && <CustomersSection />}
+              {page === 'reports' && <ReportsSection />}
+              {page === 'reviews' && <ReviewsSection />}
+              {page === 'destinations' && <DestinationsSection />}
+              {page === 'pages' && <PagesSection />}
+              {page === 'seo' && <Seo />}
+              {page === 'languages' && <LanguagesSection />}
+              {page === 'staff' && <Staff />}
+              {page === 'appearance' && <Appearance />}
+              {page === 'settings' && <SettingsSection />}
             </div>
           </div>
         )}
@@ -581,6 +610,21 @@ function ServicesTab({ services, onEdit }: { services: ServiceRow[]; onEdit: (s:
   )
 }
 
+const MORE_TITLES: Record<string, string> = {
+  drivers: 'Drivers',
+  vehicles: 'Vehicles',
+  customers: 'Customers',
+  reports: 'Reports',
+  reviews: 'Reviews',
+  destinations: 'Destinations',
+  pages: 'Pages & blog',
+  seo: 'Website & SEO',
+  languages: 'Languages',
+  staff: 'Staff & permissions',
+  appearance: 'Appearance & theme',
+  settings: 'Settings',
+}
+
 function MoreTab({
   theme,
   onThemeChange,
@@ -588,6 +632,7 @@ function MoreTab({
   liveAnnouncements,
   onOpenAnnouncements,
   onOpenPayments,
+  onOpenPage,
 }: {
   theme: 'light' | 'dark'
   onThemeChange?: (t: 'light' | 'dark') => void
@@ -595,17 +640,22 @@ function MoreTab({
   liveAnnouncements: number
   onOpenAnnouncements: () => void
   onOpenPayments: () => void
+  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations') => void
 }) {
   const items = [
-    ['Drivers', UserSquare2, undefined as (() => void) | undefined],
-    ['Vehicles', Car, undefined],
-    ['Customers', Users, undefined],
+    ['Drivers', UserSquare2, () => onOpenPage('drivers')],
+    ['Vehicles', Car, () => onOpenPage('vehicles')],
+    ['Customers', Users, () => onOpenPage('customers')],
     ['Payments & refunds', CreditCard, onOpenPayments],
-    ['Reports', BarChart3, undefined],
-    ['Website & SEO', FileText, undefined],
-    ['Staff & permissions', Shield, undefined],
-    ['Appearance & theme', Palette, undefined],
-    ['Settings', Settings, undefined],
+    ['Reports', BarChart3, () => onOpenPage('reports')],
+    ['Destinations', MapPinned, () => onOpenPage('destinations')],
+    ['Reviews', Star, () => onOpenPage('reviews')],
+    ['Pages & blog', FileText, () => onOpenPage('pages')],
+    ['Website & SEO', FileText, () => onOpenPage('seo')],
+    ['Languages', Globe, () => onOpenPage('languages')],
+    ['Staff & permissions', Shield, () => onOpenPage('staff')],
+    ['Appearance & theme', Palette, () => onOpenPage('appearance')],
+    ['Settings', Settings, () => onOpenPage('settings')],
   ] as const
   return (
     <div className="p-4">

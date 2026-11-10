@@ -26,8 +26,8 @@ export function AnnouncementBar({ state, language = 'en' }: Props) {
         <li key={a.id} className="flex shrink-0 items-center gap-2 whitespace-nowrap px-6 text-[13px] font-medium">
           <span className={`h-1 w-1 shrink-0 rounded-full ${s.dot}`} />
           <span>{textOf(a.text, a.textIs)}</span>
-          {a.linkLabel && (
-            <a href={a.linkUrl || '#'} tabIndex={hidden ? -1 : undefined} className={`font-bold underline-offset-2 hover:underline ${s.link}`}>
+          {a.linkLabel && a.linkUrl && a.linkUrl !== '#' && (
+            <a href={a.linkUrl} tabIndex={hidden ? -1 : undefined} className={`font-bold underline-offset-2 hover:underline ${s.link}`}>
               {a.linkLabel} →
             </a>
           )}

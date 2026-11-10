@@ -19,11 +19,11 @@ export type AppTab = {
  * A phone-style bottom tab bar. Fixed to the bottom of the viewport and hidden from `hideFrom` up,
  * so desktop keeps its own navigation.
  */
-export function AppTabBar({ tabs, active, hideFrom = 'md' }: { tabs: AppTab[]; active?: string; hideFrom?: 'md' | 'lg' }) {
+export function AppTabBar({ tabs, active, hideFrom = 'md', hidden = false }: { tabs: AppTab[]; active?: string; hideFrom?: 'md' | 'lg'; hidden?: boolean }) {
   return (
     <nav
       aria-label="App navigation"
-      className={`pb-safe fixed inset-x-0 bottom-0 z-40 w-full max-w-full overflow-x-clip border-t border-line bg-white pt-1.5 dark:bg-bg ${hideFrom === 'lg' ? 'lg:hidden' : 'md:hidden'}`}
+      className={`pb-safe fixed inset-x-0 bottom-0 z-40 w-full max-w-full overflow-x-clip border-t border-line bg-white pt-1.5 dark:bg-bg ${hideFrom === 'lg' ? 'lg:hidden' : 'md:hidden'} ${hidden ? 'hidden' : ''}`}
     >
       <ul className="grid w-full min-w-0" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map((t) => {

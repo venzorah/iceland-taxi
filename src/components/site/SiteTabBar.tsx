@@ -15,6 +15,7 @@ export function SiteTabBar({
   onBook,
   onTrips,
   onHelp,
+  hidden = false,
 }: {
   active: 'home' | 'book' | 'trips' | 'help' | 'profile'
   language?: Lang
@@ -22,6 +23,8 @@ export function SiteTabBar({
   onBook?: () => void
   onTrips?: () => void
   onHelp?: () => void
+  /** Hide the bar while a mobile composer is open so it cannot cover the input. */
+  hidden?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [session, setSession] = useState<{ email: string; name: string | null } | null>(null)
@@ -71,6 +74,7 @@ export function SiteTabBar({
   return (
     <>
       <AppTabBar
+        hidden={hidden}
         active={open ? 'profile' : active}
         tabs={[
           { id: 'home', label: 'Home', icon: Home, onSelect: onHome },

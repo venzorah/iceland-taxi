@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { MessageAlerts } from '@/components/alerts/MessageAlerts'
@@ -34,7 +34,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Lang>('en')
   const [currency, setCurrency] = useState<Currency>('EUR')
   const [customerCategory, setCustomerCategory] = useState<'international' | 'resident'>('international')
-  const [announcements, setAnnouncements] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
+  const [announcements, setAnnouncementsState] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
+  const announcementSave = useRef<number | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -43,6 +44,36 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((t: Theme) => setThemeState(t), [])
   const go = useCallback((path: string) => router.push(path), [router])
+  const setAnnouncements = useCallback((next: AnnouncementState) => {
+    setAnnouncementsState(next)
+    if (announcementSave.current) window.clearTimeout(announcementSave.current)
+    announcementSave.current = window.setTimeout(() => {
+      fetch('/api/announcements', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(next),
+      }).catch(() => undefined)
+    }, 400)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/theme')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data?.appearance?.defaultLang === 'is') setLanguage('is')
+      })
+      .catch(() => undefined)
+    fetch('/api/announcements')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data?.announcements) setAnnouncementsState(data.announcements)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const value = useMemo(
     () => ({
@@ -58,7 +89,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       setAnnouncements,
       go,
     }),
-    [theme, language, currency, customerCategory, announcements, setTheme, go],
+    [theme, language, currency, customerCategory, announcements, setTheme, setAnnouncements, go],
   )
 
   return (

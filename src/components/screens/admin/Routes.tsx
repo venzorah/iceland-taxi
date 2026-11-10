@@ -20,6 +20,8 @@ export function Routes() {
   const [msg, setMsg] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [draftIsk, setDraftIsk] = useState(0)
+  const [creating, setCreating] = useState(false)
+  const [draft, setDraft] = useState({ from: '', to: '', isk: '' })
 
   const load = useCallback(async () => {
     try {
@@ -84,8 +86,35 @@ export function Routes() {
     <div className="mx-auto max-w-[1400px] p-3 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">Fixed-price routes. Distance and duration are calculated from the map and can be overridden.{msg ? ` · ${msg}` : ''}</p>
-        <button className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary"><Plus size={15} /> New route</button>
+        <button onClick={() => setCreating((value) => !value)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary"><Plus size={15} /> New route</button>
       </div>
+      {creating && (
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault()
+            const res = await fetch('/api/admin/routes', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ fromLabel: draft.from, toLabel: draft.to, fromIsk: Number(draft.isk), active: true, returnTrip: true }),
+            })
+            const data = await res.json().catch(() => null)
+            if (!res.ok || !data?.ok) {
+              setMsg(data?.message || 'Could not save the route')
+              return
+            }
+            setCreating(false)
+            setDraft({ from: '', to: '', isk: '' })
+            setMsg('Saved')
+            await load()
+          }}
+          className="mt-4 grid gap-2 rounded-xl border border-line bg-bg p-4 sm:grid-cols-4"
+        >
+          <input required value={draft.from} onChange={(event) => setDraft({ ...draft, from: event.target.value })} placeholder="From" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+          <input required value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} placeholder="To" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+          <input required value={draft.isk} onChange={(event) => setDraft({ ...draft, isk: event.target.value })} inputMode="numeric" placeholder="Price in ISK" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+          <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">Save route</button>
+        </form>
+      )}
       <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg md:hidden">
         {rows.map((r) => (
           <li key={r.id} className="px-4 py-3.5">

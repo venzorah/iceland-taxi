@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Search,
+  BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Route, Search,
   Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft,
 } from 'lucide-react'
 
@@ -18,6 +18,9 @@ import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from
 
 import { Appearance } from '@/components/screens/admin/Appearance'
 import { Fleet } from '@/components/screens/admin/Fleet'
+import { PaymentsList } from '@/components/screens/admin/PaymentsList'
+import { Pricing } from '@/components/screens/admin/Pricing'
+import { Routes } from '@/components/screens/admin/Routes'
 import { Seo } from '@/components/screens/admin/Seo'
 import { Staff } from '@/components/screens/admin/Staff'
 import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from '@/components/screens/admin/Workspace'
@@ -76,7 +79,7 @@ export default function MobileAdmin(props: Props) {
   const [editing, setEditing] = useState<ServiceRow | null>(null)
   const [chat, setChat] = useState<string | null>(null)
   const th = p.theme as 'light' | 'dark'
-  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | null>(null)
+  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | null>(null)
   const [localAnn, setLocalAnn] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
   const announcements = props.onAnnouncementsChange ? props.announcements ?? ANNOUNCEMENTS_SEED : localAnn
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
@@ -84,24 +87,23 @@ export default function MobileAdmin(props: Props) {
   const [bookings, setBookings] = useState<OpsBooking[]>([])
   const [drivers, setDrivers] = useState<DriverOption[]>([])
   const [services, setServices] = useState<ServiceRow[]>([])
-  const [payments, setPayments] = useState<Array<{ id: string; status: string; amount: number; currency: string; booking?: { ref: string } | null }>>([])
   const [source, setSource] = useState('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [compose, setCompose] = useState(false)
+  const [bookingDraft, setBookingDraft] = useState({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '' })
   const [driverId, setDriverId] = useState('')
   const [statusDraft, setStatusDraft] = useState<OpsBooking['status']>('Confirmed')
 
   const load = useCallback(async () => {
     try {
-      const [bRes, dRes, sRes, pRes] = await Promise.all([
+      const [bRes, dRes, sRes] = await Promise.all([
         fetch('/api/bookings'),
         fetch('/api/drivers'),
         fetch('/api/admin/services'),
-        fetch('/api/admin/payments'),
       ])
       const bJson = await bRes.json()
       const dJson = await dRes.json()
       const sJson = await sRes.json().catch(() => ({ ok: false }))
-      const pJson = await pRes.json().catch(() => ({ ok: false }))
       const ops: OpsBooking[] = bJson.ops || bJson.bookings || []
       setBookings(ops)
       setSource(bJson.source || 'unknown')
@@ -124,7 +126,6 @@ export default function MobileAdmin(props: Props) {
           })),
         )
       }
-      if (pJson.ok && Array.isArray(pJson.payments)) setPayments(pJson.payments)
     } catch (e) {
       console.error(e)
     }
@@ -251,6 +252,8 @@ export default function MobileAdmin(props: Props) {
               {page === 'staff' && <Staff />}
               {page === 'appearance' && <Appearance />}
               {page === 'settings' && <SettingsSection />}
+              {page === 'routes' && <Routes />}
+              {page === 'pricing' && <Pricing />}
             </div>
           </div>
         )}
@@ -261,31 +264,50 @@ export default function MobileAdmin(props: Props) {
               <button onClick={() => setPage(null)} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-heading active:bg-surface"><ChevronLeft size={22} /></button>
               <h1 className="font-display text-base font-bold text-heading">Payments</h1>
             </header>
-            <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto bg-bg">
-              {payments.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No payments yet. Checkout without sandbox keys does not mark a booking paid.</li>}
-              {payments.map((pay) => (
-                <li key={pay.id} className="px-4 py-3.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-mono text-xs text-muted">{pay.booking?.ref || pay.id.slice(0, 8)}</p>
-                      <p className="text-sm font-semibold text-heading">{pay.status}</p>
-                    </div>
-                    <p className="text-sm font-bold tabular-nums text-heading">
-                      {pay.currency === 'EUR'
-                        ? `€${pay.amount.toLocaleString('en-US').replace(/,/g, '.')}`
-                        : pay.currency === 'ISK'
-                          ? `ISK ${pay.amount.toLocaleString('en-US')}`
-                          : `$${Number(pay.amount).toLocaleString('en-US')}`}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <PaymentsList />
+            </div>
           </div>
         )}
 
+        {tab === 'bookings' && compose && (
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault()
+              const res = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  guestName: bookingDraft.guestName,
+                  guestEmail: bookingDraft.guestEmail,
+                  serviceLabel: bookingDraft.serviceLabel,
+                  routeLabel: bookingDraft.routeLabel,
+                  quote: { baseIsk: Number(bookingDraft.baseIsk), customerCategory: 'INTERNATIONAL', currency: 'EUR' },
+                  awaitPaymentWithoutGateway: true,
+                }),
+              })
+              const data = await res.json().catch(() => null)
+              if (!res.ok || !data?.ok) {
+                setSaveMsg(data?.message || 'Could not save the booking')
+                return
+              }
+              setCompose(false)
+              setBookingDraft({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '' })
+              setSaveMsg('Saved')
+              await load()
+            }}
+            className="absolute inset-x-3 bottom-24 z-30 grid gap-2 rounded-2xl border border-line bg-bg p-3 shadow-lg"
+          >
+            <input required value={bookingDraft.guestName} onChange={(event) => setBookingDraft({ ...bookingDraft, guestName: event.target.value })} placeholder="Guest name" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
+            <input required type="email" value={bookingDraft.guestEmail} onChange={(event) => setBookingDraft({ ...bookingDraft, guestEmail: event.target.value })} placeholder="Email" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
+            <input required value={bookingDraft.serviceLabel} onChange={(event) => setBookingDraft({ ...bookingDraft, serviceLabel: event.target.value })} placeholder="Service" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
+            <input required value={bookingDraft.routeLabel} onChange={(event) => setBookingDraft({ ...bookingDraft, routeLabel: event.target.value })} placeholder="Route" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
+            <input required value={bookingDraft.baseIsk} onChange={(event) => setBookingDraft({ ...bookingDraft, baseIsk: event.target.value })} inputMode="numeric" placeholder="Price in ISK" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted" />
+            <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">Save booking</button>
+          </form>
+        )}
         {tab === 'bookings' && (
-          <button aria-label="New booking" className="absolute bottom-24 right-4 grid h-14 w-14 place-items-center rounded-full bg-primary text-on-primary shadow-lg transition-transform duration-150 active:scale-95">
+          <button aria-label="New booking" onClick={() => setCompose((value) => !value)} className="absolute bottom-24 right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-primary text-on-primary shadow-lg transition-transform duration-150 active:scale-95">
             <Plus size={24} />
           </button>
         )}
@@ -654,6 +676,8 @@ const MORE_TITLES: Record<string, string> = {
   staff: 'Staff & permissions',
   appearance: 'Appearance & theme',
   settings: 'Settings',
+  routes: 'Routes',
+  pricing: 'Pricing',
 }
 
 function MoreTab({
@@ -671,11 +695,13 @@ function MoreTab({
   liveAnnouncements: number
   onOpenAnnouncements: () => void
   onOpenPayments: () => void
-  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations') => void
+  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing') => void
 }) {
   const items = [
     ['Drivers', UserSquare2, () => onOpenPage('drivers')],
     ['Vehicles', Car, () => onOpenPage('vehicles')],
+    ['Routes', Route, () => onOpenPage('routes')],
+    ['Pricing', Tag, () => onOpenPage('pricing')],
     ['Customers', Users, () => onOpenPage('customers')],
     ['Payments & refunds', CreditCard, onOpenPayments],
     ['Reports', BarChart3, () => onOpenPage('reports')],
@@ -713,7 +739,7 @@ function MoreTab({
         ))}
       </ul>
       <button onClick={onOpenDesktop} className="mt-4 w-full text-center text-sm font-semibold text-link">Open desktop dashboard</button>
-      <p className="mt-2 text-center text-xs text-muted">Signed in as Demo admin · Super Admin</p>
+      <p className="mt-2 text-center text-xs text-muted">Signed in as Juliet · admin@example.local</p>
     </div>
   )
 }

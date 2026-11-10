@@ -34,6 +34,7 @@ type Workspace = {
 function useWorkspace() {
   const [data, setData] = useState<Workspace | null>(null)
   const [message, setMessage] = useState('Loading…')
+  const [tick, setTick] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -55,9 +56,9 @@ function useWorkspace() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [tick])
 
-  return { data, message }
+  return { data, message, reload: () => setTick((value) => value + 1) }
 }
 
 function Shell({ message, children }: { message: string; children: React.ReactNode }) {
@@ -73,20 +74,74 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-xl border border-line bg-bg px-4 py-10 text-center text-sm leading-relaxed text-muted">{children}</p>
 }
 
+type DestinationRow = { id: string; name: string; note: string | null; imageUrl: string | null; active: boolean }
+
 export function DestinationsSection() {
-  const { data, message } = useWorkspace()
-  const rows = data?.destinations ?? []
+  const [rows, setRows] = useState<DestinationRow[]>([])
+  const [message, setMessage] = useState('Loading…')
+  const [draft, setDraft] = useState<{ id?: string; name: string; note: string; imageUrl: string; active: boolean } | null>(null)
+
+  const load = async () => {
+    const res = await fetch('/api/admin/destinations')
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setMessage(body?.message || 'Could not load destinations')
+      return
+    }
+    setRows(body.destinations)
+    setMessage('Live database')
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const save = async () => {
+    if (!draft?.name.trim()) return
+    const res = await fetch(draft.id ? `/api/admin/destinations/${draft.id}` : '/api/admin/destinations', {
+      method: draft.id ? 'PATCH' : 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: draft.name, note: draft.note || null, imageUrl: draft.imageUrl || null, active: draft.active }),
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setMessage(body?.message || 'Could not save the destination')
+      return
+    }
+    setDraft(null)
+    setMessage('Saved')
+    await load()
+  }
+
   return (
     <Shell message={message}>
+      <div className="mb-3 flex justify-end">
+        <button onClick={() => setDraft({ name: '', note: '', imageUrl: '', active: true })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add destination</button>
+      </div>
+      {draft && (
+        <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
+          <label className="text-xs font-semibold text-muted">Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="text-xs font-semibold text-muted">Note<input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="text-xs font-semibold text-muted">Image URL<input value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} placeholder="Optional" className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" /></label>
+          <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Shown on the public site</label>
+          <div className="flex gap-2">
+            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
+            <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</button>
+          </div>
+        </form>
+      )}
       {rows.length === 0 ? <Empty>No destinations are published yet.</Empty> : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {rows.map((item) => (
-            <li key={item.name} className="flex gap-3 overflow-hidden rounded-xl border border-line bg-bg p-3">
+            <li key={item.id} className="flex gap-3 overflow-hidden rounded-xl border border-line bg-bg p-3">
               {item.imageUrl ? <img src={item.imageUrl} alt="" className="h-20 w-24 shrink-0 rounded-lg object-cover" /> : null}
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-display text-base font-bold text-heading">{item.name}</p>
                 <p className="mt-1 text-sm leading-snug text-muted">{item.note || 'No note yet'}</p>
-                <p className={`mt-2 text-xs font-semibold ${item.active ? 'text-success' : 'text-muted'}`}>{item.active ? 'Shown on the public site' : 'Hidden'}</p>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className={`text-xs font-semibold ${item.active ? 'text-success' : 'text-muted'}`}>{item.active ? 'Shown on the public site' : 'Hidden'}</p>
+                  <button onClick={() => setDraft({ id: item.id, name: item.name, note: item.note || '', imageUrl: item.imageUrl || '', active: item.active })} className="text-xs font-semibold text-link">Edit</button>
+                </div>
               </div>
             </li>
           ))}
@@ -97,20 +152,59 @@ export function DestinationsSection() {
 }
 
 export function CustomersSection() {
-  const { data, message } = useWorkspace()
+  const { data, message, reload } = useWorkspace()
   const rows = data?.customers ?? []
+  const [draft, setDraft] = useState<{ email: string; name: string; category: string; existing: boolean } | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
+
+  const save = async () => {
+    if (!draft) return
+    const res = await fetch('/api/admin/customers', {
+      method: draft.existing ? 'PATCH' : 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: draft.email, name: draft.name, category: draft.category }),
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setStatus(body?.message || 'Could not save the customer')
+      return
+    }
+    setDraft(null)
+    setStatus('Saved')
+    reload()
+  }
+
   return (
-    <Shell message={message}>
+    <Shell message={status || message}>
+      <div className="mb-3 flex justify-end">
+        <button onClick={() => setDraft({ email: '', name: '', category: 'INTERNATIONAL', existing: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add customer</button>
+      </div>
+      {draft && (
+        <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4 sm:grid-cols-2">
+          <label className="text-xs font-semibold text-muted">Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="text-xs font-semibold text-muted">Email<input required type="email" readOnly={draft.existing} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="text-xs font-semibold text-muted">Category
+            <select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus">
+              <option value="INTERNATIONAL">International · EUR</option>
+              <option value="RESIDENT">Resident · ISK</option>
+            </select>
+          </label>
+          <div className="flex items-end gap-2">
+            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
+            <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</button>
+          </div>
+        </form>
+      )}
       {rows.length === 0 ? <Empty>No customer accounts or guest bookings yet.</Empty> : (
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
           {rows.map((row) => (
             <li key={row.email} className="px-4 py-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-semibold text-heading">{row.name}</p>
-                <p className="text-xs font-semibold text-muted">{row.bookings} booking{row.bookings === 1 ? '' : 's'}</p>
+                <button onClick={() => setDraft({ email: row.email, name: row.name, category: row.category, existing: true })} className="text-xs font-semibold text-link">Edit</button>
               </div>
               <p className="mt-0.5 break-all text-sm text-muted">{row.email}</p>
-              <p className="mt-1 text-xs text-muted">{row.category === 'RESIDENT' ? 'Resident' : 'International'} · prefers {row.currency}{row.phone ? ` · ${row.phone}` : ''}</p>
+              <p className="mt-1 text-xs text-muted">{row.category === 'RESIDENT' ? 'Resident' : 'International'} · prefers {row.currency} · {row.bookings} booking{row.bookings === 1 ? '' : 's'}{row.phone ? ` · ${row.phone}` : ''}</p>
             </li>
           ))}
         </ul>
@@ -152,10 +246,34 @@ export function ReportsSection() {
 }
 
 export function ReviewsSection() {
-  const { data, message } = useWorkspace()
+  const { data, message, reload } = useWorkspace()
   const enabled = data?.reviews.testimonialsEnabled ?? false
+  const [status, setStatus] = useState<string | null>(null)
+
+  const save = async (next: boolean) => {
+    const res = await fetch('/api/admin/company', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ testimonialsEnabled: next }),
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setStatus(body?.message || 'Could not save the review setting')
+      return
+    }
+    setStatus('Saved')
+    reload()
+  }
+
   return (
-    <Shell message={message}>
+    <Shell message={status || message}>
+      <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-line bg-bg px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-heading">Show testimonials</p>
+          <p className="text-xs text-muted">Turns the public slot on or off. It does not create review text.</p>
+        </div>
+        <button onClick={() => save(!enabled)} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">{enabled ? 'Turn off' : 'Turn on'}</button>
+      </div>
       <Empty>
         No approved reviews yet. Reviews are collected only from customers with a completed booking. Testimonials stay {enabled ? 'enabled in settings, but none are published' : 'off'} until real reviews exist. Nothing here is invented.
       </Empty>
@@ -163,24 +281,96 @@ export function ReviewsSection() {
   )
 }
 
+type EditorialDraft = {
+  id: string | null
+  kind: 'blog' | 'guide'
+  slug: string
+  title: string
+  excerpt: string
+  body: string
+  tag: string
+  published: boolean
+}
+
 export function PagesSection() {
-  const { data, message } = useWorkspace()
-  const rows = data?.pages ?? []
+  const [rows, setRows] = useState<EditorialDraft[]>([])
+  const [message, setMessage] = useState('Loading…')
+  const [draft, setDraft] = useState<EditorialDraft | null>(null)
+
+  const load = async () => {
+    const res = await fetch('/api/admin/editorial')
+    const body = await res.json().catch(() => null)
+    if (!body?.ok) {
+      setMessage('Could not load pages')
+      return
+    }
+    setRows(
+      (body.posts || []).map((post: { id: string | null; kind: 'blog' | 'guide'; slug: string; title: string; excerpt: string; body: string[]; tag: string; published: boolean }) => ({
+        id: post.id,
+        kind: post.kind,
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt,
+        body: Array.isArray(post.body) ? post.body.join('\n\n') : '',
+        tag: post.tag || '',
+        published: post.published,
+      })),
+    )
+    setMessage('Blog posts and travel guides')
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const save = async () => {
+    if (!draft) return
+    const payload = { kind: draft.kind, slug: draft.slug, title: draft.title, excerpt: draft.excerpt, body: draft.body, tag: draft.tag, published: draft.published }
+    const res = await fetch(draft.id ? `/api/admin/editorial/${draft.id}` : '/api/admin/editorial', {
+      method: draft.id ? 'PATCH' : 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setMessage(body?.message || 'Could not save the page')
+      return
+    }
+    setDraft(null)
+    setMessage('Saved')
+    await load()
+  }
+
   return (
     <Shell message={message}>
+      <div className="mb-3 flex justify-end gap-2">
+        <button onClick={() => setDraft({ id: null, kind: 'blog', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New blog post</button>
+        <button onClick={() => setDraft({ id: null, kind: 'guide', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm font-semibold text-heading">New guide</button>
+      </div>
+      {draft && (
+        <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
+          <p className="text-xs font-semibold text-muted">{draft.kind === 'blog' ? 'Blog' : 'Travel guide'}{draft.slug ? ` · /${draft.kind === 'blog' ? 'blog' : 'travel-guides'}/${draft.slug}` : ''}</p>
+          <label className="text-xs font-semibold text-muted">Title<input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="text-xs font-semibold text-muted">Excerpt<textarea rows={2} value={draft.excerpt} onChange={(event) => setDraft({ ...draft, excerpt: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="text-xs font-semibold text-muted">Body<textarea rows={6} value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.published} onChange={(event) => setDraft({ ...draft, published: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Published</label>
+          <div className="flex gap-2">
+            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
+            <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</button>
+          </div>
+        </form>
+      )}
       <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
         {rows.map((row) => (
-          <li key={row.kind + row.href + row.title}>
-            <a href={row.href} className="flex items-start justify-between gap-3 px-4 py-3 active:bg-surface">
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold leading-snug text-heading">{row.title}</span>
-                <span className="mt-0.5 block break-all font-mono text-xs text-muted">{row.href}</span>
-              </span>
-              <span className="shrink-0 text-right text-xs font-semibold text-muted">
-                {row.kind}
-                <span className={`mt-1 block ${row.published ? 'text-success' : 'text-muted'}`}>{row.published ? 'Published' : 'Draft'}</span>
-              </span>
-            </a>
+          <li key={row.kind + row.slug} className="flex items-start justify-between gap-3 px-4 py-3">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold leading-snug text-heading">{row.title}</span>
+              <span className="mt-0.5 block break-all font-mono text-xs text-muted">/{row.kind === 'blog' ? 'blog' : 'travel-guides'}/{row.slug}</span>
+            </span>
+            <span className="shrink-0 text-right">
+              <button onClick={() => setDraft(row)} className="text-xs font-semibold text-link">Edit</button>
+              <span className={`mt-1 block text-xs font-semibold ${row.published ? 'text-success' : 'text-muted'}`}>{row.published ? 'Published' : 'Draft'}</span>
+            </span>
           </li>
         ))}
       </ul>
@@ -190,20 +380,60 @@ export function PagesSection() {
 
 export function LanguagesSection() {
   const { data, message } = useWorkspace()
+  const [defaultLang, setDefaultLang] = useState<'en' | 'is'>('en')
+  const [status, setStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const body = await fetch('/api/admin/theme').then((res) => res.json()).catch(() => null)
+      if (!cancelled && (body?.appearance?.defaultLang === 'en' || body?.appearance?.defaultLang === 'is')) {
+        setDefaultLang(body.appearance.defaultLang)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const save = async (code: 'en' | 'is') => {
+    const res = await fetch('/api/admin/theme', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ appearance: { defaultLang: code } }),
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setStatus(body?.message || 'Could not save the default language')
+      return
+    }
+    setDefaultLang(code)
+    setStatus('Saved')
+  }
+
+  const languages = data?.languages?.length ? data.languages : [
+    { code: 'en', name: 'English', default: defaultLang === 'en' },
+    { code: 'is', name: 'Íslenska', default: defaultLang === 'is' },
+  ]
+
   return (
-    <Shell message={message}>
+    <Shell message={status || message}>
       <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
-        {(data?.languages ?? []).map((lang) => (
+        {languages.map((lang) => (
           <li key={lang.code} className="flex items-center justify-between gap-3 px-4 py-4">
             <div>
               <p className="font-semibold text-heading">{lang.name}</p>
               <p className="text-xs uppercase text-muted">{lang.code}</p>
             </div>
-            <p className="text-sm font-semibold text-success">{lang.default ? 'Default' : 'Available'}</p>
+            {defaultLang === lang.code ? (
+              <p className="text-sm font-semibold text-success">Default</p>
+            ) : (
+              <button onClick={() => save(lang.code === 'is' ? 'is' : 'en')} className="text-sm font-semibold text-link">Make default</button>
+            )}
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-sm leading-relaxed text-muted">The public site and menus switch between English and Icelandic. Icelandic copy falls back to English when a translation is empty. This list does not add a language by itself.</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted">The public site and menus switch between English and Icelandic. Icelandic copy falls back to English when a translation is empty. Saving the default stores it with the theme.</p>
     </Shell>
   )
 }

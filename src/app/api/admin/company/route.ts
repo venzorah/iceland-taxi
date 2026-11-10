@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { normalizeStoredE164 } from '@/lib/whatsapp'
 
 export async function GET() {
@@ -26,6 +27,8 @@ const patchSchema = z.object({
 
 /** Admin CMS company profile — never invent missing contacts. */
 export async function PATCH(req: Request) {
+  const blocked = await rejectDriverOnly()
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = await req.json().catch(() => null)
   const parsed = patchSchema.safeParse(body)

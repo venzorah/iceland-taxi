@@ -170,7 +170,7 @@ Repo layout is a **single Next.js app at the repository root** (`package.json`, 
    - Optional: `GOOGLE_MAPS_API_KEY`, `TEYA_CLIENT_ID`, `TEYA_CLIENT_SECRET`, `TEYA_STORE_ID`, `TEYA_ENVIRONMENT` (`sandbox` only), `TEYA_WEBHOOK_PUBLIC_KEY`
    - Optional Web Push: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
    - Optional WhatsApp Cloud API (outbound notices only): `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and optionally `WHATSAPP_NOTIFY_E164`, `WHATSAPP_API_VERSION`
-5. After first deploy, run `npx prisma db push` so `StaffNotification` exists. The official WhatsApp number is `+3548353111`. Phone, email, address and registration stay empty until set. Do not invent them.
+5. After deploy, run `npx prisma db push` so `StaffNotification`, `EditorialPost`, announcement link labels, and theme settings exist. The official WhatsApp number is `+3548353111`. Phone, email, address and registration stay empty until set. Do not invent them. Admin saves for fleet, catalogue, pages, SEO, staff, theme, and refunds need that database.
 6. If a deployment fails with a React Server Components / Next security gate, upgrade `next` to a patched release (see Vercel automated CVE PRs) before redeploying.
 
 Local production check: `npm run build && npm start`.

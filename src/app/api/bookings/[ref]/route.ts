@@ -1,6 +1,7 @@
 import { BookingStatus } from '@prisma/client'
 import { z } from 'zod'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { toOpsBooking, updateBookingStatus } from '@/lib/booking/service'
 
 type Ctx = { params: Promise<{ ref: string }> }
@@ -27,6 +28,8 @@ const patchSchema = z.object({
 })
 
 export async function PATCH(req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly()
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
   }

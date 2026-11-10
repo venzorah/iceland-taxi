@@ -63,6 +63,9 @@ export function Services() {
   const [selId, setSelId] = useState<string>('')
   const [msg, setMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [kindFilter, setKindFilter] = useState('ALL')
+  const [creating, setCreating] = useState(false)
+  const [draft, setDraft] = useState({ name: '', kind: 'AIRPORT', fromIsk: '' })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -128,10 +131,51 @@ export function Services() {
     await load()
   }
 
+  const create = async () => {
+    const slug = draft.name.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'service'
+    const res = await fetch('/api/admin/services', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        slug,
+        kind: draft.kind,
+        titleEn: draft.name,
+        fromIsk: draft.fromIsk ? Number(draft.fromIsk) : undefined,
+        active: true,
+      }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.ok) {
+      setMsg(data?.message || 'Could not save the service')
+      return
+    }
+    setCreating(false)
+    setDraft({ name: '', kind: kindFilter === 'ALL' ? 'AIRPORT' : kindFilter, fromIsk: '' })
+    setMsg('Saved')
+    await load()
+    if (data.service?.id) setSelId(data.service.id)
+  }
+
+  const visible = list.filter((item) => kindFilter === 'ALL' || item.kind === kindFilter)
+
   if (!sel) {
     return (
-      <div className="grid h-full place-items-center p-6 text-center text-sm text-muted">
-        {loading ? 'Loading services…' : msg || 'No services in database. Run npm run db:seed.'}
+      <div className="mx-auto max-w-lg p-6">
+        <p className="text-sm text-muted">{loading ? 'Loading services…' : msg || 'No services yet. Add one to save it.'}</p>
+        {!loading && (
+          <form onSubmit={(event) => { event.preventDefault(); create() }} className="mt-4 grid gap-2">
+            <input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Service name" className="w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <select value={draft.kind} onChange={(event) => setDraft({ ...draft, kind: event.target.value })} className="w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus">
+              <option value="AIRPORT">Airport transfer</option>
+              <option value="TAXI">Private taxi</option>
+              <option value="TOUR">Private tour</option>
+              <option value="DRIVER">Private driver</option>
+              <option value="CUSTOM">Special occasion</option>
+            </select>
+            <input value={draft.fromIsk} onChange={(event) => setDraft({ ...draft, fromIsk: event.target.value })} inputMode="numeric" placeholder="From price in ISK" className="w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">Save service</button>
+          </form>
+        )}
       </div>
     )
   }
@@ -140,11 +184,30 @@ export function Services() {
     <div className="grid min-h-0 lg:h-full lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr]">
       <div className="min-h-0 border-b border-line bg-bg lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <p className="text-sm font-semibold text-heading">{list.length} services{msg ? ` · ${msg}` : ''}</p>
-          <button className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary"><Plus size={15} /> New</button>
+          <p className="text-sm font-semibold text-heading">{visible.length} services{msg ? ` · ${msg}` : ''}</p>
+          <button onClick={() => { setCreating(true); setDraft({ name: '', kind: kindFilter === 'ALL' ? 'TOUR' : kindFilter, fromIsk: '' }) }} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary"><Plus size={15} /> New</button>
         </div>
+        <div className="flex gap-1 overflow-x-auto border-b border-line px-3 py-2">
+          {[['ALL', 'All'], ['AIRPORT', 'Airport'], ['TAXI', 'Taxi'], ['TOUR', 'Tours'], ['DRIVER', 'Driver'], ['CUSTOM', 'Custom']].map(([id, label]) => (
+            <button key={id} onClick={() => setKindFilter(id)} className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${kindFilter === id ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}>{label}</button>
+          ))}
+        </div>
+        {creating && (
+          <form onSubmit={(event) => { event.preventDefault(); create() }} className="grid gap-2 border-b border-line p-3">
+            <input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Service name" className="w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <select value={draft.kind} onChange={(event) => setDraft({ ...draft, kind: event.target.value })} className="w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus">
+              <option value="AIRPORT">Airport transfer</option>
+              <option value="TAXI">Private taxi</option>
+              <option value="TOUR">Private tour</option>
+              <option value="DRIVER">Private driver</option>
+              <option value="CUSTOM">Special occasion</option>
+            </select>
+            <input value={draft.fromIsk} onChange={(event) => setDraft({ ...draft, fromIsk: event.target.value })} inputMode="numeric" placeholder="From price in ISK" className="w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">Save service</button>
+          </form>
+        )}
         <ul className="divide-y divide-line">
-          {list.map((s) => (
+          {visible.map((s) => (
             <li key={s.id}>
               <button onClick={() => setSelId(s.id)} className={`w-full px-4 py-3 text-left transition-colors duration-150 ${s.id === sel.id ? 'bg-surface' : 'hover:bg-surface/60'}`}>
                 <div className="flex items-center justify-between gap-2">
@@ -166,7 +229,26 @@ export function Services() {
               <p className="text-sm text-muted">Changes go live on the website when published. Confirmed bookings keep their original price.</p>
             </div>
             <div className="flex gap-2">
-              <button aria-label="Duplicate" className="grid h-9 w-9 place-items-center rounded-lg border border-line text-heading"><Copy size={15} /></button>
+              <button
+                aria-label="Duplicate"
+                onClick={async () => {
+                  const res = await fetch('/api/admin/services', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ slug: `${sel.slug}-copy`, kind: sel.kind, titleEn: `${sel.name} copy`, fromIsk: sel.base || undefined, active: false }),
+                  })
+                  const data = await res.json().catch(() => null)
+                  if (!res.ok || !data?.ok) {
+                    setMsg(data?.message || 'Could not duplicate the service')
+                    return
+                  }
+                  setMsg('Saved')
+                  await load()
+                }}
+                className="grid h-9 w-9 place-items-center rounded-lg border border-line text-heading"
+              >
+                <Copy size={15} />
+              </button>
               <button aria-label="Delete" onClick={deactivate} className="grid h-9 w-9 place-items-center rounded-lg border border-line text-error"><Trash2 size={15} /></button>
               <label className="flex h-9 items-center gap-2 rounded-lg border border-line px-3 text-sm font-semibold text-heading">
                 <input type="checkbox" checked={sel.active} onChange={(e) => update({ active: e.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Active

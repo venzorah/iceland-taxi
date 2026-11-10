@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
-import { DEMO_DRIVER_EMAIL, DEMO_DRIVER_ID, DRIVER_COOKIE } from '@/lib/auth/demo'
+import { DEMO_DRIVER_EMAIL, DEMO_DRIVER_ID, DRIVER_COOKIE, STAFF_COOKIE } from '@/lib/auth/demo'
 
 const schema = z.object({
   email: z.string().email().optional(),
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     if (parsed.data.email?.toLowerCase() !== DEMO_DRIVER_EMAIL) {
       return jsonError(404, 'NOT_FOUND', `Driver not found. Try ${DEMO_DRIVER_EMAIL}`)
     }
+    jar.delete(STAFF_COOKIE)
     jar.set(DRIVER_COOKIE, DEMO_DRIVER_ID, {
       httpOnly: true,
       sameSite: 'lax',
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
 
   if (!driver) return jsonError(404, 'NOT_FOUND', `Driver not found. Try ${DEMO_DRIVER_EMAIL}`)
 
+  jar.delete(STAFF_COOKIE)
   jar.set(DRIVER_COOKIE, driver.id, {
     httpOnly: true,
     sameSite: 'lax',

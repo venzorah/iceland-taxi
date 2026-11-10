@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Monitor, RotateCcw, Smartphone } from 'lucide-react'
 
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
@@ -12,8 +12,33 @@ export function Appearance() {
   const [enabled, setEnabled] = useState({ light: true, dark: true })
   const [defaults, setDefaults] = useState<Record<string, 'light' | 'dark'>>({ 'Public website': 'light', 'Customer app': 'light', 'Admin dashboard': 'light', 'Driver portal': 'dark' })
   const [colors, setColors] = useState(OFFICIAL)
+  const [saved, setSaved] = useState({ enabled: { light: true, dark: true }, defaults: { 'Public website': 'light', 'Customer app': 'light', 'Admin dashboard': 'light', 'Driver portal': 'dark' } as Record<string, 'light' | 'dark'>, colors: OFFICIAL })
   const [preview, setPreview] = useState<{ mode: 'light' | 'dark'; device: 'desktop' | 'mobile' }>({ mode: 'light', device: 'desktop' })
-  const changed = JSON.stringify(colors) !== JSON.stringify(OFFICIAL)
+  const [msg, setMsg] = useState<string | null>(null)
+  const changed = JSON.stringify({ enabled, defaults, colors }) !== JSON.stringify(saved)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const data = await fetch('/api/admin/theme').then((res) => res.json()).catch(() => null)
+      if (cancelled || !data?.appearance) return
+      const nextColors = { navy: data.appearance.navy, yellow: data.appearance.yellow, mint: data.appearance.mint, cyan: data.appearance.cyan }
+      const nextEnabled = { light: data.appearance.light !== false, dark: data.appearance.dark !== false }
+      const nextDefaults = data.appearance.surfaces || {
+        'Public website': 'light' as const,
+        'Customer app': 'light' as const,
+        'Admin dashboard': 'light' as const,
+        'Driver portal': 'dark' as const,
+      }
+      setColors(nextColors)
+      setEnabled(nextEnabled)
+      setDefaults(nextDefaults)
+      setSaved({ colors: nextColors, enabled: nextEnabled, defaults: nextDefaults })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const toggle = (k: 'light' | 'dark') => {
     const next = { ...enabled, [k]: !enabled[k] }
@@ -86,9 +111,39 @@ export function Appearance() {
           </div>
         </section>
 
-        <div className="flex justify-end gap-2">
-          <button className="rounded-lg border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading">Discard</button>
-          <button className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Publish theme</button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {msg && <p className="mr-auto text-xs text-muted">{msg}</p>}
+          <button
+            onClick={() => {
+              setColors(saved.colors)
+              setEnabled(saved.enabled)
+              setDefaults(saved.defaults)
+              setMsg('Discarded')
+            }}
+            className="rounded-lg border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading"
+          >
+            Discard
+          </button>
+          <button
+            onClick={async () => {
+              setMsg('Saving…')
+              const res = await fetch('/api/admin/theme', {
+                method: 'PATCH',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ appearance: { ...colors, light: enabled.light, dark: enabled.dark, surfaces: defaults } }),
+              })
+              const data = await res.json().catch(() => null)
+              if (!res.ok || !data?.ok) {
+                setMsg(data?.message || 'Could not save the theme')
+                return
+              }
+              setSaved({ colors, enabled, defaults })
+              setMsg('Saved')
+            }}
+            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover"
+          >
+            Publish theme
+          </button>
         </div>
       </div>
 

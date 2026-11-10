@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import { BLOG_POSTS } from '@/lib/content/editorial'
@@ -28,6 +28,20 @@ type Props = {
 
 export default function Blog(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
+  const [posts, setPosts] = useState(BLOG_POSTS)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/content/editorial?kind=blog')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.posts) && data.posts.length) setPosts(data.posts)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const th = p.theme as 'light' | 'dark'
 
   return (
@@ -54,10 +68,10 @@ export default function Blog(props: Props) {
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">Practical travel notes from the CMS. Posts are editorial seed content, not customer testimonials.</p>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
-          {BLOG_POSTS.map((post) => (
+          {posts.map((post) => (
             <article key={post.slug} className="overflow-hidden rounded-2xl border border-line bg-card">
               <a href={`/blog/${post.slug}`}>
-                <img src={post.img} alt="" className="aspect-[16/9] w-full object-cover" />
+                {post.img ? <img src={post.img} alt="" className="aspect-[16/9] w-full object-cover" /> : null}
                 <div className="p-5 sm:p-6">
                   <p className="text-xs font-semibold uppercase tracking-wide text-mint-text">{post.tag} · {post.date}</p>
                   <h2 className="mt-2 font-display text-xl font-bold leading-snug text-heading">{post.title}</h2>

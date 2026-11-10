@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { ArrowRight, BookOpen } from 'lucide-react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
@@ -30,6 +30,20 @@ type Props = {
 export default function TravelGuides(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
+  const [guides, setGuides] = useState(TRAVEL_GUIDES)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/content/editorial?kind=guide')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.posts) && data.posts.length) setGuides(data.posts)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <PublicPageShell
@@ -58,7 +72,7 @@ export default function TravelGuides(props: Props) {
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">Longer CMS guides for itineraries and logistics. These are editorial notes, not customer testimonials.</p>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          {TRAVEL_GUIDES.map((g) => (
+          {guides.map((g) => (
             <article key={g.slug} className="overflow-hidden rounded-2xl border border-line bg-card">
               <a href={`/travel-guides/${g.slug}`} className="flex gap-4 p-3 sm:gap-5 sm:p-4">
                 <img src={g.img} alt="" className="h-28 w-28 shrink-0 rounded-xl object-cover sm:h-32 sm:w-40" />

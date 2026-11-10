@@ -33,7 +33,17 @@ Brand colours: Deep Navy `#061B3A`, Vibrant Yellow `#FFC400`, Emerald Mint `#00C
 
 - **Do not invent** company phone, email, address, registration, VAT, testimonials, or fleet ownership claims. Those fields live in `CompanySettings` / Admin CMS and stay `null` until set.
 - Services, prices, routes, vehicles, and theme defaults come from the database (seed for demo). Historical booking amounts are snapshotted on the booking row.
-- Integrations without credentials **fail clearly** (HTTP 503 + message) — they never fake success.
+- Integrations without credentials **fail clearly** — Teya checkout still creates bookings as **Awaiting Payment** (demo path) when credentials are missing; card PANs are never stored.
+
+## Booking & payments
+
+Guest checkout on `/book` creates a snapshotted booking (USD for international visitors; ISK or USD for residents), runs driver/vehicle availability checks, then:
+
+1. **Teya configured** → creates a Hosted Checkout session and redirects to `session_url`.
+2. **Teya missing credentials** → keeps the booking as `AWAITING_PAYMENT` and shows a clear demo message (no fake “paid”).
+3. **Quotation** → saves as `PENDING` with amount `0` / quote flag.
+
+Webhook: `POST /api/payments/webhook/teya` (optional `TEYA_WEBHOOK_SECRET` HMAC). Admin desktop `/admin` and mobile `/m` share the same booking/services/routes/pricing/payments APIs.
 
 ## Quick start
 
@@ -64,18 +74,38 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 | `npm run db:migrate` | Create/apply migrations |
 | `npm run db:seed` | Seed demo catalogue + ops data |
 
-## API stubs
+## API
 
 | Endpoint | Notes |
 | --- | --- |
 | `GET /api/health` | Liveness + integration flags |
 | `GET /api/services` | Services, routes, destinations, FAQs, fleet |
-| `GET/POST /api/bookings` | List / create bookings |
+| `GET/POST /api/bookings` | List / create bookings (price snapshot + availability) |
+| `POST /api/bookings/quote` | Catalogue quote (USD/ISK) |
+| `POST /api/bookings/availability` | Driver/vehicle overlap check |
+| `GET/PATCH /api/bookings/[ref]` | Booking detail + admin status/assign |
 | `GET /api/drivers` | Driver roster |
 | `GET /api/company` | CMS company profile (null contacts until set) |
 | `GET /api/integrations` | Live credential status |
-| `POST /api/payments/checkout` | Teya checkout (fails clearly if unset) |
+| `GET/POST /api/admin/services` · `PATCH/DELETE …/[id]` | Services CRUD |
+| `GET/POST /api/admin/routes` · `PATCH …/[id]` | Routes CRUD |
+| `GET/POST /api/admin/pricing` | Extras + exchange rate + vehicle upgrades |
+| `GET /api/admin/payments` | Payments list |
+| `POST /api/payments/checkout` | Create booking (optional) + Teya hosted session / demo path |
+| `POST /api/payments/webhook/teya` | Payment status sync (no card data) |
 | `POST /api/maps/geocode` | Google geocode stub (fails clearly if unset) |
+
+### Teya env keys (required for live card checkout)
+
+| Variable | Purpose |
+| --- | --- |
+| `TEYA_CLIENT_ID` | OAuth client id |
+| `TEYA_CLIENT_SECRET` | OAuth client secret |
+| `TEYA_STORE_ID` | Store UUID |
+| `TEYA_ENVIRONMENT` | `sandbox` or `production` |
+| `TEYA_WEBHOOK_SECRET` | Optional webhook HMAC |
+
+Staging API: `https://api.teya.xyz` · OAuth: `https://id.teya.xyz/oauth/v2/oauth-token`
 
 ## Project layout
 

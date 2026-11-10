@@ -108,16 +108,30 @@ model Driver {
 }
 
 model Vehicle {
+  id         String   @id @default(cuid())
+  name       String
+  category   String
+  pax        Int
+  bags       Int
+  plate      String?
+  useCase    String?
+  /// ISK upgrade vs base route price (snapshotted at booking).
+  upgradeIsk Int      @default(0)
+  active     Boolean  @default(true)
+  drivers    Driver[]
+  bookings   Booking[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model PricingExtra {
   id        String   @id @default(cuid())
-  name      String
-  category  String
-  pax       Int
-  bags      Int
-  plate     String?
-  useCase   String?
+  key       String   @unique
+  labelEn   String
+  labelIs   String?
+  isk       Int
   active    Boolean  @default(true)
-  drivers   Driver[]
-  bookings  Booking[]
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -203,11 +217,20 @@ model Booking {
   driver          Driver?        @relation(fields: [driverId], references: [id])
   status          BookingStatus  @default(PENDING)
   currency        CurrencyCode
-  /// Snapshotted charge amount in the booking currency's minor or major units as recorded at checkout.
+  /// Snapshotted charge amount in the booking display currency (USD whole dollars or ISK whole krónur).
   amountSnapshot  Int
   amountIskSnapshot Int?
+  /// Optional deposit / partial amount in the same units as amountSnapshot.
+  depositAmount   Int?
   customerCategory CustomerCategory @default(INTERNATIONAL)
   notes           String?
+  /// Selected extras keys + flags (childSeat, returnTrip, meetGreet, …).
+  extras          Json?
+  /// Line items used for the price snapshot [{label, isk}].
+  priceLines      Json?
+  durationMinutes Int?
+  endsAt          DateTime?
+  isQuote         Boolean        @default(false)
   payments        Payment[]
   messages        Message[]
   createdAt       DateTime       @default(now())
@@ -215,6 +238,8 @@ model Booking {
 
   @@index([status, pickupAt])
   @@index([guestEmail])
+  @@index([vehicleId, pickupAt, endsAt])
+  @@index([driverId, pickupAt, endsAt])
 }
 
 model Payment {
@@ -225,11 +250,17 @@ model Payment {
   status          PaymentStatus @default(PENDING)
   currency        CurrencyCode
   amount          Int
+  /// Amount actually captured (supports deposits/partial).
+  capturedAmount  Int?
   providerRef     String?
+  checkoutUrl     String?
   failureReason   String?
   raw             Json?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  @@index([providerRef])
+  @@index([status])
 }
 
 model Message {

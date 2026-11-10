@@ -1,13 +1,15 @@
-import { integrationConfigured } from '@/lib/env'
+import { integrationConfigured, teyaCredentials } from '@/lib/env'
 import { jsonOk, prisma, withDb } from '@/lib/api'
 
 export async function GET() {
+  const teya = teyaCredentials()
   const live = {
     teya: {
-      configured: integrationConfigured('teya'),
-      message: integrationConfigured('teya')
-        ? 'Credentials present'
-        : 'Set TEYA_MERCHANT_ID and TEYA_API_KEY',
+      configured: teya.configured,
+      environment: teya.environment,
+      message: teya.configured
+        ? 'Teya OAuth + store credentials present'
+        : 'Set TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, and TEYA_STORE_ID',
     },
     googleMaps: {
       configured: integrationConfigured('google_maps'),

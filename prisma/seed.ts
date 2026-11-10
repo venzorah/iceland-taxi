@@ -12,6 +12,7 @@ async function main() {
   await prisma.destination.deleteMany()
   await prisma.faq.deleteMany()
   await prisma.announcement.deleteMany()
+  await prisma.pricingExtra.deleteMany()
   await prisma.driver.deleteMany()
   await prisma.vehicle.deleteMany()
   await prisma.staffProfile.deleteMany()
@@ -180,14 +181,22 @@ async function main() {
     ],
   })
 
+  await prisma.pricingExtra.createMany({
+    data: [
+      { key: 'meetGreet', labelEn: 'Meet & greet at arrivals', isk: 0, sortOrder: 1 },
+      { key: 'childSeat', labelEn: 'Child seat', isk: 2500, sortOrder: 2 },
+      { key: 'returnTrip', labelEn: 'Return journey', isk: 0, sortOrder: 3 },
+    ],
+  })
+
   const vehicles = await Promise.all(
     [
-      { name: 'Standard Sedan', category: 'sedan', pax: 3, bags: 3, useCase: 'Airport & city rides', plate: 'ST-100' },
-      { name: 'Comfort Sedan', category: 'sedan', pax: 3, bags: 3, useCase: 'Longer transfers', plate: 'RX-482' },
-      { name: 'Premium Sedan', category: 'sedan', pax: 3, bags: 2, useCase: 'Business & chauffeur', plate: 'BS-771' },
-      { name: 'SUV', category: 'suv', pax: 4, bags: 4, useCase: 'Winter roads & tours', plate: 'KL-115' },
-      { name: 'Minivan', category: 'van', pax: 7, bags: 7, useCase: 'Families & small groups', plate: 'MV-220' },
-      { name: 'Minibus', category: 'bus', pax: 16, bags: 16, useCase: 'Groups & events', plate: 'MB-016' },
+      { name: 'Standard Sedan', category: 'sedan', pax: 3, bags: 3, useCase: 'Airport & city rides', plate: 'ST-100', upgradeIsk: 0 },
+      { name: 'Comfort Sedan', category: 'sedan', pax: 3, bags: 3, useCase: 'Longer transfers', plate: 'RX-482', upgradeIsk: 3000 },
+      { name: 'Premium Sedan', category: 'sedan', pax: 3, bags: 2, useCase: 'Business & chauffeur', plate: 'BS-771', upgradeIsk: 6000 },
+      { name: 'SUV', category: 'suv', pax: 4, bags: 4, useCase: 'Winter roads & tours', plate: 'KL-115', upgradeIsk: 8000 },
+      { name: 'Minivan', category: 'van', pax: 7, bags: 7, useCase: 'Families & small groups', plate: 'MV-220', upgradeIsk: 12000 },
+      { name: 'Minibus', category: 'bus', pax: 16, bags: 16, useCase: 'Groups & events', plate: 'MB-016', upgradeIsk: 25000 },
     ].map((v) => prisma.vehicle.create({ data: v })),
   )
 

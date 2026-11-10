@@ -1,29 +1,106 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronRight, Filter, MessageCircle, X } from 'lucide-react'
 
 import { BottomSheet } from '@/components/site/BottomSheet'
-import { DRIVERS, TODAY_BOOKINGS, money, statusClass, type OpsBooking } from '@/lib/design/opsData'
+import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
 
 const FILTERS = ['All', 'Needs driver', 'Awaiting payment', 'Quotes', 'Completed']
 
+const STATUS_TO_API: Record<string, string> = {
+  Pending: 'PENDING',
+  'Awaiting Payment': 'AWAITING_PAYMENT',
+  Confirmed: 'CONFIRMED',
+  'Driver Assigned': 'DRIVER_ASSIGNED',
+  'Driver En Route': 'DRIVER_EN_ROUTE',
+  'In Progress': 'IN_PROGRESS',
+  Completed: 'COMPLETED',
+  Cancelled: 'CANCELLED',
+  'Refund Requested': 'REFUND_REQUESTED',
+  Refunded: 'REFUNDED',
+}
+
+type DriverOption = { id: string; displayName: string; status: string }
+
 export function BookingsTable() {
   const [filter, setFilter] = useState('All')
-  const [selected, setSelected] = useState<OpsBooking | null>(TODAY_BOOKINGS[0])
+  const [rows, setRows] = useState<OpsBooking[]>([])
+  const [drivers, setDrivers] = useState<DriverOption[]>([])
+  const [selected, setSelected] = useState<OpsBooking | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [source, setSource] = useState<string>('loading')
+  const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
-  const rows = TODAY_BOOKINGS.filter((b) =>
-    filter === 'All' ? true
-      : filter === 'Needs driver' ? !b.driver && b.status !== 'Pending'
-      : filter === 'Awaiting payment' ? b.status === 'Awaiting Payment'
-      : filter === 'Quotes' ? b.status === 'Pending'
-      : b.status === 'Completed',
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [bRes, dRes] = await Promise.all([fetch('/api/bookings'), fetch('/api/drivers')])
+      const bJson = await bRes.json()
+      const dJson = await dRes.json()
+      const ops: OpsBooking[] = bJson.ops || bJson.bookings || []
+      setRows(ops)
+      setSource(bJson.source || 'unknown')
+      if (!selected && ops[0]) setSelected(ops[0])
+      const driverList: DriverOption[] = (dJson.drivers || []).map(
+        (d: { id?: string; displayName?: string; name?: string; status?: string }) => ({
+          id: d.id || d.displayName || d.name || '',
+          displayName: d.displayName || d.name || 'Driver',
+          status: d.status || 'Available',
+        }),
+      )
+      setDrivers(driverList)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }, [selected])
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const filtered = rows.filter((b) =>
+    filter === 'All'
+      ? true
+      : filter === 'Needs driver'
+        ? !b.driver && b.status !== 'Pending'
+        : filter === 'Awaiting payment'
+          ? b.status === 'Awaiting Payment'
+          : filter === 'Quotes'
+            ? b.status === 'Pending'
+            : b.status === 'Completed',
   )
+
   const open = (b: OpsBooking) => {
     setSelected(b)
     setSheetOpen(true)
+  }
+
+  const save = async (patch: { status?: string; driverId?: string | null; notes?: string }) => {
+    if (!selected) return
+    setSaveMsg(null)
+    const res = await fetch(`/api/bookings/${selected.ref}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        status: patch.status ? STATUS_TO_API[patch.status] || patch.status : undefined,
+        driverId: patch.driverId,
+        notes: patch.notes,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data.ok) {
+      setSaveMsg(data.message || 'Could not save booking')
+      return
+    }
+    setSaveMsg('Saved')
+    await load()
+    if (data.ops) setSelected(data.ops)
   }
 
   return (
@@ -32,19 +109,29 @@ export function BookingsTable() {
         <div className="flex items-center gap-2">
           <div className="no-scrollbar -mx-3 flex min-w-0 flex-1 gap-2 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {FILTERS.map((f) => (
-              <button key={f} onClick={() => setFilter(f)} className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-150 ${filter === f ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'border border-line bg-bg text-text hover:border-input-line'}`}>
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-150 ${filter === f ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'border border-line bg-bg text-text hover:border-input-line'}`}
+              >
                 {f}
               </button>
             ))}
           </div>
-          <button aria-label="More filters" className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-bg px-2.5 py-1.5 text-sm font-medium text-text sm:px-3">
+          <button
+            aria-label="More filters"
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-bg px-2.5 py-1.5 text-sm font-medium text-text sm:px-3"
+          >
             <Filter size={14} /> <span className="hidden md:inline">Date · Service · Currency</span>
           </button>
         </div>
+        <p className="mt-2 text-xs text-muted">
+          {loading ? 'Loading bookings…' : `${filtered.length} bookings · source: ${source}`}
+          {saveMsg ? ` · ${saveMsg}` : ''}
+        </p>
 
-        {/* Phones and tablets: one card per booking */}
         <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg md:hidden">
-          {rows.map((b) => (
+          {filtered.map((b) => (
             <li key={b.ref}>
               <button onClick={() => open(b)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface">
                 <p className="w-12 shrink-0 font-display text-base font-bold tabular-nums text-heading">{b.time}</p>
@@ -66,24 +153,33 @@ export function BookingsTable() {
           ))}
         </ul>
 
-        {/* Wider screens: the full table */}
         <div className="mt-4 hidden overflow-x-auto rounded-xl border border-line bg-bg md:block">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead className="border-b border-line text-xs font-semibold text-muted">
               <tr>
-                {['Reference', 'Pickup', 'Customer', 'Service', 'Driver', 'Amount', 'Status'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}
+                {['Reference', 'Pickup', 'Customer', 'Service', 'Driver', 'Amount', 'Status'].map((h) => (
+                  <th key={h} className="px-4 py-3">
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {rows.map((b) => (
-                <tr key={b.ref} onClick={() => open(b)} className={`cursor-pointer transition-colors duration-150 ${selected?.ref === b.ref ? 'bg-surface' : 'hover:bg-surface/60'}`}>
+              {filtered.map((b) => (
+                <tr
+                  key={b.ref}
+                  onClick={() => open(b)}
+                  className={`cursor-pointer transition-colors duration-150 ${selected?.ref === b.ref ? 'bg-surface' : 'hover:bg-surface/60'}`}
+                >
                   <td className="px-4 py-3 font-mono text-xs text-heading">{b.ref}</td>
                   <td className="px-4 py-3 tabular-nums text-heading">{b.time}</td>
                   <td className="px-4 py-3 font-medium text-heading">{b.customer}</td>
                   <td className="px-4 py-3 text-text">{b.service}</td>
                   <td className="px-4 py-3">{b.driver ?? <span className="font-semibold text-error">Unassigned</span>}</td>
                   <td className="px-4 py-3 tabular-nums font-semibold text-heading">{money(b.amount, b.currency)}</td>
-                  <td className="px-4 py-3"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusClass(b.status)}`}>{b.status}</span></td>
+                  <td className="px-4 py-3">
+                    <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusClass(b.status)}`}>{b.status}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -91,7 +187,6 @@ export function BookingsTable() {
         </div>
       </div>
 
-      {/* Large screens: details sit beside the table */}
       <AnimatePresence>
         {selected && (
           <motion.aside
@@ -107,19 +202,20 @@ export function BookingsTable() {
                 <p className="font-mono text-xs text-muted">{selected.ref}</p>
                 <h2 className="mt-1 font-display text-xl font-bold text-heading">{selected.route}</h2>
               </div>
-              <button onClick={() => setSelected(null)} aria-label="Close" className="text-muted hover:text-heading"><X size={18} /></button>
+              <button onClick={() => setSelected(null)} aria-label="Close" className="text-muted hover:text-heading">
+                <X size={18} />
+              </button>
             </div>
-            <BookingDetail booking={selected} />
+            <BookingDetail booking={selected} drivers={drivers} onSave={save} />
           </motion.aside>
         )}
       </AnimatePresence>
 
-      {/* Smaller screens: details slide up as a sheet */}
       <BottomSheet open={sheetOpen && !!selected} onClose={() => setSheetOpen(false)} title={selected?.route} hideFrom="xl">
         {selected && (
           <>
             <p className="font-mono text-xs text-muted">{selected.ref}</p>
-            <BookingDetail booking={selected} />
+            <BookingDetail booking={selected} drivers={drivers} onSave={save} />
           </>
         )}
       </BottomSheet>
@@ -127,7 +223,26 @@ export function BookingsTable() {
   )
 }
 
-function BookingDetail({ booking }: { booking: OpsBooking }) {
+function BookingDetail({
+  booking,
+  drivers,
+  onSave,
+}: {
+  booking: OpsBooking
+  drivers: DriverOption[]
+  onSave: (patch: { status?: string; driverId?: string | null; notes?: string }) => void
+}) {
+  const [status, setStatus] = useState(booking.status)
+  const [driverId, setDriverId] = useState('')
+  const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    setStatus(booking.status)
+    const match = drivers.find((d) => d.displayName === booking.driver)
+    setDriverId(match?.id || '')
+    setNotes('')
+  }, [booking, drivers])
+
   return (
     <>
       <span className={`mt-3 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusClass(booking.status)}`}>{booking.status}</span>
@@ -139,26 +254,62 @@ function BookingDetail({ booking }: { booking: OpsBooking }) {
           ['Passengers', String(booking.pax)],
           ['Vehicle', booking.vehicle],
           ['Total', `${money(booking.amount, booking.currency)} · ${booking.currency}`],
-          ...(booking.flight ? [['Flight', booking.flight]] : []),
+          ...(booking.flight ? [['Flight', booking.flight] as [string, string]] : []),
         ].map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-4 py-2.5"><dt className="text-muted">{k}</dt><dd className="text-right font-medium text-heading">{v}</dd></div>
+          <div key={k} className="flex justify-between gap-4 py-2.5">
+            <dt className="text-muted">{k}</dt>
+            <dd className="text-right font-medium text-heading">{v}</dd>
+          </div>
         ))}
       </dl>
       <label className="mt-5 block text-xs font-semibold text-muted">Driver</label>
-      <select key={booking.ref + 'd'} defaultValue={booking.driver ?? ''} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm text-heading">
+      <select
+        value={driverId}
+        onChange={(e) => setDriverId(e.target.value)}
+        className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm text-heading"
+      >
         <option value="">Choose a driver…</option>
-        {DRIVERS.map((d) => <option key={d.name} value={d.name} disabled={d.status === 'Off duty'}>{d.name} — {d.status}</option>)}
+        {drivers.map((d) => (
+          <option key={d.id} value={d.id} disabled={d.status === 'Off duty'}>
+            {d.displayName} — {d.status}
+          </option>
+        ))}
       </select>
       <p className="mt-1.5 text-xs text-muted">Drivers on an overlapping journey are blocked by availability rules.</p>
       <label className="mt-4 block text-xs font-semibold text-muted">Status</label>
-      <select key={booking.ref + 's'} defaultValue={booking.status} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm text-heading">
-        {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', 'Refunded'].map((s) => <option key={s}>{s}</option>)}
+      <select
+        value={status}
+        onChange={(e) => setStatus(e.target.value as OpsBooking['status'])}
+        className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm text-heading"
+      >
+        {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', 'Refunded'].map((s) => (
+          <option key={s}>{s}</option>
+        ))}
       </select>
       <label className="mt-4 block text-xs font-semibold text-muted">Internal note</label>
-      <textarea rows={3} placeholder="Visible to staff only" className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading placeholder:text-muted" />
+      <textarea
+        rows={3}
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Visible to staff only"
+        className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading placeholder:text-muted"
+      />
       <div className="mt-5 flex gap-2">
-        <button className="flex-1 rounded-lg bg-primary py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover xl:py-2.5">Save changes</button>
-        <button className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-heading"><MessageCircle size={15} /> Message</button>
+        <button
+          onClick={() =>
+            onSave({
+              status,
+              driverId: driverId || null,
+              notes: notes || undefined,
+            })
+          }
+          className="flex-1 rounded-lg bg-primary py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover xl:py-2.5"
+        >
+          Save changes
+        </button>
+        <button className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-heading">
+          <MessageCircle size={15} /> Message
+        </button>
       </div>
     </>
   )

@@ -14,4 +14,4 @@ export function getPaymentProvider(id = process.env.PAYMENT_PROVIDER ?? 'teya'):
 }
 
 export * from './types'
-export { teyaProvider }
+export { teyaProvider, verifyTeyaWebhookSignature } from './teya'

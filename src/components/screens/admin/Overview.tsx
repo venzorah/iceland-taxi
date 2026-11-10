@@ -1,9 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { AlertCircle, ArrowRight, Plane, UserPlus } from 'lucide-react'
 
-import { CONVERSATIONS, DRIVERS, TODAY_BOOKINGS, money, statusClass } from '@/lib/design/opsData'
+import { CONVERSATIONS, DRIVERS, money, statusClass, type OpsBooking } from '@/lib/design/opsData'
 
 const WEEK = [
   { d: 'Mon', usd: 1820, isk: 210 },
@@ -16,27 +16,45 @@ const WEEK = [
 ]
 
 export function Overview({ onOpenBookings }: { onOpenBookings?: () => void }) {
-  const sorted = [...TODAY_BOOKINGS].filter((b) => b.time !== '—').sort((a, b) => a.time.localeCompare(b.time))
-  const needDriver = TODAY_BOOKINGS.filter((b) => !b.driver && b.status !== 'Pending').length
+  const [bookings, setBookings] = useState<OpsBooking[]>([])
+  const [source, setSource] = useState('loading')
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch('/api/bookings')
+        const data = await res.json()
+        setBookings(data.ops || data.bookings || [])
+        setSource(data.source || 'unknown')
+      } catch {
+        setSource('error')
+      }
+    })()
+  }, [])
+
+  const sorted = [...bookings].filter((b) => b.time !== '—').sort((a, b) => a.time.localeCompare(b.time))
+  const needDriver = bookings.filter((b) => !b.driver && b.status !== 'Pending' && b.status !== 'Cancelled').length
+  const awaiting = bookings.filter((b) => b.status === 'Awaiting Payment').length
+  const quotes = bookings.filter((b) => b.status === 'Pending').length
   const max = Math.max(...WEEK.map((w) => w.usd))
+  const usdTotal = bookings.filter((b) => b.currency === 'USD').reduce((s, b) => s + b.amount, 0)
+  const iskTotal = bookings.filter((b) => b.currency === 'ISK').reduce((s, b) => s + b.amount, 0)
 
   return (
     <div className="mx-auto max-w-[1400px] p-3 sm:p-6">
-      {/* Attention strip */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-bg px-4 py-3.5 text-sm sm:gap-x-6 sm:px-5">
-        <span className="font-semibold text-heading">Friday 14 March</span>
-        <span className="text-muted"><strong className="text-heading">{TODAY_BOOKINGS.length}</strong> bookings today</span>
+        <span className="font-semibold text-heading">Live · {source}</span>
+        <span className="text-muted"><strong className="text-heading">{bookings.length}</strong> bookings</span>
         <span className="flex items-center gap-1.5 text-error"><AlertCircle size={15} /><strong>{needDriver}</strong> need a driver</span>
-        <span className="text-muted"><strong className="text-heading">1</strong> awaiting payment</span>
-        <span className="text-muted"><strong className="text-heading">1</strong> quotation request</span>
+        <span className="text-muted"><strong className="text-heading">{awaiting}</strong> awaiting payment</span>
+        <span className="text-muted"><strong className="text-heading">{quotes}</strong> quotation request</span>
         <button onClick={onOpenBookings} className="inline-flex items-center gap-1 whitespace-nowrap font-semibold sm:ml-auto text-link hover:underline">All bookings <ArrowRight size={14} /></button>
       </div>
 
       <div className="mt-4 grid gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-[1fr_380px]">
-        {/* Primary: today's dispatch */}
         <section className="rounded-xl border border-line bg-bg">
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-4 sm:px-5">
-            <h2 className="font-display text-base font-bold text-heading">Today's journeys</h2>
+            <h2 className="font-display text-base font-bold text-heading">Today&apos;s journeys</h2>
             <span className="hidden text-xs text-muted sm:inline">Live · updates across desktop and mobile</span>
           </div>
           <ol className="divide-y divide-line">
@@ -57,7 +75,7 @@ export function Overview({ onOpenBookings }: { onOpenBookings?: () => void }) {
                   {b.driver ? (
                     <span className="text-sm text-text">{b.driver}</span>
                   ) : (
-                    <button className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
+                    <button onClick={onOpenBookings} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
                       <UserPlus size={14} /> Assign driver
                     </button>
                   )}
@@ -65,21 +83,21 @@ export function Overview({ onOpenBookings }: { onOpenBookings?: () => void }) {
                 </div>
               </li>
             ))}
+            {sorted.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No bookings yet.</li>}
           </ol>
         </section>
 
-        {/* Secondary column */}
         <div className="grid content-start gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-1">
           <section className="rounded-xl border border-line bg-bg p-5">
-            <h2 className="font-display text-base font-bold text-heading">Revenue this week</h2>
+            <h2 className="font-display text-base font-bold text-heading">Bookings totals</h2>
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-medium text-muted">USD</p>
-                <p className="font-display text-xl font-extrabold text-heading sm:text-2xl">$19,940</p>
+                <p className="font-display text-xl font-extrabold text-heading sm:text-2xl">${usdTotal.toLocaleString('en-US')}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-muted">ISK</p>
-                <p className="whitespace-nowrap font-display text-xl font-extrabold text-heading sm:text-2xl">2.020.000 kr</p>
+                <p className="whitespace-nowrap font-display text-xl font-extrabold text-heading sm:text-2xl">{iskTotal.toLocaleString('en-US').replace(/,/g, '.')} kr</p>
               </div>
             </div>
             <div className="mt-5 flex h-28 items-end gap-2" aria-label="USD revenue by day">
@@ -90,7 +108,7 @@ export function Overview({ onOpenBookings }: { onOpenBookings?: () => void }) {
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-xs text-muted">Totals are never combined across currencies. Outstanding: $434 · 129.900 kr</p>
+            <p className="mt-3 text-xs text-muted">Totals are never combined across currencies. Chart remains illustrative until settlement reports land.</p>
           </section>
 
           <section className="rounded-xl border border-line bg-bg">

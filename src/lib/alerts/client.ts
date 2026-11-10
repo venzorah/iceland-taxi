@@ -110,7 +110,7 @@ export async function showPhoneNotification(item: { id: string; title: string; b
   if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return
   const options = {
     body: item.body,
-    icon: '/brand/logo-dark-white-text.png',
+    icon: '/icons/icon-192.png',
     tag: `message-${item.id}`,
     renotify: true,
     silent: false,
@@ -126,7 +126,7 @@ export async function showPhoneNotification(item: { id: string; title: string; b
   } catch {
     /* fall through to the page Notification constructor */
   }
-  const note = new Notification(item.title, { body: item.body, icon: '/brand/logo-dark-white-text.png', tag: options.tag })
+  const note = new Notification(item.title, { body: item.body, icon: '/icons/icon-192.png', tag: options.tag })
   note.onclick = () => {
     window.focus()
     window.location.href = item.url

@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useRouter } from 'next/navigation'
 
 import { MessageAlerts } from '@/components/alerts/MessageAlerts'
+import { WelcomeSplash } from '@/components/site/WelcomeSplash'
 import { ANNOUNCEMENTS_SEED, type AnnouncementState } from '@/lib/design/announcements'
 import type { Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
@@ -61,6 +62,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={value}>
+      <WelcomeSplash />
       <MessageAlerts />
       {children}
     </AppContext.Provider>

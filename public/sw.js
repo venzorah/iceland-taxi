@@ -31,8 +31,8 @@ self.addEventListener('push', (event) => {
       if (visible) return
       await self.registration.showNotification(data.title, {
         body: data.body,
-        icon: '/brand/logo-dark-white-text.png',
-        badge: '/brand/logo-dark-white-text.png',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
         tag: data.id ? `message-${data.id}` : 'message-alert',
         renotify: true,
         silent: false,

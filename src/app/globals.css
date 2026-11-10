@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Iceland Taxi Booking — central design tokens (light is default) */
+:root {
+  --navy: #061b3a;
+  --navy-2: #0b294f;
+  --bg: #ffffff;
+  --surface: #f4f7fb;
+  --card: #ffffff;
+  --heading: #061b3a;
+  --text: #1d2f4a;
+  --muted: #5a6b82;
+  --primary: #ffc400;
+  --primary-hover: #ffd23f;
+  --on-primary: #061b3a;
+  --mint: #00cfa5;
+  --mint-text: #007a62;
+  --cyan: #00aeef;
+  --link: #0073a3;
+  --border: #e3e9f1;
+  --input: #ffffff;
+  --input-border: #cfd8e4;
+  --focus: #00aeef;
+  --success: #007a62;
+  --warning: #9a6a00;
+  --error: #c62f3d;
+}
+
+.dark {
+  --bg: #061b3a;
+  --surface: #0b294f;
+  --card: #0e2f5a;
+  --heading: #ffffff;
+  --text: #dbe5f3;
+  --muted: #9bb0cc;
+  --mint-text: #00cfa5;
+  --link: #00aeef;
+  --border: #1a3c68;
+  --input: #0b294f;
+  --input-border: #24507f;
+  --success: #00cfa5;
+  --warning: #ffc400;
+  --error: #ff7a85;
+}
+
+html,
+body {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+button,
+a,
+label,
+[role='tab'] {
+  touch-action: manipulation;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.pb-safe {
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,315 @@
+// Iceland Taxi Booking — PostgreSQL schema (production-bound scaffold)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  DRIVER
+  SUPER_ADMIN
+  BOOKING_MANAGER
+  FINANCE_MANAGER
+  CONTENT_MANAGER
+  STAFF
+}
+
+enum CustomerCategory {
+  INTERNATIONAL
+  RESIDENT
+}
+
+enum CurrencyCode {
+  USD
+  ISK
+}
+
+enum BookingStatus {
+  PENDING
+  AWAITING_PAYMENT
+  CONFIRMED
+  DRIVER_ASSIGNED
+  DRIVER_EN_ROUTE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUND_REQUESTED
+  REFUNDED
+}
+
+enum ServiceKind {
+  AIRPORT
+  TAXI
+  TOUR
+  DRIVER
+  CUSTOM
+}
+
+enum PaymentStatus {
+  REQUIRES_CREDENTIALS
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+enum ThemeMode {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  name         String?
+  phone        String?
+  role         Role             @default(CUSTOMER)
+  category     CustomerCategory @default(INTERNATIONAL)
+  preferredCurrency CurrencyCode @default(USD)
+  preferredLang String          @default("en")
+  passwordHash String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  bookings     Booking[]        @relation("CustomerBookings")
+  driver       Driver?
+  staffProfile StaffProfile?
+  messages     Message[]
+}
+
+model StaffProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  modules   String[] @default([])
+  active    Boolean  @default(true)
+}
+
+model Driver {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName  String
+  licenceNotes String?
+  status       String   @default("Available")
+  active       Boolean  @default(true)
+  vehicleId    String?
+  vehicle      Vehicle? @relation(fields: [vehicleId], references: [id])
+  bookings     Booking[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Vehicle {
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  pax       Int
+  bags      Int
+  plate     String?
+  useCase   String?
+  active    Boolean  @default(true)
+  drivers   Driver[]
+  bookings  Booking[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Service {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  kind        ServiceKind
+  titleEn     String
+  titleIs     String?
+  blurbEn     String?
+  blurbIs     String?
+  imageUrl    String?
+  hoursLabel  String?
+  paxLabel    String?
+  fromIsk     Int?
+  active      Boolean     @default(true)
+  sortOrder   Int         @default(0)
+  routes      Route[]
+  bookings    Booking[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Route {
+  id          String   @id @default(cuid())
+  serviceId   String?
+  service     Service? @relation(fields: [serviceId], references: [id])
+  fromLabel   String
+  toLabel     String
+  minutes     Int?
+  km          Float?
+  fromIsk     Int
+  returnTrip  Boolean  @default(true)
+  active      Boolean  @default(true)
+  override    Boolean  @default(false)
+  bookings    Booking[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Destination {
+  id        String   @id @default(cuid())
+  name      String
+  note      String?
+  imageUrl  String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  questionEn String
+  answerEn   String
+  questionIs String?
+  answerIs   String?
+  sortOrder  Int     @default(0)
+  published  Boolean @default(true)
+}
+
+model Booking {
+  id              String         @id @default(cuid())
+  ref             String         @unique
+  customerId      String?
+  customer        User?          @relation("CustomerBookings", fields: [customerId], references: [id])
+  guestName       String?
+  guestEmail      String?
+  guestPhone      String?
+  serviceId       String?
+  service         Service?       @relation(fields: [serviceId], references: [id])
+  routeId         String?
+  route           Route?         @relation(fields: [routeId], references: [id])
+  serviceLabel    String
+  routeLabel      String
+  pickupAt        DateTime?
+  passengers      Int            @default(1)
+  luggage         Int            @default(0)
+  flightNumber    String?
+  vehicleId       String?
+  vehicle         Vehicle?       @relation(fields: [vehicleId], references: [id])
+  vehicleLabel    String?
+  driverId        String?
+  driver          Driver?        @relation(fields: [driverId], references: [id])
+  status          BookingStatus  @default(PENDING)
+  currency        CurrencyCode
+  /// Snapshotted charge amount in the booking currency's minor or major units as recorded at checkout.
+  amountSnapshot  Int
+  amountIskSnapshot Int?
+  customerCategory CustomerCategory @default(INTERNATIONAL)
+  notes           String?
+  payments        Payment[]
+  messages        Message[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status, pickupAt])
+  @@index([guestEmail])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  provider        String        @default("teya")
+  status          PaymentStatus @default(PENDING)
+  currency        CurrencyCode
+  amount          Int
+  providerRef     String?
+  failureReason   String?
+  raw             Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  bookingId  String?
+  booking    Booking? @relation(fields: [bookingId], references: [id])
+  authorId   String?
+  author     User?    @relation(fields: [authorId], references: [id])
+  body       String
+  channel    String   @default("in_app")
+  unread     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  textEn      String
+  textIs      String?
+  href        String?
+  enabled     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CompanySettings {
+  id                 String    @id @default("singleton")
+  legalName          String?
+  displayName        String    @default("Iceland Taxi Booking")
+  email              String?
+  phone              String?
+  whatsappE164       String?
+  addressLine1       String?
+  addressLine2       String?
+  city               String?
+  postalCode         String?
+  country            String?   @default("IS")
+  registrationNumber String?
+  vatNumber          String?
+  aboutEn            String?
+  aboutIs            String?
+  /// Never invent values — leave null until set in admin/CMS.
+  testimonialsEnabled Boolean  @default(false)
+  updatedAt          DateTime  @updatedAt
+}
+
+model ThemeSettings {
+  id                 String    @id @default("singleton")
+  defaultMode        ThemeMode @default(LIGHT)
+  darkModeEnabled    Boolean   @default(true)
+  adminCanOverride   Boolean   @default(true)
+  updatedAt          DateTime  @updatedAt
+}
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  iskPerUsd Int
+  effective DateTime @default(now())
+  note      String?
+}
+
+model SeoPage {
+  id          String   @id @default(cuid())
+  path        String   @unique
+  titleEn     String?
+  titleIs     String?
+  descriptionEn String?
+  descriptionIs String?
+  ogImageUrl  String?
+  noIndex     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+model IntegrationStatus {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  configured Boolean @default(false)
+  lastError String?
+  updatedAt DateTime @updatedAt
+}

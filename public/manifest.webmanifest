@@ -1,0 +1,18 @@
+{
+  "name": "Iceland Taxi Booking",
+  "short_name": "Iceland Taxi",
+  "description": "Discover Iceland. Travel Comfortably.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#061B3A",
+  "theme_color": "#061B3A",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/brand/logo-dark-white-text.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

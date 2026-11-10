@@ -12,6 +12,7 @@ export async function GET() {
       googleMaps: integrationConfigured('google_maps'),
       smtp: integrationConfigured('smtp'),
       sms: integrationConfigured('sms'),
+      whatsappCloud: integrationConfigured('whatsapp'),
     },
   })
 }

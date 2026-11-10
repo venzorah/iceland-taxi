@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { normalizeStoredE164 } from '@/lib/whatsapp'
 
 export async function GET() {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
@@ -29,10 +30,22 @@ export async function PATCH(req: Request) {
   const body = await req.json().catch(() => null)
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Invalid company patch', { issues: parsed.error.flatten() })
+  const data = { ...parsed.data }
+  if (data.whatsappE164 !== undefined) {
+    if (data.whatsappE164 === null || data.whatsappE164.trim() === '') {
+      data.whatsappE164 = null
+    } else {
+      const normalized = normalizeStoredE164(data.whatsappE164)
+      if (!normalized) {
+        return jsonError(400, 'VALIDATION_ERROR', 'Enter the official WhatsApp number in international format, starting with +.')
+      }
+      data.whatsappE164 = normalized
+    }
+  }
   const company = await prisma.companySettings.upsert({
     where: { id: 'singleton' },
-    create: { id: 'singleton', displayName: parsed.data.displayName || 'Iceland Taxi Booking', ...parsed.data },
-    update: parsed.data,
+    create: { id: 'singleton', displayName: data.displayName || 'Iceland Taxi Booking', ...data },
+    update: data,
   })
   return jsonOk({ ok: true, company })
 }

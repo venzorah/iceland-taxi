@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Bell, Menu, Moon, Plus, Search, Sun } from 'lucide-react'
+import { Menu, Moon, Plus, Search, Sun } from 'lucide-react'
 
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { MobileNav, Sidebar } from './Sidebar'
@@ -13,6 +13,7 @@ import { Pricing } from './Pricing'
 import { Routes } from './Routes'
 import { PaymentsList } from './PaymentsList'
 import { Messages } from './Messages'
+import { StaffNoticeBell } from './StaffNoticeBell'
 import { Fleet } from './Fleet'
 import { Seo } from './Seo'
 import { Staff } from './Staff'
@@ -48,6 +49,7 @@ export default function AdminDashboard(props: Props) {
   const go = (s: string) => (props.onSectionChange ? props.onSectionChange(s) : setLocalSection(s))
   const th = p.theme as 'light' | 'dark'
   const [menuOpen, setMenuOpen] = useState(false)
+  const [focusRef, setFocusRef] = useState<string | null>(null)
   const [localAnn, setLocalAnn] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
   const announcements = props.onAnnouncementsChange ? props.announcements ?? ANNOUNCEMENTS_SEED : localAnn
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
@@ -60,7 +62,7 @@ export default function AdminDashboard(props: Props) {
     switch (section) {
       case 'overview': return <Overview onOpenBookings={() => go('bookings')} />
       case 'bookings': return <BookingsTable />
-      case 'messages': return <Messages />
+      case 'messages': return <Messages focusRef={focusRef} onOpenSettings={() => go('settings')} />
       case 'services': return <Services />
       case 'pricing': return <Pricing />
       case 'routes': return <Routes />
@@ -112,10 +114,13 @@ export default function AdminDashboard(props: Props) {
               <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="grid h-10 w-10 sm:h-9 sm:w-9 place-items-center rounded-lg text-heading transition-colors duration-150 hover:bg-surface">
                 {th === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
               </button>
-              <button onClick={() => go('messages')} aria-label="Notifications" className="relative grid h-10 w-10 sm:h-9 sm:w-9 place-items-center rounded-lg text-heading transition-colors duration-150 hover:bg-surface">
-                <Bell size={17} />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-error" />
-              </button>
+              <StaffNoticeBell
+                onOpenChat={(ref) => {
+                  setFocusRef(ref)
+                  go('messages')
+                }}
+                onOpenSettings={() => go('settings')}
+              />
               <a href="/book" className="hidden items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover sm:flex">
                 <Plus size={16} /> New booking
               </a>

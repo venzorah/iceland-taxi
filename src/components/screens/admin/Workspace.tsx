@@ -15,6 +15,7 @@ type Workspace = {
   pages: { title: string; href: string; kind: string; published: boolean }[]
   languages: { code: string; name: string; default: boolean }[]
   integrations: { key: string; label: string; configured: boolean; message: string }[]
+  whatsapp?: { enabled: boolean; mode: string; number: string | null; note: string }
   settings: {
     company: {
       displayName: string
@@ -219,6 +220,34 @@ function Field({ label, value }: { label: string; value: string | null }) {
 export function SettingsSection() {
   const { data, message } = useWorkspace()
   const company = data?.settings.company
+  const [draft, setDraft] = useState(company?.whatsappE164 || '')
+  const [status, setStatus] = useState<string | null>(null)
+  const [number, setNumber] = useState<string | null>(company?.whatsappE164 ?? null)
+
+  useEffect(() => {
+    setDraft(company?.whatsappE164 || '')
+    setNumber(company?.whatsappE164 ?? null)
+  }, [company?.whatsappE164])
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setStatus(null)
+    const res = await fetch('/api/admin/company', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ whatsappE164: draft.trim() || null }),
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setStatus(body?.message || 'Could not save the WhatsApp number')
+      return
+    }
+    const saved = body.company?.whatsappE164 || null
+    setNumber(saved)
+    setDraft(saved || '')
+    setStatus(saved ? 'Saved. Customer messages can now notify staff on this WhatsApp number.' : 'Saved. WhatsApp delivery stays off until an official number is stored.')
+  }
+
   return (
     <Shell message={message}>
       <h2 className="font-display text-base font-bold text-heading">Company profile</h2>
@@ -227,7 +256,29 @@ export function SettingsSection() {
         <Field label="Display name" value={company?.displayName ?? null} />
         <Field label="Email" value={company?.email ?? null} />
         <Field label="Phone" value={company?.phone ?? null} />
-        <Field label="WhatsApp" value={company?.whatsappE164 ?? null} />
+        <div className="rounded-xl border border-line bg-bg px-4 py-3 sm:col-span-2">
+          <p className="text-xs font-semibold text-muted">Official WhatsApp number</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            {!number
+              ? 'WhatsApp delivery is off. Add the official company WhatsApp number here. No number is invented, and customer messages are not sent to WhatsApp until one is saved.'
+              : data?.integrations?.find((item) => item.key === 'whatsapp')?.configured
+                ? 'Outbound WhatsApp notices are sent when a customer messages. Inbound WhatsApp chats are not synced into this inbox.'
+                : 'Each new customer message creates a staff notification and a WhatsApp link with the booking reference. The private message is not included. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server to send that notice automatically. Inbound WhatsApp chats are not synced.'}
+          </p>
+          <form onSubmit={save} className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Not set"
+              aria-label="Official WhatsApp number"
+              inputMode="tel"
+              autoComplete="tel"
+              className="min-w-0 flex-1 rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus"
+            />
+            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save number</button>
+          </form>
+          {status && <p className="mt-2 text-xs text-muted">{status}</p>}
+        </div>
         <Field label="Address" value={[company?.addressLine1, company?.city].filter(Boolean).join(', ') || null} />
         <Field label="Registration number" value={company?.registrationNumber ?? null} />
         <Field label="VAT number" value={company?.vatNumber ?? null} />

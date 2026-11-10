@@ -284,7 +284,25 @@ model Message {
   createdAt  DateTime @default(now())
 
   @@index([bookingId, createdAt])
+  @@index([bookingId, authorRole, unread])
   @@index([guestEmail])
+}
+
+/// Staff notice for a new customer message. Stores the short WhatsApp text only, never the private message.
+model StaffNotification {
+  id             String   @id @default(cuid())
+  bookingRef     String
+  messageId      String?
+  notice         String
+  whatsappUrl    String?
+  /// off | link | sent | failed
+  delivery       String
+  deliveryDetail String?
+  read           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([read, createdAt])
+  @@index([bookingRef, createdAt])
 }
 
 model Announcement {

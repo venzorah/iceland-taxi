@@ -102,7 +102,8 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 | `POST/DELETE /api/driver/auth` | Demo driver login cookie (`ari.driver@example.local`) |
 | `GET /api/driver/me` · `GET/PATCH /api/driver/bookings` | Assigned jobs + journey status advances |
 | `GET/POST /api/auth/demo` | Demo staff / guest messaging session cookies |
-| `GET/POST /api/messages` · `GET/PATCH /api/messages/[ref]` | Booking-linked threads (polling ~4s); staff or guest email gate |
+| `GET/POST /api/messages` · `GET/PATCH /api/messages/[ref]` | Booking-linked threads (polling ~4s). Staff inbox is every customer conversation. `?as=staff` or `?as=customer` chooses which side is marked read. |
+| `GET/PATCH /api/admin/notifications` | Staff notices for new customer messages (booking ref and short WhatsApp text, no message body) |
 | `GET /api/messages/alerts` | Unread alert ids and booking refs only (no message text) |
 | `GET /api/push/config` · `POST /api/push/subscribe` | Optional Web Push. Needs `VAPID_*` |
 | `GET/PATCH /api/admin/company` | Company CMS incl. `whatsappE164` (null until set — never invented) |
@@ -110,10 +111,15 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 ### Driver & messaging notes
 
 - Driver portal is **ops-only**: acknowledge → en route → in progress → completed. No admin catalogue powers. Double-assign conflicts reuse availability checks.
-- Messaging is **in-app** with HTTP polling (not claimed as WhatsApp Business API sync). Conversations are keyed to booking refs.
+- Messaging is **in-app** with HTTP polling. Conversations are keyed to booking refs. This is not WhatsApp inbox sync.
+- Admin, booking managers, and staff share one inbox. A conversation stays visible to every message-handling role, including when a driver is assigned to the trip.
+- A thread shows **Unread** until that side opens it, then **Read**. The flag is stored on the message row (`unread`). Opening as staff marks customer messages read for the whole staff inbox. Opening as the guest marks staff replies read for that guest. Pass `?as=staff` or `?as=customer` so the correct side is updated.
+- Staff replies in chat are shown as **Juliet** (the stored name `Platform Admin` is displayed as Juliet).
+- When a customer sends a message and **System settings → Official WhatsApp number** is saved, staff get an admin notification and a WhatsApp link: booking reference plus “a new message arrived”. The private message is not copied into WhatsApp. If that number is empty, WhatsApp delivery stays off and System settings says where to add it.
+- A real send needs `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` (Meta WhatsApp Cloud API). Optional `WHATSAPP_NOTIFY_E164` is the handset that receives the notice; when empty, the company number is used. Optional `WHATSAPP_API_VERSION` defaults to `v21.0`. Without those credentials the link path is used. Inbound WhatsApp messages are not imported.
 - A new message plays `/sounds/message.wav` after the person turns alerts on or taps inside messages, account, admin, or the driver portal. The same event shows an in-app banner. If they allow notifications, a backgrounded tab uses the service worker to put **New message on &lt;booking ref&gt;** at the top of the phone. The private message text is not included and is not cached in the service worker.
 - Background delivery when the site is fully closed needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` (`mailto:` or `https:` you control). Without them, sound and notifications still work while the site is open. Generate keys with `npx web-push generate-vapid-keys`. Do not commit the private key.
-- WhatsApp buttons use `CompanySettings.whatsappE164` when set; otherwise `wa.me/?text=…` with booking ref only (no fake number).
+- Customer WhatsApp buttons use `CompanySettings.whatsappE164` when set; otherwise `wa.me/?text=…` with booking ref only (no fake number). Staff delivery does not use a numberless link.
 
 ### Teya sandbox checkout
 
@@ -163,7 +169,8 @@ Repo layout is a **single Next.js app at the repository root** (`package.json`, 
    - `NEXT_PUBLIC_APP_URL` — public site URL (payment return links)
    - Optional: `GOOGLE_MAPS_API_KEY`, `TEYA_CLIENT_ID`, `TEYA_CLIENT_SECRET`, `TEYA_STORE_ID`, `TEYA_ENVIRONMENT` (`sandbox` only), `TEYA_WEBHOOK_PUBLIC_KEY`
    - Optional Web Push: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
-5. After first deploy, open Admin and set company contact fields (phone/email/WhatsApp/address) — never invent them in code.
+   - Optional WhatsApp Cloud API (outbound notices only): `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and optionally `WHATSAPP_NOTIFY_E164`, `WHATSAPP_API_VERSION`
+5. After first deploy, run `npx prisma db push` so `StaffNotification` exists, then open Admin → System settings and set the official WhatsApp number. Phone, email, address and registration stay empty until set. Do not invent them.
 6. If a deployment fails with a React Server Components / Next security gate, upgrade `next` to a patched release (see Vercel automated CVE PRs) before redeploying.
 
 Local production check: `npm run build && npm start`.

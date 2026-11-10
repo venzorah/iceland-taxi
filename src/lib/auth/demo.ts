@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import { MESSAGE_STAFF_ROLES } from '@/lib/messaging/read-state'
 import { prisma } from '@/lib/prisma'
 
 export const DRIVER_COOKIE = 'itb_driver_id'
@@ -33,9 +34,9 @@ export async function getDemoDriver() {
 export async function getDemoStaff() {
   const jar = await cookies()
   if (jar.get(STAFF_COOKIE)?.value !== '1') return null
-  if (!process.env.DATABASE_URL) return { id: 'demo-staff', email: 'admin@example.local', name: 'Demo admin', role: 'SUPER_ADMIN' as const }
+  if (!process.env.DATABASE_URL) return { id: 'demo-staff', email: 'admin@example.local', name: 'Juliet', role: 'SUPER_ADMIN' as const }
   const user = await prisma.user.findFirst({
-    where: { role: { in: ['SUPER_ADMIN', 'BOOKING_MANAGER', 'STAFF'] } },
+    where: { role: { in: [...MESSAGE_STAFF_ROLES] } },
     orderBy: { createdAt: 'asc' },
   })
   return user

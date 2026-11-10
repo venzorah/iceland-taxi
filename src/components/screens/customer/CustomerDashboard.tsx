@@ -10,6 +10,7 @@ import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { IMG, formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
+import { ReadBadge } from '@/components/messages/ReadBadge'
 import { bookingWhatsAppText, whatsappHref } from '@/lib/whatsapp'
 
 export const args = {
@@ -48,7 +49,7 @@ const PAST = {
   cancelled: [{ ref: 'ITB-2ZC8RU', title: 'Northern Lights Experience', date: '11 Mar 2025', amount: `Refunded ${formatPrice(59900, 'EUR')}`, img: IMG.northernLights }],
 }
 
-type ChatMsg = { id: string; body: string; authorRole: string; time: string }
+type ChatMsg = { id: string; body: string; authorRole: string; time: string; authorName?: string }
 
 const TRIP_TABS = [
   { id: 'upcoming', label: 'Upcoming (1)' },
@@ -64,6 +65,7 @@ export default function CustomerDashboard(props: Props) {
   const [chat, setChat] = useState<ChatMsg[]>([])
   const [draft, setDraft] = useState('')
   const [waNumber, setWaNumber] = useState<string | null>(null)
+  const [readState, setReadState] = useState<'read' | 'unread' | null>(null)
   const [composing, setComposing] = useState(false)
   const [narrow, setNarrow] = useState(false)
   const [frame, setFrame] = useState({ top: 0, height: 0 })
@@ -78,8 +80,14 @@ export default function CustomerDashboard(props: Props) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ role: 'guest', email: GUEST_EMAIL }),
     })
-    const data = await fetch(`/api/messages/${BOOKING_REF}`).then((r) => r.json()).catch(() => null)
-    if (data?.ok) setChat(data.messages || [])
+    const list = await fetch('/api/messages?as=customer').then((r) => r.json()).catch(() => null)
+    const mine = list?.threads?.find((thread: { ref: string; readState?: 'read' | 'unread' | null }) => thread.ref === BOOKING_REF)
+    if (mine?.readState) setReadState(mine.readState)
+    const data = await fetch(`/api/messages/${BOOKING_REF}?as=customer`).then((r) => r.json()).catch(() => null)
+    if (data?.ok) {
+      setChat(data.messages || [])
+      setReadState('read')
+    }
   }, [])
 
   useEffect(() => {
@@ -222,7 +230,10 @@ export default function CustomerDashboard(props: Props) {
             >
               <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5 sm:py-4">
                 <div className="min-w-0">
-                  <h2 className="font-display text-base font-bold text-heading">Messages</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-display text-base font-bold text-heading">Messages</h2>
+                    <ReadBadge state={readState} />
+                  </div>
                   <p className="text-xs leading-snug text-muted">About {BOOKING_REF} · usually replies within minutes</p>
                 </div>
                 <a href={whatsappHref({ e164: waNumber, text: bookingWhatsAppText(BOOKING_REF) })} aria-label="Open WhatsApp" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-mint text-navy"><MessageCircle size={17} /></a>
@@ -235,7 +246,7 @@ export default function CustomerDashboard(props: Props) {
                   >
                     {m.body}
                     <p className={`mt-1 text-[10px] ${m.authorRole === 'customer' ? 'opacity-70' : 'text-muted'}`}>
-                      {m.time}{m.authorRole === 'staff' ? ' · Iceland Taxi Booking' : ''}
+                      {m.time}{m.authorRole === 'staff' ? ` · ${m.authorName || 'Staff'}` : ''}
                     </p>
                   </div>
                 ))}

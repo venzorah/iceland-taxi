@@ -2,7 +2,8 @@ import { jsonOk, prisma, withDb } from '@/lib/api'
 import { BLOG_POSTS, SEO_SLUG_PAGES, TRAVEL_GUIDES } from '@/lib/content/editorial'
 import { DESTINATIONS } from '@/lib/design/data'
 import { SEO_PUBLIC_PAGES } from '@/lib/design/routes'
-import { integrationConfigured, teyaCredentials } from '@/lib/env'
+import { integrationConfigured, teyaCredentials, whatsappCloudCredentials } from '@/lib/env'
+import { describeWhatsAppFeature } from '@/lib/whatsapp'
 
 function moneyLabel(currency: string, amount: number) {
   if (currency === 'EUR') return `€${amount.toLocaleString('en-US').replace(/,/g, '.')}`
@@ -45,6 +46,14 @@ function integrations() {
       label: 'SMS',
       configured: integrationConfigured('sms'),
       message: integrationConfigured('sms') ? 'SMS_API_KEY present' : 'SMS_API_KEY is not set',
+    },
+    {
+      key: 'whatsapp',
+      label: 'WhatsApp notices',
+      configured: integrationConfigured('whatsapp'),
+      message: integrationConfigured('whatsapp')
+        ? 'Cloud API credentials present. Outbound notices only. Inbound chats are not synced.'
+        : 'WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID are not set. Staff open a WhatsApp link.',
     },
   ]
 }
@@ -172,9 +181,15 @@ export async function GET() {
     }),
   )
 
+  const whatsapp = describeWhatsAppFeature({
+    companyE164: data.settings.company.whatsappE164,
+    cloudConfigured: whatsappCloudCredentials().configured,
+  })
+
   return jsonOk({
     ok: true,
     ...data,
+    whatsapp,
     pages: pages(),
     languages: [
       { code: 'en', name: 'English', default: true },

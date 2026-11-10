@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   if (as === 'staff' || (as === 'auto' && staff)) {
     if (!staff) return jsonError(401, 'UNAUTHORIZED', 'Staff demo session required')
     const threads = await listStaffInbox()
-    return jsonOk({ ok: true, role: 'staff', threads })
+    return jsonOk({ ok: true, role: 'staff', inbox: 'all_customer_conversations', threads })
   }
 
   if (!guestEmail) {
@@ -68,5 +68,5 @@ export async function POST(req: Request) {
     const status = result.code === 'NOT_FOUND' ? 404 : 403
     return jsonError(status, result.code, result.message)
   }
-  return jsonOk({ ok: true, message: result.message }, { status: 201 })
+  return jsonOk({ ok: true, message: result.message, whatsapp: result.whatsapp }, { status: 201 })
 }

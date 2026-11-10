@@ -3,12 +3,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  BarChart3, Bell, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Search,
+  BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Search,
   Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft,
 } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { ReadBadge } from '@/components/messages/ReadBadge'
 import { rememberAlertAudience } from '@/lib/alerts/client'
+import { markThreadOpen } from '@/lib/messaging/read-state'
+import { staffMessageNotice, whatsappHref } from '@/lib/whatsapp'
+import { StaffNoticeBell } from '@/components/screens/admin/StaffNoticeBell'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 
@@ -191,9 +195,10 @@ export default function MobileAdmin(props: Props) {
           <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-12 w-auto" />
           <div className="ml-auto flex items-center gap-1">
             <button aria-label="Search" className="grid h-10 w-10 place-items-center rounded-full text-heading"><Search size={19} /></button>
-            <button onClick={() => { setTab('messages'); setChat(null); setPage(null) }} aria-label="Notifications" className="relative grid h-10 w-10 place-items-center rounded-full text-heading">
-              <Bell size={19} /><span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-error" />
-            </button>
+            <StaffNoticeBell
+              onOpenChat={(ref) => { setPage(null); setTab('messages'); setChat(ref) }}
+              onOpenSettings={() => { setTab('more'); setPage('settings') }}
+            />
           </div>
         </header>
 
@@ -292,7 +297,6 @@ export default function MobileAdmin(props: Props) {
               <button key={id} onClick={() => { setTab(id); setChat(null) }} className="relative flex flex-col items-center gap-1 py-1">
                 <Icon size={21} className={on ? 'text-heading' : 'text-muted'} strokeWidth={on ? 2.4 : 2} />
                 <span className={`text-[11px] ${on ? 'font-bold text-heading' : 'font-medium text-muted'}`}>{label}</span>
-                {id === 'messages' && <span className="absolute right-[22%] top-0 rounded-full bg-primary px-1.5 text-[10px] font-bold text-on-primary">3</span>}
               </button>
             )
           })}
@@ -491,25 +495,47 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
   useEffect(() => {
     rememberAlertAudience('staff')
   }, [])
-  const [threads, setThreads] = useState<Array<{ ref: string; customer: string; preview: string; time: string; unread: number }>>([])
-  const [messages, setMessages] = useState<Array<{ id: string; body: string; authorRole: string; time: string }>>([])
+  const [threads, setThreads] = useState<Array<{ ref: string; customer: string; preview: string; time: string; unread: number; readState?: 'read' | 'unread' | null }>>([])
+  const [messages, setMessages] = useState<Array<{ id: string; body: string; authorRole: string; time: string; authorName?: string }>>([])
   const [draft, setDraft] = useState('')
+  const [waNumber, setWaNumber] = useState<string | null>(null)
+  const [openRef, setOpenRef] = useState<string | null>(null)
 
   useEffect(() => {
-    ;(async () => {
-      await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
-      const data = await fetch('/api/messages?as=staff').then((r) => r.json())
-      setThreads(data.threads || [])
-    })()
-  }, [])
-
-  useEffect(() => {
-    if (!chat) return
     let alive = true
     const load = async () => {
       await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
-      const data = await fetch(`/api/messages/${chat}`).then((r) => r.json())
-      if (alive && data.ok) setMessages(data.messages || [])
+      const [data, company] = await Promise.all([
+        fetch('/api/messages?as=staff').then((r) => r.json()),
+        fetch('/api/company').then((r) => r.json()).catch(() => null),
+      ])
+      if (!alive) return
+      setThreads(markThreadOpen(data.threads || [], openRef))
+      setWaNumber(company?.company?.whatsappE164 || null)
+    }
+    load()
+    const timer = setInterval(load, 8000)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [openRef])
+
+  useEffect(() => {
+    if (!chat) {
+      setOpenRef(null)
+      return
+    }
+    let alive = true
+    const load = async () => {
+      await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
+      const data = await fetch(`/api/messages/${chat}?as=staff`).then((r) => r.json())
+      if (!alive) return
+      if (data.ok) {
+        setMessages(data.messages || [])
+        setOpenRef(chat)
+        setThreads((prev) => markThreadOpen(prev, chat))
+      }
     }
     load()
     const t = setInterval(load, 4000)
@@ -527,7 +553,7 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
       body: JSON.stringify({ bookingRef: chat, body: draft.trim(), as: 'staff' }),
     })
     setDraft('')
-    const data = await fetch(`/api/messages/${chat}`).then((r) => r.json())
+    const data = await fetch(`/api/messages/${chat}?as=staff`).then((r) => r.json())
     if (data.ok) setMessages(data.messages || [])
   }
 
@@ -541,6 +567,11 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
             <p className="truncate text-sm font-bold text-heading">{c.customer}</p>
             <p className="font-mono text-[11px] text-muted">{c.ref}</p>
           </div>
+          {waNumber ? (
+            <a href={whatsappHref({ e164: waNumber, text: staffMessageNotice(c.ref) })} className="ml-auto text-xs font-bold text-heading">WhatsApp</a>
+          ) : (
+            <p className="ml-auto max-w-[9rem] text-right text-[10px] leading-snug text-muted">Add the WhatsApp number in Settings</p>
+          )}
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
           {messages.map((m) => (
@@ -574,7 +605,7 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
               <div className="flex justify-between gap-2"><p className={`truncate text-sm ${x.unread ? 'font-bold text-heading' : 'font-medium text-text'}`}>{x.customer}</p><span className="text-xs text-muted">{x.time}</span></div>
               <p className="truncate text-sm text-muted">{x.preview}</p>
             </div>
-            {x.unread > 0 && <span className="rounded-full bg-primary px-2 text-xs font-bold text-on-primary">{x.unread}</span>}
+            <ReadBadge state={x.readState} />
           </button>
         </li>
       ))}

@@ -179,7 +179,7 @@ export default function CustomerDashboard(props: Props) {
                     </p>
                   </div>
                 ))}
-                {chat.length === 0 && <p className="text-sm text-muted">No messages yet — say hello about your booking.</p>}
+                {chat.length === 0 && <p className="text-sm text-muted">No messages yet, say hello about your booking.</p>}
               </div>
               <div className="flex items-center gap-2 border-t border-line p-3">
                 <input

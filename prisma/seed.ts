@@ -25,7 +25,7 @@ async function main() {
     create: {
       id: 'singleton',
       displayName: 'Iceland Taxi Booking',
-      // Contact/legal fields intentionally null — set via Admin CMS only.
+      // Contact/legal fields intentionally null, set via Admin CMS only.
       email: null,
       phone: null,
       whatsappE164: null,
@@ -383,14 +383,14 @@ async function main() {
           authorRole: 'customer',
           guestEmail: 'emma@example.local',
           guestName: 'Emma Larsen',
-          body: 'Our flight is now landing 20 minutes early — is that okay?',
+          body: 'Our flight is now landing 20 minutes early, is that okay?',
           unread: true,
         },
         {
           bookingId: emma.id,
           authorId: admin.id,
           authorRole: 'staff',
-          body: 'No problem — your driver tracks the flight and will be waiting at arrivals with a name sign.',
+          body: 'No problem, your driver tracks the flight and will be waiting at arrivals with a name sign.',
           unread: false,
         },
       ],
@@ -424,8 +424,8 @@ async function main() {
   await prisma.announcement.createMany({
     data: [
       {
-        textEn: 'Book airport transfers with live flight tracking — add your flight number at checkout.',
-        textIs: 'Bókaðu flugvallarakstur með rauntíma flugupplýsingum — bættu flugnúmerinu við í greiðslu.',
+        textEn: 'Book airport transfers with live flight tracking. Add your flight number at checkout.',
+        textIs: 'Bókaðu flugvallarakstur með rauntíma flugupplýsingum. Bættu flugnúmerinu við í greiðslu.',
         enabled: true,
         sortOrder: 1,
       },
@@ -436,28 +436,28 @@ async function main() {
     data: [
       {
         path: '/',
-        titleEn: 'Iceland Taxi Booking — Discover Iceland. Travel Comfortably.',
+        titleEn: 'Iceland Taxi Booking | Discover Iceland. Travel Comfortably.',
         descriptionEn:
           'Airport transfers, private taxis, tours and vacation drivers across Iceland.',
       },
-      { path: '/book', titleEn: 'Book your ride — Iceland Taxi Booking' },
-      { path: '/account', titleEn: 'My bookings — Iceland Taxi Booking', noIndex: true },
-      { path: '/admin', titleEn: 'Admin — Iceland Taxi Booking', noIndex: true },
-      { path: '/driver', titleEn: 'Driver portal — Iceland Taxi Booking', noIndex: true },
-      { path: '/about', titleEn: 'About us — Iceland Taxi Booking', descriptionEn: 'Company-owned private transport booked around your Iceland trip.' },
-      { path: '/contact', titleEn: 'Contact — Iceland Taxi Booking', descriptionEn: 'Message Iceland Taxi Booking about a booking, quotation or partnership.' },
-      { path: '/services', titleEn: 'Services — Iceland Taxi Booking', descriptionEn: 'Airport transfers, private taxis, tours, private drivers and corporate travel.' },
-      { path: '/destinations', titleEn: 'Destinations — Iceland Taxi Booking', descriptionEn: 'Popular Iceland destinations for transfers, tours and private-driver days.' },
-      { path: '/fleet', titleEn: 'Our fleet — Iceland Taxi Booking', descriptionEn: 'Sedan, SUV, minivan and minibus classes sized for passengers and luggage.' },
-      { path: '/how-it-works', titleEn: 'How it works — Iceland Taxi Booking', descriptionEn: 'Choose a trip, confirm details, pay in EUR or ISK, then track and message.' },
-      { path: '/faqs', titleEn: 'FAQs — Iceland Taxi Booking', descriptionEn: 'Answers about booking, currency, flight delays, multi-day drivers and cancellations.' },
-      { path: '/blog', titleEn: 'Blog — Iceland Taxi Booking', descriptionEn: 'Practical travel notes for airport arrivals, tours and booking in Iceland.' },
-      { path: '/travel-guides', titleEn: 'Travel guides — Iceland Taxi Booking', descriptionEn: 'Longer guides for Reykjavík arrivals, Blue Lagoon timing and South Coast days.' },
-      { path: '/policies', titleEn: 'Policies — Iceland Taxi Booking', descriptionEn: 'Privacy, terms, cancellation and refund policies.' },
-      { path: '/manage-booking', titleEn: 'Manage booking — Iceland Taxi Booking', descriptionEn: 'Look up a trip with your booking reference and checkout email.' },
-      { path: '/airport-transfer', titleEn: 'Airport transfers — Iceland Taxi Booking', descriptionEn: 'Private Keflavík Airport transfers with flight tracking and fixed-price routes.' },
-      { path: '/private-tours', titleEn: 'Private tours — Iceland Taxi Booking', descriptionEn: 'Private Golden Circle, South Coast and Northern Lights sightseeing tours.' },
-      { path: '/private-driver', titleEn: 'Private driver — Iceland Taxi Booking', descriptionEn: 'Hourly to multi-day private chauffeur hire across Iceland.' },
+      { path: '/book', titleEn: 'Book your ride | Iceland Taxi Booking' },
+      { path: '/account', titleEn: 'My bookings | Iceland Taxi Booking', noIndex: true },
+      { path: '/admin', titleEn: 'Admin | Iceland Taxi Booking', noIndex: true },
+      { path: '/driver', titleEn: 'Driver portal | Iceland Taxi Booking', noIndex: true },
+      { path: '/about', titleEn: 'About us | Iceland Taxi Booking', descriptionEn: 'Company-owned private transport booked around your Iceland trip.' },
+      { path: '/contact', titleEn: 'Contact | Iceland Taxi Booking', descriptionEn: 'Message Iceland Taxi Booking about a booking, quotation or partnership.' },
+      { path: '/services', titleEn: 'Services | Iceland Taxi Booking', descriptionEn: 'Airport transfers, private taxis, tours, private drivers and corporate travel.' },
+      { path: '/destinations', titleEn: 'Destinations | Iceland Taxi Booking', descriptionEn: 'Popular Iceland destinations for transfers, tours and private-driver days.' },
+      { path: '/fleet', titleEn: 'Our fleet | Iceland Taxi Booking', descriptionEn: 'Sedan, SUV, minivan and minibus classes sized for passengers and luggage.' },
+      { path: '/how-it-works', titleEn: 'How it works | Iceland Taxi Booking', descriptionEn: 'Choose a trip, confirm details, pay in EUR or ISK, then track and message.' },
+      { path: '/faqs', titleEn: 'FAQs | Iceland Taxi Booking', descriptionEn: 'Answers about booking, currency, flight delays, multi-day drivers and cancellations.' },
+      { path: '/blog', titleEn: 'Blog | Iceland Taxi Booking', descriptionEn: 'Practical travel notes for airport arrivals, tours and booking in Iceland.' },
+      { path: '/travel-guides', titleEn: 'Travel guides | Iceland Taxi Booking', descriptionEn: 'Longer guides for Reykjavík arrivals, Blue Lagoon timing and South Coast days.' },
+      { path: '/policies', titleEn: 'Policies | Iceland Taxi Booking', descriptionEn: 'Privacy, terms, cancellation and refund policies.' },
+      { path: '/manage-booking', titleEn: 'Manage booking | Iceland Taxi Booking', descriptionEn: 'Look up a trip with your booking reference and checkout email.' },
+      { path: '/airport-transfer', titleEn: 'Airport transfers | Iceland Taxi Booking', descriptionEn: 'Private Keflavík Airport transfers with flight tracking and fixed-price routes.' },
+      { path: '/private-tours', titleEn: 'Private tours | Iceland Taxi Booking', descriptionEn: 'Private Golden Circle, South Coast and Northern Lights sightseeing tours.' },
+      { path: '/private-driver', titleEn: 'Private driver | Iceland Taxi Booking', descriptionEn: 'Hourly to multi-day private chauffeur hire across Iceland.' },
     ],
   })
 
@@ -499,7 +499,7 @@ async function main() {
   })
 
   console.log(`Seed complete. Admin user: ${admin.email}`)
-  console.log('Company contact fields left null — configure in Admin CMS.')
+  console.log('Company contact fields left null, configure in Admin CMS.')
 }
 
 main()

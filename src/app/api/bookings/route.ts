@@ -76,7 +76,7 @@ export async function GET(req: Request) {
       source: 'seed-fallback' as const,
       bookings: TODAY_BOOKINGS,
       ops: TODAY_BOOKINGS,
-      note: 'DATABASE_URL unset or unreachable — serving design ops seed fallback.',
+      note: 'DATABASE_URL unset or unreachable, serving design ops seed fallback.',
     }),
   )
   return jsonOk({ ok: true, ...data })

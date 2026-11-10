@@ -1,4 +1,4 @@
-/** Canonical public website paths — keep header/footer/nav in sync. */
+/** Canonical public website paths, keep header/footer/nav in sync. */
 
 export const PUBLIC_PATHS = {
   home: '/',

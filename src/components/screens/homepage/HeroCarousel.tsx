@@ -58,7 +58,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
       img: IMG.privateDriver,
       alt: 'View from the back seat of a chauffeured car along an Icelandic fjord',
       title: 'Your Journey Across Iceland Starts Here.',
-      body: 'Hire a private driver by the hour, the day or for your whole stay — or send us your itinerary for a custom quote.',
+      body: 'Hire a private driver by the hour, the day or for your whole stay, or send us your itinerary for a custom quote.',
       cta: 'Hire a Private Driver',
       action: go('driver', 'Reykjavík hotel', 'Custom itinerary'),
     },
@@ -102,7 +102,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
           className={`absolute inset-0 -z-10 h-full w-full object-cover transition-opacity duration-300 ease-out ${i === index ? 'opacity-100' : 'opacity-0'}`}
         />
       ))}
-      <div className="absolute inset-0 -z-10 bg-navy/50" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-black/55 via-navy/45 to-black/50" />
 
       <div className="mx-auto w-full min-w-0 max-w-7xl px-4 pb-36 pt-10 sm:px-6 sm:pb-40 sm:pt-28 lg:px-8 lg:pb-48 lg:pt-32">
         <div className="min-h-[318px] sm:min-h-[340px] lg:min-h-[360px]">

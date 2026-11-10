@@ -272,7 +272,7 @@ function BookingDetail({
         <option value="">Choose a driver…</option>
         {drivers.map((d) => (
           <option key={d.id} value={d.id} disabled={d.status === 'Off duty'}>
-            {d.displayName} — {d.status}
+            {d.displayName}, {d.status}
           </option>
         ))}
       </select>

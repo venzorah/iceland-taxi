@@ -28,7 +28,7 @@ type Props = {
 const POSTS = [
   { title: 'What to pack for a KEF arrival in March', date: '2 Mar 2025', tag: 'Airport', img: IMG.airport, excerpt: 'Layers, studded-tyre season and why flight numbers help your driver.' },
   { title: 'Planning a Golden Circle day without rushing', date: '18 Feb 2025', tag: 'Tours', img: IMG.goldenCircle, excerpt: 'How private tours leave room for longer stops at Geysir and Gullfoss.' },
-  { title: 'EUR vs ISK at checkout — who chooses what', date: '5 Feb 2025', tag: 'Booking', img: IMG.reykjavik, excerpt: 'International visitors pay in euro. Residents can choose ISK, and the currency is shown before payment.' },
+  { title: 'EUR vs ISK at checkout: who chooses what', date: '5 Feb 2025', tag: 'Booking', img: IMG.reykjavik, excerpt: 'International visitors pay in euro. Residents can choose ISK, and the currency is shown before payment.' },
   { title: 'Reading the aurora forecast before you book', date: '22 Jan 2025', tag: 'Northern Lights', img: IMG.northernLights, excerpt: 'Cloud cover, solar activity and flexible evening windows with a private driver.' },
 ]
 
@@ -57,7 +57,7 @@ export default function Blog(props: Props) {
     >
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8">
         <h1 className="font-display text-3xl font-extrabold text-heading sm:text-4xl">Blog</h1>
-        <p className="mt-3 max-w-2xl text-base text-muted">Practical travel notes from the CMS. Posts are editorial seed content — not customer testimonials.</p>
+        <p className="mt-3 max-w-2xl text-base text-muted">Practical travel notes from the CMS. Posts are editorial seed content, not customer testimonials.</p>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {POSTS.map((post) => (

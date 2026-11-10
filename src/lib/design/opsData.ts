@@ -48,7 +48,7 @@ export const DRIVERS = [
 ]
 
 export const CONVERSATIONS = [
-  { name: 'Emma Larsen', ref: 'ITB-7K4Q2M', last: 'Our flight is now landing 20 minutes early — is that okay?', time: '14:52', unread: 2 },
+  { name: 'Emma Larsen', ref: 'ITB-7K4Q2M', last: 'Our flight is now landing 20 minutes early, is that okay?', time: '14:52', unread: 2 },
   { name: 'Lucas Martin', ref: 'ITB-4QX1ZP', last: 'Could we add Snæfellsnes on day 3?', time: '13:20', unread: 1 },
   { name: 'Helga Jónsdóttir', ref: 'ITB-8NB4KS', last: 'Takk! Ég greiði í kvöld.', time: '11:05', unread: 0 },
 ]

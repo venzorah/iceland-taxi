@@ -13,7 +13,7 @@ export async function GET() {
     () => ({
       source: 'seed-fallback' as const,
       drivers: DRIVERS,
-      note: 'DATABASE_URL unset or unreachable — serving design ops seed fallback.',
+      note: 'DATABASE_URL unset or unreachable, serving design ops seed fallback.',
     }),
   )
   return jsonOk({ ok: true, ...data })

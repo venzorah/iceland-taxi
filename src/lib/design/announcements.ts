@@ -48,8 +48,8 @@ export const ANNOUNCEMENTS_SEED: AnnouncementState = {
     },
     {
       id: 'nl-season',
-      text: 'Northern Lights season — book a private Aurora tour and your driver follows the forecast.',
-      textIs: 'Norðurljósatímabilið er hafið — bókaðu einkaferð og bílstjórinn fylgir spánni.',
+      text: 'Northern Lights season: book a private Aurora tour and your driver follows the forecast.',
+      textIs: 'Norðurljósatímabilið er hafið: bókaðu einkaferð og bílstjórinn fylgir spánni.',
       linkLabel: 'Book a tour',
       linkUrl: '/tours/northern-lights',
       active: true,
@@ -68,8 +68,8 @@ export const ANNOUNCEMENTS_SEED: AnnouncementState = {
     },
     {
       id: 'easter',
-      text: 'Easter weekend: book early — surcharges of 25% apply on public holidays.',
-      textIs: 'Páskar: bókaðu tímanlega — 25% álag á almennum frídögum.',
+      text: 'Easter weekend: book early, surcharges of 25% apply on public holidays.',
+      textIs: 'Páskar: bókaðu tímanlega, 25% álag á almennum frídögum.',
       linkLabel: '',
       linkUrl: '',
       active: true,

@@ -137,7 +137,7 @@ export function Messages() {
                   </p>
                 </div>
               ))}
-              {messages.length === 0 && <p className="text-sm text-muted">No messages in this thread yet — send the first reply.</p>}
+              {messages.length === 0 && <p className="text-sm text-muted">No messages in this thread yet, send the first reply.</p>}
             </div>
             <div className="flex items-center gap-2 border-t border-line p-3">
               <input

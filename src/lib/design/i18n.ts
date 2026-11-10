@@ -37,7 +37,7 @@ const dict = {
     book: 'Bóka ferð',
     heroTitle: 'Uppgötvaðu Ísland. Ferðastu þægilega.',
     heroBody:
-      'Frá flugvallarakstri til einkaferða og einkabílstjóra — þægilegar ferðir um allt Ísland með bókun sem er sniðin að þér.',
+      'Frá flugvallarakstri til einkaferða og einkabílstjóra, þægilegar ferðir um allt Ísland með bókun sem er sniðin að þér.',
     pickup: 'Sóttstaður',
     destination: 'Áfangastaður',
     date: 'Dagsetning',

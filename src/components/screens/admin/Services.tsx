@@ -235,7 +235,7 @@ export function Services() {
               <Input label="Public holiday" value="25%" />
               <Input label="Return discount" value="10%" />
               <Input label="VAT" value="11% included" />
-              <Input label="Deposit" value="None — full payment" />
+              <Input label="Deposit" value="None, full payment" />
             </div>
           </Panel>
 

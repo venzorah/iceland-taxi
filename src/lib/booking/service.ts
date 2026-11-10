@@ -218,7 +218,7 @@ export async function updateBookingStatus(
       return {
         ok: false as const,
         code: 'NOT_AVAILABLE' as const,
-        message: 'Cannot assign — resource already booked in this window.',
+        message: 'Cannot assign, resource already booked in this window.',
         conflicts: avail.conflicts,
       }
     }

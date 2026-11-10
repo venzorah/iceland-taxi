@@ -23,7 +23,7 @@ export function AppTabBar({ tabs, active, hideFrom = 'md' }: { tabs: AppTab[]; a
   return (
     <nav
       aria-label="App navigation"
-      className={`pb-safe fixed inset-x-0 bottom-0 z-40 w-full max-w-full overflow-x-clip border-t border-line bg-bg/95 pt-1.5 backdrop-blur ${hideFrom === 'lg' ? 'lg:hidden' : 'md:hidden'}`}
+      className={`pb-safe fixed inset-x-0 bottom-0 z-40 w-full max-w-full overflow-x-clip border-t border-line bg-white pt-1.5 dark:bg-bg ${hideFrom === 'lg' ? 'lg:hidden' : 'md:hidden'}`}
     >
       <ul className="grid w-full min-w-0" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map((t) => {

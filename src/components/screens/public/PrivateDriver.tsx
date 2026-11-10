@@ -30,7 +30,7 @@ type Props = {
 const PACKAGES = [
   { icon: Clock3, title: 'Hourly', body: 'City hops, meetings and flexible short windows.' },
   { icon: CalendarRange, title: 'Half-day & full-day', body: 'Sightseeing loops with room to change the order of stops.' },
-  { icon: Map, title: 'Multi-day vacation driver', body: 'Ring Road segments and multi-stop itineraries — request a quotation for custom days.' },
+  { icon: Map, title: 'Multi-day vacation driver', body: 'Ring Road segments and multi-stop itineraries, request a quotation for custom days.' },
 ]
 
 export default function PrivateDriver(props: Props) {
@@ -73,7 +73,7 @@ export default function PrivateDriver(props: Props) {
             <button onClick={p.onBook} className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
               Book a private driver <ArrowRight size={16} />
             </button>
-            <a href={whatsappHref({ e164: whatsappE164, text: 'Hello — I would like a quotation for a private driver itinerary.' })} className="rounded-full border border-white/30 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10">
+            <a href={whatsappHref({ e164: whatsappE164, text: 'Hello, I would like a quotation for a private driver itinerary.' })} className="rounded-full border border-white/30 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10">
               Request a quotation
             </a>
           </div>

@@ -66,7 +66,7 @@ export default function AirportTransfer(props: Props) {
         <div className="grid gap-4 sm:grid-cols-3">
           {[
             { icon: Clock, t: 'Meet at arrivals', d: 'Name sign and included waiting time shown before you pay.' },
-            { icon: Shield, t: 'Private vehicle', d: 'Your party only — choose sedan, SUV, minivan or minibus.' },
+            { icon: Shield, t: 'Private vehicle', d: 'Your party only, choose sedan, SUV, minivan or minibus.' },
             { icon: Plane, t: 'Flight-aware', d: 'Delays update the pickup window when a flight number is provided.' },
           ].map(({ icon: Icon, t, d }) => (
             <div key={t} className="rounded-2xl border border-line bg-card p-5">

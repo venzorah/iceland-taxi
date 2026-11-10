@@ -38,7 +38,7 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
     <div aria-hidden className={hasBar ? 'h-[92px] sm:h-[116px] lg:h-[132px]' : 'h-14 sm:h-20 lg:h-24'} />
     <div className="fixed inset-x-0 top-0 z-40 w-full max-w-full overflow-x-clip">
     <AnnouncementBar state={announcements} language={language} />
-    <header className="border-b border-line bg-bg/95 backdrop-blur">
+    <header className="border-b border-line bg-white dark:bg-bg">
       <div className="mx-auto flex h-14 w-full min-w-0 max-w-7xl items-center gap-2 px-3 sm:h-20 sm:gap-6 sm:px-6 lg:h-24 lg:px-8">
         {mobileTitle && (
           <div className="flex min-w-0 flex-1 items-center gap-1 sm:hidden">

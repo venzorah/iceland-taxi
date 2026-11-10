@@ -64,7 +64,7 @@ export default function Homepage(props: Props) {
           <BookingSearch language={lang} onSearch={onSearch} />
         </div>
 
-        {/* Airport transfers — the primary service */}
+        {/* Airport transfers, the primary service */}
         <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
           <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
             <div className="relative hidden overflow-hidden rounded-2xl sm:block">
@@ -230,7 +230,7 @@ export default function Homepage(props: Props) {
               <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Why travel with us</h2>
               <dl className="mt-8 divide-y divide-line border-t border-line">
                 {[
-                  ['Price before you pay', 'The full breakdown — extras, surcharges and currency — is shown before checkout.'],
+                  ['Price before you pay', 'The full breakdown, extras, surcharges and currency, is shown before checkout.'],
                   ['Your currency, clearly', 'Pay in euro (EUR), or in ISK if you live in Iceland. You are charged in the currency you see.'],
                   ['Our own drivers and vehicles', 'Every journey is run by Iceland Taxi Booking, not passed to an unknown operator.'],
                   ['A person to talk to', 'Message us in your booking or on WhatsApp before, during and after your trip.'],
@@ -264,7 +264,7 @@ export default function Homepage(props: Props) {
           </div>
         </section>
 
-        {/* Reviews — verified bookings only */}
+        {/* Reviews, verified bookings only */}
         <section className="border-y border-line bg-surface py-12 sm:py-16">
           <div className="mx-auto w-full min-w-0 max-w-7xl">
             <h2 className="px-4 font-display text-2xl font-bold text-heading sm:px-6 sm:text-3xl lg:px-8">Reviews from verified journeys</h2>

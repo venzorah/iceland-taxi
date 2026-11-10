@@ -9,8 +9,12 @@ const createSchema = z.object({
   guestPhone: z.string().optional(),
   serviceId: z.string().optional(),
   routeId: z.string().optional(),
-  serviceLabel: z.string().min(1),
-  routeLabel: z.string().min(1),
+  listingId: z.string().optional(),
+  listingKind: z.enum(['route', 'service']).optional(),
+  pickup: z.string().optional(),
+  destination: z.string().optional(),
+  serviceLabel: z.string().min(1).optional(),
+  routeLabel: z.string().min(1).optional(),
   pickupAt: z.string().datetime().optional().nullable(),
   passengers: z.number().int().positive().default(1),
   luggage: z.number().int().nonnegative().default(0),
@@ -28,7 +32,7 @@ const createSchema = z.object({
     })
     .optional(),
   quote: z.object({
-    baseIsk: z.number().int().nonnegative(),
+    baseIsk: z.number().int().nonnegative().optional(),
     vehicleUpgradeIsk: z.number().int().nonnegative().optional(),
     vehicleLabel: z.string().optional(),
     extras: z
@@ -94,9 +98,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await createBooking(parsed.data)
+    const result = await createBooking({
+      ...parsed.data,
+      serviceLabel: parsed.data.serviceLabel || 'Published listing',
+      routeLabel: parsed.data.routeLabel || 'Published listing',
+      quote: { ...parsed.data.quote, baseIsk: parsed.data.quote.baseIsk ?? 0 },
+    })
     if (!result.ok) {
-      return jsonError(409, result.code, result.message, { conflicts: result.conflicts })
+      return jsonError(409, result.code, result.message, 'conflicts' in result ? { conflicts: result.conflicts } : undefined)
     }
     return jsonOk(
       {

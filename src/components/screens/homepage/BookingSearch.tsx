@@ -14,6 +14,9 @@ export type SearchPayload = {
   time: string
   passengers: number
   luggage: number
+  listingId?: string
+  listingKind?: 'route' | 'service'
+  enquiry?: boolean
 }
 
 export function BookingSearch({ language, onSearch }: { language: Lang; onSearch?: (p: SearchPayload) => void }) {

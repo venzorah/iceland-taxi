@@ -5,6 +5,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronRight, Filter, MessageCircle, X } from 'lucide-react'
 
 import { BottomSheet } from '@/components/site/BottomSheet'
+import { usePublishedListings } from '@/components/booking/usePublishedListings'
+import { listingLabel } from '@/lib/booking/listings'
+import { formatIsk } from '@/lib/design/data'
 import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
 
 const FILTERS = ['All', 'Needs driver', 'Awaiting payment', 'Quotes', 'Completed']
@@ -35,7 +38,9 @@ export function BookingsTable() {
   const [source, setSource] = useState<string>('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [draft, setDraft] = useState({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '', category: 'INTERNATIONAL' })
+  const listings = usePublishedListings()
+  const [draft, setDraft] = useState({ guestName: '', guestEmail: '', listingId: '', category: 'INTERNATIONAL' })
+  const selectedListing = (listings || []).find((listing) => listing.id === draft.listingId) || null
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -135,6 +140,10 @@ export function BookingsTable() {
           <form
             onSubmit={async (event) => {
               event.preventDefault()
+              if (!selectedListing) {
+                setSaveMsg('This option is unavailable')
+                return
+              }
               setSaveMsg(null)
               const res = await fetch('/api/bookings', {
                 method: 'POST',
@@ -142,10 +151,11 @@ export function BookingsTable() {
                 body: JSON.stringify({
                   guestName: draft.guestName,
                   guestEmail: draft.guestEmail,
-                  serviceLabel: draft.serviceLabel,
-                  routeLabel: draft.routeLabel,
+                  listingId: selectedListing.id,
+                  listingKind: selectedListing.kind,
+                  serviceLabel: selectedListing.title,
+                  routeLabel: listingLabel(selectedListing),
                   quote: {
-                    baseIsk: Number(draft.baseIsk),
                     customerCategory: draft.category,
                     currency: draft.category === 'RESIDENT' ? 'ISK' : 'EUR',
                   },
@@ -158,7 +168,7 @@ export function BookingsTable() {
                 return
               }
               setCreating(false)
-              setDraft({ guestName: '', guestEmail: '', serviceLabel: '', routeLabel: '', baseIsk: '', category: 'INTERNATIONAL' })
+              setDraft({ guestName: '', guestEmail: '', listingId: '', category: 'INTERNATIONAL' })
               setSaveMsg('Saved')
               await load()
             }}
@@ -166,9 +176,13 @@ export function BookingsTable() {
           >
             <input required value={draft.guestName} onChange={(event) => setDraft({ ...draft, guestName: event.target.value })} placeholder="Guest name" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
             <input required type="email" value={draft.guestEmail} onChange={(event) => setDraft({ ...draft, guestEmail: event.target.value })} placeholder="Email" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
-            <input required value={draft.serviceLabel} onChange={(event) => setDraft({ ...draft, serviceLabel: event.target.value })} placeholder="Service" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
-            <input required value={draft.routeLabel} onChange={(event) => setDraft({ ...draft, routeLabel: event.target.value })} placeholder="Route" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
-            <input required value={draft.baseIsk} onChange={(event) => setDraft({ ...draft, baseIsk: event.target.value })} inputMode="numeric" placeholder="Price in ISK" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
+            <select required value={draft.listingId} onChange={(event) => setDraft({ ...draft, listingId: event.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus sm:col-span-2">
+              <option value="">Choose a published listing</option>
+              {(listings || []).map((listing) => (
+                <option key={listing.id} value={listing.id}>{listingLabel(listing)} · {formatIsk(listing.fromIsk)}</option>
+              ))}
+            </select>
+            <p className="text-sm font-semibold text-heading sm:col-span-2">{selectedListing ? `Fixed price ${formatIsk(selectedListing.fromIsk)}. Guest details do not change it.` : 'This option is unavailable until you choose a published listing.'}</p>
             <select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus">
               <option value="INTERNATIONAL">International · EUR</option>
               <option value="RESIDENT">Resident · ISK</option>

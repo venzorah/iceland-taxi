@@ -263,7 +263,7 @@ export function Services() {
                 <input value={sel.name} onChange={(e) => update({ name: e.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
               </label>
               <Select label="Category" value={sel.category} options={['Airport transfer', 'Private taxi', 'Private tour', 'Private driver', 'Hotel & port', 'Corporate', 'Special occasion']} />
-              <Select label="Pricing model" value={sel.model} options={['Fixed route', 'Per kilometre', 'Hourly', 'Half-day', 'Full-day', 'Per passenger', 'Vehicle-based', 'Package', 'Multi-day', 'Custom quotation']} />
+              <Select label="Pricing model" value={sel.model} options={['Fixed route', 'Hourly', 'Half-day', 'Full-day', 'Per passenger', 'Vehicle-based', 'Package', 'Multi-day', 'Custom quotation']} />
               <label className="block min-w-0">
                 <span className="text-xs font-semibold text-muted">Passenger label</span>
                 <input value={sel.paxLabel} onChange={(e) => update({ paxLabel: e.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
@@ -272,7 +272,7 @@ export function Services() {
           </Panel>
 
           {sel.model !== 'Custom quotation' && (
-            <Panel title="Price & durations" hint={`Prices are set in ISK. USD shown at today's rate (1 USD = ${ISK_PER_USD} ISK) unless overridden.`}>
+            <Panel title="Price & durations" hint="The published ISK price is the fixed listing price. Kilometres do not change it. Confirmed bookings keep that snapshot.">
               <div className="grid gap-4 sm:grid-cols-3">
                 <label className="block min-w-0">
                   <span className="text-xs font-semibold text-muted">Base price (ISK)</span>
@@ -306,9 +306,9 @@ export function Services() {
 
           <Panel title="Charges & surcharges">
             <div className="grid gap-4 sm:grid-cols-3">
+              <p className="text-sm text-muted sm:col-span-3">Trips are not priced per kilometre. Publish a fixed price on the service or route.</p>
               <Input label="Extra passenger" value="2.500 kr" />
               <Input label="Extra hour" value="14.900 kr" />
-              <Input label="Extra km" value="350 kr" />
               <Input label="Waiting time / 15 min" value="2.000 kr" />
               <Input label="Extra luggage / item" value="1.500 kr" />
               <Input label="Child seat" value="2.500 kr" />

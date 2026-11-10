@@ -1,10 +1,12 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, Clock, Users } from 'lucide-react'
 
+import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { IMG, TOURS, formatPrice, type Currency } from '@/lib/design/data'
+import { IMG, formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -30,6 +32,9 @@ export default function PrivateTours(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
   const cur = p.currency as Currency
+  const router = useRouter()
+  const listings = usePublishedListings()
+  const tours = (listings || []).filter((listing) => listing.category === 'tour')
 
   return (
     <PublicPageShell
@@ -55,7 +60,7 @@ export default function PrivateTours(props: Props) {
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private sightseeing tours across Iceland</h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Your own vehicle and driver, your own schedule. Stop where you want, packages are starting points, not fixed bus itineraries.</p>
-          <button onClick={p.onBook} className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
+          <button onClick={() => tours[0] ? router.push(`/book?listing=${encodeURIComponent(tours[0].id)}&kind=service`) : router.push('/book?enquiry=1')} className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
             Book a private tour <ArrowRight size={16} />
           </button>
         </div>
@@ -63,22 +68,24 @@ export default function PrivateTours(props: Props) {
 
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
-          {TOURS.map((tour) => (
+          {listings === null && <p className="text-sm text-muted">Loading published prices…</p>}
+          {listings !== null && tours.length === 0 && <p className="text-sm text-muted">No published tour price yet. This option is unavailable.</p>}
+          {tours.map((tour) => (
             <article key={tour.id} className="overflow-hidden rounded-2xl border border-line bg-card">
-              <img src={tour.img} alt={tour.title} className="aspect-[4/3] w-full object-cover" />
+              <img src={tour.imageUrl || IMG.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover" />
               <div className="p-5">
                 <h2 className="font-display text-lg font-bold text-heading">{tour.title}</h2>
                 <p className="mt-2 text-sm text-muted">{tour.blurb}</p>
                 <div className="mt-3 flex gap-4 text-sm text-muted">
-                  <span className="inline-flex items-center gap-1"><Clock size={14} /> {tour.hours}</span>
-                  <span className="inline-flex items-center gap-1"><Users size={14} /> {tour.pax}</span>
+                  {tour.hoursLabel && <span className="inline-flex items-center gap-1"><Clock size={14} /> {tour.hoursLabel}</span>}
+                  {tour.paxLabel && <span className="inline-flex items-center gap-1"><Users size={14} /> {tour.paxLabel}</span>}
                 </div>
                 <div className="mt-5 flex items-end justify-between">
                   <div>
-                    <p className="text-xs text-muted">from</p>
+                    <p className="text-xs text-muted">Price</p>
                     <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur)}</p>
                   </div>
-                  <button onClick={p.onBook} className="text-sm font-bold text-link hover:underline">Book</button>
+                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(tour.id)}&kind=service`)} className="text-sm font-bold text-link hover:underline">Book</button>
                 </div>
               </div>
             </article>

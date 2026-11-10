@@ -8,6 +8,29 @@ export function HomePageClient() {
   const prefs = useAppPrefs()
 
   const onSearch = (s: SearchPayload) => {
+    if (s.enquiry) {
+      const q = new URLSearchParams({
+        enquiry: '1',
+        pickup: s.pickup,
+        destination: s.destination,
+        date: s.date || '',
+        time: s.time || '',
+        passengers: String(s.passengers),
+      })
+      prefs.go(`/book?${q.toString()}`)
+      return
+    }
+    if (s.listingId && s.listingKind) {
+      const q = new URLSearchParams({
+        listing: s.listingId,
+        kind: s.listingKind,
+        date: s.date || '',
+        time: s.time || '',
+        passengers: String(s.passengers),
+      })
+      prefs.go(`/book?${q.toString()}`)
+      return
+    }
     const q = new URLSearchParams({
       pickup: s.pickup,
       destination: s.destination,

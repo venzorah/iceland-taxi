@@ -2,7 +2,7 @@ import { PaymentStatus } from '@prisma/client'
 import { z } from 'zod'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
 import { getPaymentProvider } from '@/lib/payments'
-import { createBooking, quoteFromCatalogue } from '@/lib/booking/service'
+import { createBooking } from '@/lib/booking/service'
 
 const schema = z.object({
   // Existing booking
@@ -13,8 +13,8 @@ const schema = z.object({
       guestName: z.string().min(1),
       guestEmail: z.string().email(),
       guestPhone: z.string().optional(),
-      serviceLabel: z.string().min(1),
-      routeLabel: z.string().min(1),
+      serviceLabel: z.string().min(1).optional(),
+      routeLabel: z.string().min(1).optional(),
       pickupAt: z.string().datetime().optional().nullable(),
       passengers: z.number().int().positive().default(1),
       luggage: z.number().int().nonnegative().default(0),
@@ -23,6 +23,10 @@ const schema = z.object({
       vehicleLabel: z.string().optional(),
       routeId: z.string().optional(),
       serviceId: z.string().optional(),
+      listingId: z.string().optional(),
+      listingKind: z.enum(['route', 'service']).optional(),
+      pickup: z.string().optional(),
+      destination: z.string().optional(),
       extras: z
         .object({
           childSeat: z.boolean().optional(),
@@ -64,75 +68,24 @@ export async function POST(req: Request) {
   if (!booking && parsed.data.create) {
     const c = parsed.data.create
     if (c.isQuote) {
-      const q = await quoteFromCatalogue({
-        routeId: c.routeId,
-        vehicleId: c.vehicleId,
-        pickup: c.routeLabel.split('→')[0]?.trim(),
-        destination: c.routeLabel.split('→')[1]?.trim(),
-        extras: c.extras,
-        customerCategory: c.customerCategory,
-        currency: c.currency,
-        depositPct: c.depositPct,
-      })
-      const created = await createBooking({
-        ...c,
-        quote: {
-          baseIsk: q.meta.baseIsk,
-          vehicleUpgradeIsk: q.meta.vehicleUpgradeIsk,
-          vehicleLabel: c.vehicleLabel || q.meta.vehicleLabel,
-          extras: c.extras,
-          durationMinutes: q.meta.durationMinutes,
-          customerCategory: c.customerCategory,
-          currency: c.currency,
-          iskPerUsd: q.quote.iskPerUsd,
-          iskPerEur: q.quote.iskPerEur,
-          depositPct: c.depositPct,
-        },
-        serviceId: c.serviceId || q.meta.serviceId,
-        routeId: c.routeId || q.meta.routeId,
-        isQuote: true,
-        awaitPaymentWithoutGateway: true,
-      })
-      if (!created.ok) return jsonError(409, created.code, created.message, { conflicts: created.conflicts })
-      booking = created.booking
-      bookingRef = created.booking.ref
-      return jsonOk({
-        ok: true,
-        demo: true,
-        booking,
-        message: 'Quotation request saved as Pending. No payment collected.',
-      })
+      return jsonError(409, 'UNAVAILABLE', 'This option is unavailable')
     }
-
-    const q = await quoteFromCatalogue({
-      routeId: c.routeId,
-      vehicleId: c.vehicleId,
-      extras: c.extras,
-      customerCategory: c.customerCategory,
-      currency: c.currency,
-      depositPct: c.depositPct,
-    })
     const created = await createBooking({
       ...c,
+      serviceLabel: c.serviceLabel || 'Published listing',
+      routeLabel: c.routeLabel || 'Published listing',
       quote: {
-        baseIsk: q.meta.baseIsk,
-        vehicleUpgradeIsk: q.meta.vehicleUpgradeIsk,
-        vehicleLabel: c.vehicleLabel || q.meta.vehicleLabel,
+        baseIsk: 0,
         extras: c.extras,
-        durationMinutes: q.meta.durationMinutes,
         customerCategory: c.customerCategory,
         currency: c.currency,
-        iskPerUsd: q.quote.iskPerUsd,
-        iskPerEur: q.quote.iskPerEur,
         depositPct: c.depositPct,
       },
-      serviceId: c.serviceId || q.meta.serviceId,
-      routeId: c.routeId || q.meta.routeId,
-      serviceLabel: c.serviceLabel || q.meta.serviceLabel,
-      routeLabel: c.routeLabel || q.meta.routeLabel,
       awaitPaymentWithoutGateway: true,
     })
-    if (!created.ok) return jsonError(409, created.code, created.message, { conflicts: created.conflicts })
+    if (!created.ok) {
+      return jsonError(409, created.code, created.message, 'conflicts' in created ? { conflicts: created.conflicts } : undefined)
+    }
     booking = created.booking
     bookingRef = created.booking.ref
   }
@@ -141,8 +94,11 @@ export async function POST(req: Request) {
     return jsonError(400, 'VALIDATION_ERROR', 'Provide bookingRef or create payload')
   }
 
-  const amount = parsed.data.amount ?? booking.amountSnapshot
-  const currency = parsed.data.currency ?? booking.currency
+  if (!booking.amountSnapshot || booking.amountSnapshot <= 0 || !booking.listingId) {
+    return jsonError(409, 'UNAVAILABLE', 'This option is unavailable')
+  }
+  const amount = booking.amountSnapshot
+  const currency = booking.currency
   const provider = getPaymentProvider()
   const returnBase = `${origin}/api/payments/teya/return?ref=${encodeURIComponent(bookingRef)}`
   const result = await provider.createCheckout({

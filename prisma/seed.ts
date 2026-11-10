@@ -3,6 +3,7 @@ import { PrismaClient, BookingStatus, CurrencyCode, CustomerCategory, Role, Serv
 const prisma = new PrismaClient()
 
 async function main() {
+  await prisma.enquiry.deleteMany()
   await prisma.integrationStatus.deleteMany()
   await prisma.payment.deleteMany()
   await prisma.staffNotification.deleteMany()

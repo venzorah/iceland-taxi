@@ -50,7 +50,7 @@ export function ContactPageClient() {
 
 export function ServicesPageClient() {
   const c = usePublicChrome()
-  return <Services {...chromeProps(c)} onAirport={c.onAirport} onTours={c.onTours} onPrivateDriver={c.onPrivateDriver} />
+  return <Services {...chromeProps(c)} onAirport={c.onAirport} onTours={c.onTours} onPrivateDriver={c.onPrivateDriver} onEnquire={() => c.go('/book?enquiry=1')} />
 }
 
 export function DestinationsPageClient() {

@@ -4,6 +4,7 @@ export type PriceLine = { key: string; label: string; isk: number }
 
 export type QuoteInput = {
   baseIsk: number
+  baseLabel?: string
   vehicleUpgradeIsk?: number
   vehicleLabel?: string
   extras?: {
@@ -82,7 +83,7 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   const currency = resolveCurrency(category, input.currency)
   const extras = input.extras ?? {}
   const lines: PriceLine[] = [
-    { key: 'base', label: 'Base transfer', isk: Math.max(0, input.baseIsk) },
+    { key: 'listing', label: input.baseLabel || 'Published price', isk: Math.max(0, input.baseIsk) },
   ]
 
   if (input.vehicleUpgradeIsk && input.vehicleUpgradeIsk > 0) {

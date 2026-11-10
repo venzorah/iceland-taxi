@@ -1,7 +1,11 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, CalendarRange, Clock3, Map } from 'lucide-react'
+
+import { usePublishedListings } from '@/components/booking/usePublishedListings'
+import { formatPrice } from '@/lib/design/data'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import { IMG, type Currency } from '@/lib/design/data'
@@ -36,6 +40,8 @@ const PACKAGES = [
 export default function PrivateDriver(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
+  const router = useRouter()
+  const driverListings = (usePublishedListings() || []).filter((listing) => listing.category === 'driver')
   const [whatsappE164, setWhatsappE164] = useState<string | null>(null)
 
   useEffect(() => {
@@ -70,11 +76,14 @@ export default function PrivateDriver(props: Props) {
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private driver & chauffeur hire in Iceland</h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Hourly to multi-day hire with a dedicated vehicle. Ideal when the itinerary is still taking shape.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={p.onBook} className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
+            <button onClick={() => driverListings[0] ? router.push(`/book?listing=${encodeURIComponent(driverListings[0].id)}&kind=service`) : router.push('/book?enquiry=1')} className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
               Book a private driver <ArrowRight size={16} />
             </button>
-            <a href={whatsappHref({ e164: whatsappE164, text: 'Hello, I would like a quotation for a private driver itinerary.' })} className="rounded-full border border-white/30 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10">
-              Request a quotation
+            <button onClick={() => router.push('/book?enquiry=1')} className="rounded-full border border-white/30 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10">
+              Request a custom trip
+            </button>
+            <a href={whatsappHref({ e164: whatsappE164, text: 'Hello Iceland Taxi Booking' })} className="rounded-full border border-white/30 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10">
+              Company WhatsApp
             </a>
           </div>
         </div>
@@ -90,7 +99,23 @@ export default function PrivateDriver(props: Props) {
             </article>
           ))}
         </div>
-        <p className="mt-8 text-sm text-muted">Durations, overtime rules and vehicle classes are configured per service in Admin and shown at checkout.</p>
+        {driverListings.length > 0 && (
+          <ul className="mt-8 divide-y divide-line rounded-2xl border border-line bg-card">
+            {driverListings.map((listing) => (
+              <li key={listing.id} className="flex items-center justify-between gap-4 px-4 py-4">
+                <div>
+                  <p className="font-semibold text-heading">{listing.title}</p>
+                  <p className="text-sm text-muted">{listing.hoursLabel || 'Fixed price'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display text-lg font-bold text-heading">{formatPrice(listing.fromIsk, p.currency)}</p>
+                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(listing.id)}&kind=service`)} className="text-sm font-bold text-link">Book</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-8 text-sm text-muted">A published driver price is fixed. A custom itinerary is an enquiry, not a distance fare.</p>
       </section>
     </PublicPageShell>
   )

@@ -59,6 +59,12 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Page-shell backstop only. The overflowing pieces are fixed in the components. */
+.page-shell {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 button,
 a,
 label,

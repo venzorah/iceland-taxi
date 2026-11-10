@@ -79,7 +79,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
 
   return (
     <section
-      className="relative isolate overflow-hidden bg-navy"
+      className="relative isolate w-full max-w-full overflow-hidden bg-navy"
       aria-roledescription="carousel"
       aria-label="Featured journeys"
       onMouseEnter={() => setHovered(true)}
@@ -104,7 +104,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
       ))}
       <div className="absolute inset-0 -z-10 bg-navy/50" />
 
-      <div className="mx-auto max-w-7xl px-4 pb-36 pt-10 sm:px-6 sm:pb-40 sm:pt-28 lg:px-8 lg:pb-48 lg:pt-32">
+      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 pb-36 pt-10 sm:px-6 sm:pb-40 sm:pt-28 lg:px-8 lg:pb-48 lg:pt-32">
         <div className="min-h-[318px] sm:min-h-[340px] lg:min-h-[360px]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div

@@ -34,9 +34,9 @@ export function BookingSearch({ language, onSearch }: { language: Lang; onSearch
         e.preventDefault()
         onSearch?.(form)
       }}
-      className="rounded-2xl border border-line bg-card p-4 shadow-[0_20px_50px_-20px_rgba(6,27,58,0.35)] sm:p-6"
+      className="w-full min-w-0 overflow-x-clip rounded-2xl border border-line bg-card p-4 shadow-[0_20px_50px_-20px_rgba(6,27,58,0.35)] sm:p-6"
     >
-      <div className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" role="tablist">
+      <div className="no-scrollbar -mx-1 flex min-w-0 gap-1 overflow-x-auto overscroll-x-contain px-1 pb-1" role="tablist">
         {SERVICE_CATEGORIES.map((c) => (
           <button
             key={c.id}
@@ -53,7 +53,7 @@ export function BookingSearch({ language, onSearch }: { language: Lang; onSearch
         ))}
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto_1fr_150px_120px_110px_110px]">
+      <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_150px_120px_110px_110px]">
         <Field label={t(language, 'pickup')} icon={<MapPin size={16} />}>
           <input value={form.pickup} onChange={(e) => set('pickup', e.target.value)} className="w-full bg-transparent text-sm font-semibold text-heading outline-none" />
         </Field>
@@ -68,22 +68,22 @@ export function BookingSearch({ language, onSearch }: { language: Lang; onSearch
         <Field label={t(language, 'destination')} icon={<Navigation size={16} />}>
           <input value={form.destination} onChange={(e) => set('destination', e.target.value)} className="w-full bg-transparent text-sm font-semibold text-heading outline-none" />
         </Field>
-        <div className="grid grid-cols-2 gap-3 lg:contents">
+        <div className="grid min-w-0 grid-cols-2 gap-3 lg:contents">
           <Field label={t(language, 'date')} icon={<Calendar size={16} />}>
-            <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} className="w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
+            <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
           </Field>
           <Field label={t(language, 'time')} icon={<Clock size={16} />}>
-            <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} className="w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
+            <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
           </Field>
           <Field label={t(language, 'passengers')} icon={<Users size={16} />}>
-            <select value={form.passengers} onChange={(e) => set('passengers', Number(e.target.value))} className="w-full bg-transparent text-sm font-semibold text-heading outline-none">
+            <select value={form.passengers} onChange={(e) => set('passengers', Number(e.target.value))} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none">
               {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n} className="text-navy">{n}</option>
               ))}
             </select>
           </Field>
           <Field label={t(language, 'luggage')} icon={<Luggage size={16} />}>
-            <select value={form.luggage} onChange={(e) => set('luggage', Number(e.target.value))} className="w-full bg-transparent text-sm font-semibold text-heading outline-none">
+            <select value={form.luggage} onChange={(e) => set('luggage', Number(e.target.value))} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none">
               {Array.from({ length: 17 }, (_, i) => i).map((n) => (
                 <option key={n} value={n} className="text-navy">{n}</option>
               ))}
@@ -104,7 +104,7 @@ export function BookingSearch({ language, onSearch }: { language: Lang; onSearch
 
 function Field({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <label className="flex min-h-[56px] min-w-0 items-center gap-3 rounded-xl border border-input-line bg-input px-3 py-2 transition-colors duration-150 focus-within:border-focus">
+    <label className="flex min-h-12 min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-input-line bg-input px-3 py-2 transition-colors duration-150 focus-within:border-focus">
       <span className="text-muted">{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[11px] font-medium text-muted">{label}</span>

@@ -40,11 +40,11 @@ export function AnnouncementBar({ state, language = 'en' }: Props) {
     <div
       role="region"
       aria-label="Announcements"
-      className={`itb-marquee no-scrollbar relative flex h-9 items-center overflow-hidden ${s.bar}`}
+      className={`itb-marquee no-scrollbar relative flex h-9 w-full min-w-0 max-w-full items-center overflow-hidden ${s.bar}`}
     >
       <style>{MARQUEE_CSS}</style>
       <div
-        className="itb-marquee-track flex w-max min-w-full"
+        className="itb-marquee-track flex w-max min-w-full max-w-none"
         data-pause={state.settings.pauseOnHover ? 'true' : 'false'}
         style={{ ['--itb-loop' as string]: `${loopSeconds(chars, state.settings.speed)}s` }}
       >
@@ -57,6 +57,7 @@ export function AnnouncementBar({ state, language = 'en' }: Props) {
 
 const MARQUEE_CSS = `
 @keyframes itb-marquee { from { transform: translate3d(0,0,0) } to { transform: translate3d(-50%,0,0) } }
+.itb-marquee { max-width: 100%; }
 .itb-marquee-track { animation: itb-marquee var(--itb-loop, 30s) linear infinite; will-change: transform; }
 .itb-marquee:hover .itb-marquee-track[data-pause="true"],
 .itb-marquee:focus-within .itb-marquee-track { animation-play-state: paused; }

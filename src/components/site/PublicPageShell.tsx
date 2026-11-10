@@ -57,7 +57,7 @@ export function PublicPageShell({
 }: Props) {
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <div className="bg-bg pb-[calc(4.75rem+env(safe-area-inset-bottom))] font-sans text-text md:pb-0">
+      <div className="bg-bg pb-[calc(5.5rem+env(safe-area-inset-bottom))] font-sans text-text md:pb-0">
         <SiteHeader
           theme={theme}
           language={language}
@@ -72,13 +72,15 @@ export function PublicPageShell({
           onMobileBack={onHome}
           announcements={announcements}
         />
-        {children}
-        {!hideFooter && (
-          <SiteFooter onStaff={onStaff} onStaffMobile={onStaffMobile} onDriver={onDriver} onAccount={onAccount} />
-        )}
+        <div className="page-shell">
+          {children}
+          {!hideFooter && (
+            <SiteFooter onStaff={onStaff} onStaffMobile={onStaffMobile} onDriver={onDriver} onAccount={onAccount} />
+          )}
+        </div>
       </div>
       {!hideTabBar && (
-        <SiteTabBar active={activeTab} onHome={onHome} onBook={onBook} onTrips={onAccount} onHelp={onHelp} />
+        <SiteTabBar language={language} active={activeTab} onHome={onHome} onBook={onBook} onTrips={onAccount} onHelp={onHelp} />
       )}
     </div>
   )

@@ -195,7 +195,7 @@ export default function CustomerDashboard(props: Props) {
           </div>
         </main>
       </div>
-      <SiteTabBar active="trips" onHome={p.onHome} onBook={p.onBook} onTrips={() => setTab('upcoming')} onHelp={p.onMessages} />
+      <SiteTabBar language={p.language as Lang} active="trips" onHome={p.onHome} onBook={p.onBook} onTrips={() => setTab('upcoming')} onHelp={p.onMessages} />
     </div>
   )
 }

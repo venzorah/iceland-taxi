@@ -104,7 +104,7 @@ export default function Homepage(props: Props) {
                 <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Private sightseeing tours</h2>
                 <p className="mt-3 text-base text-muted">Your own vehicle and driver, your own schedule. Stop where you want, stay as long as you like.</p>
               </div>
-              <a href="#" className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-bold text-link hover:underline">Discover Private Tours <ArrowRight size={16} /></a>
+              <a href="/private-tours" className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-bold text-link hover:underline">Discover Private Tours <ArrowRight size={16} /></a>
             </div>
             <div className="no-scrollbar -mx-4 mt-8 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mt-10 md:mx-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0">
               {TOURS.map((tour) => (
@@ -152,7 +152,7 @@ export default function Homepage(props: Props) {
                 <button onClick={() => onSearch?.({ category: 'driver', pickup: 'Reykjavík hotel', destination: 'Custom itinerary', date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
                   Hire a Private Driver
                 </button>
-                <a href="#" className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</a>
+                <a href="/private-driver" className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</a>
               </div>
             </div>
             <img src={IMG.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />
@@ -165,7 +165,7 @@ export default function Homepage(props: Props) {
           <p className="mt-3 max-w-2xl text-base text-muted">Where our passengers travel most. Every destination can be booked as a transfer, a tour or part of a private driver day.</p>
           <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:mt-10 sm:auto-rows-[220px] sm:gap-3 lg:grid-cols-4">
             {DESTINATIONS.map((d, i) => (
-              <a key={d.name} href="#" className={`group relative overflow-hidden rounded-2xl ${i === 0 ? 'col-span-2 row-span-2' : ''} ${i === 4 ? 'col-span-2' : ''}`}>
+              <a key={d.name} href="/destinations" className={`group relative overflow-hidden rounded-2xl ${i === 0 ? 'col-span-2 row-span-2' : ''} ${i === 4 ? 'col-span-2' : ''}`}>
                 <img src={d.img} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                 <div className="absolute inset-x-0 bottom-0 bg-navy/70 px-4 py-3 backdrop-blur-sm">
                   <p className="font-display text-base font-bold text-white sm:text-lg">{d.name}</p>
@@ -182,7 +182,7 @@ export default function Homepage(props: Props) {
             <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
               <div>
                 <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Our fleet</h2>
-                <p className="mt-3 text-base text-muted">Choose the vehicle that fits your group and luggage. Capacities are per vehicle.</p>
+                <p className="mt-3 text-base text-muted">Choose the vehicle that fits your group and luggage. Capacities are per vehicle. <a href="/fleet" className="font-semibold text-link hover:underline">Full fleet page</a></p>
                 <img src={IMG.fleet} alt="Sedan, SUV and minivan parked in Reykjavík" className="mt-8 hidden aspect-[16/10] w-full rounded-2xl object-cover sm:block" />
               </div>
               <div className="overflow-hidden rounded-2xl border border-line bg-card">
@@ -231,7 +231,7 @@ export default function Homepage(props: Props) {
               </dl>
             </div>
             <div>
-              <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">How booking works</h2>
+              <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl"><a href="/how-it-works" className="hover:text-link">How booking works</a></h2>
               <ol className="relative mt-8 space-y-8 border-l-2 border-line pl-8">
                 {[
                   ['Tell us your journey', 'Pickup, destination, date, passengers and luggage.'],
@@ -274,6 +274,9 @@ export default function Homepage(props: Props) {
         <section className="mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
           <h2 className="font-display text-2xl font-bold text-heading sm:text-center sm:text-4xl">Frequently asked questions</h2>
           <Faq />
+          <p className="mt-8 text-center">
+            <a href="/faqs" className="text-sm font-bold text-link hover:underline">View all FAQs</a>
+          </p>
         </section>
 
         {/* CTA */}

@@ -1,3 +1,4 @@
+import { ensureOfficialWhatsApp } from '@/lib/company-whatsapp'
 import { prisma } from '@/lib/prisma'
 import { planStaffWhatsApp } from '@/lib/whatsapp'
 import { cloudSender, sendWhatsAppCloudText } from '@/lib/whatsapp-cloud'
@@ -6,14 +7,14 @@ import { cloudSender, sendWhatsAppCloudText } from '@/lib/whatsapp-cloud'
  * Customer in-app message → staff notification.
  * With a company number and no Cloud API credentials, staff get a deep link.
  * With credentials, the same short notice is sent. The private message body is never included.
- * No company number: the feature stays off and nothing is sent.
+ * The company number defaults to +3548353111 when the setting is empty.
  */
 export async function notifyStaffWhatsApp(input: { bookingRef: string; messageId: string }) {
-  const company = await prisma.companySettings.findUnique({ where: { id: 'singleton' } }).catch(() => null)
+  const companyE164 = await ensureOfficialWhatsApp()
   const cloud = cloudSender()
   const plan = planStaffWhatsApp({
     bookingRef: input.bookingRef,
-    companyE164: company?.whatsappE164,
+    companyE164,
     cloudConfigured: cloud.configured,
     notifyE164: cloud.notifyE164,
   })

@@ -26,10 +26,10 @@ async function main() {
     create: {
       id: 'singleton',
       displayName: 'Iceland Taxi Booking',
-      // Contact/legal fields intentionally null, set via Admin CMS only.
+      // Other contact/legal fields stay null. WhatsApp is the official company number.
       email: null,
       phone: null,
-      whatsappE164: null,
+      whatsappE164: '+3548353111',
       addressLine1: null,
       registrationNumber: null,
       vatNumber: null,
@@ -37,6 +37,7 @@ async function main() {
     },
     update: {
       testimonialsEnabled: false,
+      whatsappE164: '+3548353111',
     },
   })
 

@@ -1,4 +1,6 @@
 import { jsonOk, prisma, withDb } from '@/lib/api'
+import { ensureOfficialWhatsApp } from '@/lib/company-whatsapp'
+import { OFFICIAL_WHATSAPP_E164 } from '@/lib/whatsapp'
 
 /**
  * Company profile is CMS/admin-owned. Never invent contact, registration,
@@ -8,18 +10,21 @@ export async function GET() {
   const data = await withDb(
     async () => {
       const settings = await prisma.companySettings.findUnique({ where: { id: 'singleton' } })
+      const whatsappE164 = await ensureOfficialWhatsApp()
       return {
         source: 'database' as const,
-        company: settings ?? {
-          displayName: 'Iceland Taxi Booking',
-          email: null,
-          phone: null,
-          whatsappE164: null,
-          addressLine1: null,
-          registrationNumber: null,
-          vatNumber: null,
-          testimonialsEnabled: false,
-        },
+        company: settings
+          ? { ...settings, whatsappE164 }
+          : {
+              displayName: 'Iceland Taxi Booking',
+              email: null,
+              phone: null,
+              whatsappE164,
+              addressLine1: null,
+              registrationNumber: null,
+              vatNumber: null,
+              testimonialsEnabled: false,
+            },
       }
     },
     () => ({
@@ -28,7 +33,7 @@ export async function GET() {
         displayName: 'Iceland Taxi Booking',
         email: null,
         phone: null,
-        whatsappE164: null,
+        whatsappE164: OFFICIAL_WHATSAPP_E164,
         addressLine1: null,
         registrationNumber: null,
         vatNumber: null,

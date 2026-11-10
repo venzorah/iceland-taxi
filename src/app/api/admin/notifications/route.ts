@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
 import { getDemoStaff } from '@/lib/auth/demo'
 import { whatsappCloudCredentials } from '@/lib/env'
+import { ensureOfficialWhatsApp } from '@/lib/company-whatsapp'
 import { describeWhatsAppFeature } from '@/lib/whatsapp'
 
 const patchSchema = z.object({
@@ -14,9 +15,9 @@ export async function GET() {
   const staff = await getDemoStaff()
   if (!staff) return jsonError(401, 'UNAUTHORIZED', 'Staff session required')
 
-  const company = await prisma.companySettings.findUnique({ where: { id: 'singleton' } })
+  const whatsappE164 = await ensureOfficialWhatsApp()
   const feature = describeWhatsAppFeature({
-    companyE164: company?.whatsappE164,
+    companyE164: whatsappE164,
     cloudConfigured: whatsappCloudCredentials().configured,
   })
   const items = await prisma.staffNotification.findMany({

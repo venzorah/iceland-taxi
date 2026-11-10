@@ -11,6 +11,14 @@ export const metadata: Metadata = {
     'From airport transfers to private tours and personalised vacation drivers, enjoy convenient transportation across Iceland with a booking experience designed around you.',
   applicationName: 'Iceland Taxi Booking',
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/favicon-16.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -32,6 +40,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-dvh bg-bg font-sans text-text antialiased">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('itb_welcome_seen')==='1')return;localStorage.setItem('itb_welcome_seen','1');window.__itbWelcome=1;document.documentElement.classList.add('itb-welcome')}catch(e){}})()`,
+          }}
+        />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

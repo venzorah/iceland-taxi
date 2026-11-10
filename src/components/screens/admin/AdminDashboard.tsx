@@ -12,6 +12,7 @@ import { Services } from './Services'
 import { Pricing } from './Pricing'
 import { Routes } from './Routes'
 import { PaymentsList } from './PaymentsList'
+import { Messages } from './Messages'
 import { Fleet } from './Fleet'
 import { Seo } from './Seo'
 import { Staff } from './Staff'
@@ -25,7 +26,7 @@ export const args = {
 }
 
 export const argTypes = {
-  section: { control: 'select', options: ['overview', 'bookings', 'services', 'pricing', 'routes', 'payments', 'drivers', 'vehicles', 'announcements', 'seo', 'staff', 'appearance'] },
+  section: { control: 'select', options: ['overview', 'bookings', 'messages', 'services', 'pricing', 'routes', 'payments', 'drivers', 'vehicles', 'announcements', 'seo', 'staff', 'appearance'] },
   theme: { control: 'radio', options: ['light', 'dark'] },
   role: { control: 'select', options: ['Super Admin', 'Booking Manager', 'Finance Manager', 'Content Manager'] },
 }
@@ -51,13 +52,14 @@ export default function AdminDashboard(props: Props) {
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
 
   const titles: Record<string, string> = {
-    overview: 'Today', bookings: 'Bookings', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
+    overview: 'Today', bookings: 'Bookings', messages: 'Messages', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
     vehicles: 'Vehicles', announcements: 'Announcements', seo: 'SEO & landing pages', staff: 'Staff & permissions', appearance: 'Appearance & Theme',
   }
   const body = (() => {
     switch (section) {
       case 'overview': return <Overview onOpenBookings={() => go('bookings')} />
       case 'bookings': return <BookingsTable />
+      case 'messages': return <Messages />
       case 'services': return <Services />
       case 'pricing': return <Pricing />
       case 'routes': return <Routes />

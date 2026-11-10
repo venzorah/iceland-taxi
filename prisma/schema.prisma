@@ -33,6 +33,7 @@ enum BookingStatus {
   AWAITING_PAYMENT
   CONFIRMED
   DRIVER_ASSIGNED
+  ACKNOWLEDGED
   DRIVER_EN_ROUTE
   IN_PROGRESS
   COMPLETED
@@ -269,10 +270,18 @@ model Message {
   booking    Booking? @relation(fields: [bookingId], references: [id])
   authorId   String?
   author     User?    @relation(fields: [authorId], references: [id])
+  /// customer | staff | system — guests may post without a User row
+  authorRole String   @default("customer")
+  guestEmail String?
+  guestName  String?
   body       String
   channel    String   @default("in_app")
+  /// Unread for the *other* party (customer unread when staff wrote, and vice versa).
   unread     Boolean  @default(true)
   createdAt  DateTime @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([guestEmail])
 }
 
 model Announcement {

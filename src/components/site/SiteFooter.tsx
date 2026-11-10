@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Mail, MessageCircle } from 'lucide-react'
 
 import { LOGO_DARK } from '@/lib/design/data'
+import { whatsappHref } from '@/lib/whatsapp'
 
 const COLUMNS = [
   { title: 'Services', links: ['Airport transfers', 'Private taxi', 'Private tours', 'Private driver', 'Corporate travel'] },
@@ -13,6 +14,13 @@ const COLUMNS = [
 ]
 
 export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { onStaff?: () => void; onStaffMobile?: () => void; onDriver?: () => void; onAccount?: () => void }) {
+  const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null } | null>(null)
+  useEffect(() => {
+    fetch('/api/company')
+      .then((r) => r.json())
+      .then((d) => setCompany(d.company || null))
+      .catch(() => {})
+  }, [])
   const portals: [string, (() => void) | undefined][] = [
     ['Customer account', onAccount],
     ['Driver portal', onDriver],
@@ -29,12 +37,18 @@ export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { on
               Airport transfers, private taxis, sightseeing tours and private drivers across Iceland.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <a href="#" className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-mint px-4 py-2 text-sm font-semibold text-navy transition-opacity duration-150 hover:opacity-90">
+              <a href={whatsappHref({ e164: company?.whatsappE164, text: 'Hello Iceland Taxi Booking' })} className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-mint px-4 py-2 text-sm font-semibold text-navy transition-opacity duration-150 hover:opacity-90">
                 <MessageCircle size={16} /> WhatsApp
               </a>
-              <a href="#" className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">
-                <Mail size={16} /> Email us
-              </a>
+              {company?.email ? (
+                <a href={`mailto:${company.email}`} className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">
+                  <Mail size={16} /> Email us
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/50" title="Email unset in company CMS">
+                  <Mail size={16} /> Email us
+                </span>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">

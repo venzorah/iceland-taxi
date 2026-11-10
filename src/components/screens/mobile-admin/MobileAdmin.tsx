@@ -11,7 +11,7 @@ import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
-import { CONVERSATIONS, money, statusClass, type OpsBooking } from '@/lib/design/opsData'
+import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
 
 export const viewport = 'mobile'
 
@@ -41,6 +41,7 @@ const STATUS_TO_API: Record<string, string> = {
   'Awaiting Payment': 'AWAITING_PAYMENT',
   Confirmed: 'CONFIRMED',
   'Driver Assigned': 'DRIVER_ASSIGNED',
+  Acknowledged: 'ACKNOWLEDGED',
   'Driver En Route': 'DRIVER_EN_ROUTE',
   'In Progress': 'IN_PROGRESS',
   Completed: 'COMPLETED',
@@ -276,7 +277,7 @@ export default function MobileAdmin(props: Props) {
                 onChange={(e) => setStatusDraft(e.target.value as OpsBooking['status'])}
                 className="mt-2 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-sm font-semibold text-heading"
               >
-                {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', 'Refunded'].map((s) => (
+                {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Acknowledged', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', 'Refunded'].map((s) => (
                   <option key={s}>{s}</option>
                 ))}
               </select>
@@ -451,42 +452,90 @@ function BookingRow({ b, onOpen }: { b: OpsBooking; onOpen: (b: OpsBooking) => v
 }
 
 function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: string | null) => void }) {
-  const c = CONVERSATIONS.find((x) => x.ref === chat)
-  if (c) {
+  const [threads, setThreads] = useState<Array<{ ref: string; customer: string; preview: string; time: string; unread: number }>>([])
+  const [messages, setMessages] = useState<Array<{ id: string; body: string; authorRole: string; time: string }>>([])
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    ;(async () => {
+      await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
+      const data = await fetch('/api/messages?as=staff').then((r) => r.json())
+      setThreads(data.threads || [])
+    })()
+  }, [])
+
+  useEffect(() => {
+    if (!chat) return
+    let alive = true
+    const load = async () => {
+      await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
+      const data = await fetch(`/api/messages/${chat}`).then((r) => r.json())
+      if (alive && data.ok) setMessages(data.messages || [])
+    }
+    load()
+    const t = setInterval(load, 4000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [chat])
+
+  const send = async () => {
+    if (!chat || !draft.trim()) return
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bookingRef: chat, body: draft.trim(), as: 'staff' }),
+    })
+    setDraft('')
+    const data = await fetch(`/api/messages/${chat}`).then((r) => r.json())
+    if (data.ok) setMessages(data.messages || [])
+  }
+
+  const c = threads.find((x) => x.ref === chat)
+  if (chat && c) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-3 border-b border-line bg-bg px-4 py-3">
           <button onClick={() => setChat(null)} className="text-sm font-semibold text-link">Back</button>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-heading">{c.name}</p>
+            <p className="truncate text-sm font-bold text-heading">{c.customer}</p>
             <p className="font-mono text-[11px] text-muted">{c.ref}</p>
           </div>
         </div>
-        <div className="flex-1 space-y-3 p-4">
-          <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-bg px-4 py-2.5 text-sm text-heading">{c.last}<p className="mt-1 text-[10px] text-muted">{c.time}</p></div>
-          <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-navy px-4 py-2.5 text-sm text-white dark:bg-primary dark:text-navy">No problem — your driver tracks the flight and will be waiting at arrivals.<p className="mt-1 text-[10px] opacity-70">14:55 · Read</p></div>
+        <div className="flex-1 space-y-3 overflow-y-auto p-4">
+          {messages.map((m) => (
+            <div
+              key={m.id}
+              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.authorRole === 'staff' ? 'ml-auto rounded-br-sm bg-navy text-white dark:bg-primary dark:text-navy' : 'rounded-bl-sm bg-bg text-heading'}`}
+            >
+              {m.body}
+              <p className={`mt-1 text-[10px] ${m.authorRole === 'staff' ? 'opacity-70' : 'text-muted'}`}>{m.time}</p>
+            </div>
+          ))}
         </div>
         <div className="sticky bottom-0 flex items-center gap-2 border-t border-line bg-bg p-3">
-          <input placeholder="Reply…" className="flex-1 rounded-full border border-input-line bg-input px-4 py-2.5 text-sm text-heading placeholder:text-muted" />
-          <button aria-label="Send" className="grid h-10 w-10 place-items-center rounded-full bg-primary text-on-primary"><Send size={17} /></button>
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Reply…" className="flex-1 rounded-full border border-input-line bg-input px-4 py-2.5 text-sm text-heading placeholder:text-muted" />
+          <button onClick={send} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-full bg-primary text-on-primary"><Send size={17} /></button>
         </div>
       </div>
     )
   }
   return (
     <ul className="divide-y divide-line bg-bg">
-      {CONVERSATIONS.map((x) => (
+      {threads.map((x) => (
         <li key={x.ref}>
           <button onClick={() => setChat(x.ref)} className="flex w-full items-center gap-3 px-4 py-4 text-left">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-sm font-bold text-heading">{x.name.split(' ').map((s) => s[0]).join('')}</div>
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-sm font-bold text-heading">{(x.customer || '?').split(' ').map((s) => s[0]).join('').slice(0, 2)}</div>
             <div className="min-w-0 flex-1">
-              <div className="flex justify-between gap-2"><p className={`truncate text-sm ${x.unread ? 'font-bold text-heading' : 'font-medium text-text'}`}>{x.name}</p><span className="text-xs text-muted">{x.time}</span></div>
-              <p className="truncate text-sm text-muted">{x.last}</p>
+              <div className="flex justify-between gap-2"><p className={`truncate text-sm ${x.unread ? 'font-bold text-heading' : 'font-medium text-text'}`}>{x.customer}</p><span className="text-xs text-muted">{x.time}</span></div>
+              <p className="truncate text-sm text-muted">{x.preview}</p>
             </div>
             {x.unread > 0 && <span className="rounded-full bg-primary px-2 text-xs font-bold text-on-primary">{x.unread}</span>}
           </button>
         </li>
       ))}
+      {threads.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No message threads yet.</li>}
     </ul>
   )
 }

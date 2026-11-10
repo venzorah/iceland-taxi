@@ -14,6 +14,7 @@ const STATUS_TO_API: Record<string, string> = {
   'Awaiting Payment': 'AWAITING_PAYMENT',
   Confirmed: 'CONFIRMED',
   'Driver Assigned': 'DRIVER_ASSIGNED',
+  Acknowledged: 'ACKNOWLEDGED',
   'Driver En Route': 'DRIVER_EN_ROUTE',
   'In Progress': 'IN_PROGRESS',
   Completed: 'COMPLETED',
@@ -282,7 +283,7 @@ function BookingDetail({
         onChange={(e) => setStatus(e.target.value as OpsBooking['status'])}
         className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm text-heading"
       >
-        {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', 'Refunded'].map((s) => (
+        {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Acknowledged', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', 'Refunded'].map((s) => (
           <option key={s}>{s}</option>
         ))}
       </select>

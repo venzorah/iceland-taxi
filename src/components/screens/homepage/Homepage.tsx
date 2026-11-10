@@ -38,12 +38,13 @@ type Props = Partial<typeof args> & {
   onStaff?: () => void
   onStaffMobile?: () => void
   onDriver?: () => void
+  onMessages?: () => void
   /** The scrolling announcement bar, managed in Admin → Announcements. */
   announcements?: AnnouncementState
 }
 
 export default function Homepage(props: Props) {
-  const { theme, language, currency, showDemoReviews, autoplay, onThemeChange, onLanguageChange, onCurrencyChange, onSearch, onSignIn, onStaff, onStaffMobile, onDriver, announcements } = { ...args, ...props }
+  const { theme, language, currency, showDemoReviews, autoplay, onThemeChange, onLanguageChange, onCurrencyChange, onSearch, onSignIn, onStaff, onStaffMobile, onDriver, onMessages, announcements } = { ...args, ...props }
   const th = theme as 'light' | 'dark'
   const lang = language as Lang
   const cur = currency as Currency
@@ -290,7 +291,7 @@ export default function Homepage(props: Props) {
 
         <SiteFooter onStaff={onStaff} onStaffMobile={onStaffMobile} onDriver={onDriver} onAccount={onSignIn} />
       </div>
-      <SiteTabBar active="home" onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onBook={book} onTrips={onSignIn} />
+      <SiteTabBar active="home" onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onBook={book} onTrips={onSignIn} onHelp={onMessages} />
     </div>
   )
 }

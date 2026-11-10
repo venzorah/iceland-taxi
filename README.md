@@ -13,7 +13,8 @@ Production-bound booking platform for **Iceland Taxi Booking** — airport trans
 | `/account` | Customer PWA dashboard |
 | `/admin` | Desktop admin |
 | `/m` | Mobile admin PWA |
-| `/driver` | Driver portal |
+| `/driver` | Driver portal (demo login) |
+| `/messages` | In-app messaging inbox |
 
 All phone layouts follow a native mobile app feel (touch targets, bottom tabs, safe areas).
 
@@ -94,6 +95,17 @@ Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns
 | `POST /api/payments/checkout` | Create booking (optional) + Teya hosted session / demo path |
 | `POST /api/payments/webhook/teya` | Payment status sync (no card data) |
 | `POST /api/maps/geocode` | Google geocode stub (fails clearly if unset) |
+| `POST/DELETE /api/driver/auth` | Demo driver login cookie (`ari.driver@example.local`) |
+| `GET /api/driver/me` · `GET/PATCH /api/driver/bookings` | Assigned jobs + journey status advances |
+| `GET/POST /api/auth/demo` | Demo staff / guest messaging session cookies |
+| `GET/POST /api/messages` · `GET/PATCH /api/messages/[ref]` | Booking-linked threads (polling ~4s); staff or guest email gate |
+| `GET/PATCH /api/admin/company` | Company CMS incl. `whatsappE164` (null until set — never invented) |
+
+### Driver & messaging notes
+
+- Driver portal is **ops-only**: acknowledge → en route → in progress → completed. No admin catalogue powers. Double-assign conflicts reuse availability checks.
+- Messaging is **in-app** with HTTP polling (not claimed as WhatsApp Business API sync). Conversations are keyed to booking refs.
+- WhatsApp buttons use `CompanySettings.whatsappE164` when set; otherwise `wa.me/?text=…` with booking ref only (no fake number).
 
 ### Teya env keys (required for live card checkout)
 

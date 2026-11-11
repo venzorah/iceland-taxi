@@ -57,7 +57,20 @@ export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { on
         </div>
         <div className="mt-12 border-t border-white/15 pt-6 sm:mt-14">
           <DemoPortalButtons tone="dark" />
-          <p className="mt-6 text-xs text-white/60">© {new Date().getFullYear()} Iceland Taxi Booking</p>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+            <p className="text-xs text-white/60">© {new Date().getFullYear()} Iceland Taxi Booking</p>
+            <p className="text-xs leading-relaxed text-white/80">
+              Designed by{' '}
+              <a
+                href="https://wa.me/2347039340610"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-white underline decoration-white/40 underline-offset-2 transition-colors duration-150 hover:text-cyan"
+              >
+                KM Consulting & Tech LTD
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

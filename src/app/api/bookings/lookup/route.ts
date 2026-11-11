@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { canEditPickup, formatPickupLabel, pickupParts } from '@/lib/booking/pickup'
 
 const bodySchema = z.object({
   ref: z.string().min(3).max(40),
@@ -34,15 +35,8 @@ export async function POST(req: Request) {
     return jsonError(404, 'NOT_FOUND', 'No booking matched that reference and email')
   }
 
-  const when = booking.pickupAt
-    ? new Intl.DateTimeFormat('en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(booking.pickupAt)
-    : 'Schedule TBC'
+  const when = booking.pickupAt ? formatPickupLabel(booking.pickupAt) : 'Schedule TBC'
+  const pickup = booking.pickupAt ? pickupParts(booking.pickupAt) : null
 
   const charged = booking.currency === 'ISK' ? (booking.amountIskSnapshot ?? booking.amountSnapshot) : booking.amountSnapshot
   const grouped = Math.round(charged).toLocaleString('en-US')
@@ -53,6 +47,8 @@ export async function POST(req: Request) {
         ? `€${grouped.replace(/,/g, '.')}`
         : `$${grouped}`
 
+  const detail = `${booking.vehicleLabel || 'Vehicle TBC'} · ${booking.status.replaceAll('_', ' ')} · ${amountLabel}`
+
   return jsonOk({
     ok: true,
     booking: {
@@ -60,7 +56,13 @@ export async function POST(req: Request) {
       serviceLabel: booking.serviceLabel,
       routeLabel: booking.routeLabel,
       status: booking.status,
-      summary: `${when} · ${booking.vehicleLabel || 'Vehicle TBC'} · ${booking.status.replaceAll('_', ' ')} · ${amountLabel}`,
+      summary: `${when} · ${detail}`,
+      detail,
+      pickupAt: booking.pickupAt?.toISOString() ?? null,
+      pickupDate: pickup?.date ?? '',
+      pickupTime: pickup?.time ?? '',
+      pickupLabel: when,
+      canEditPickup: canEditPickup(booking.status),
     },
   })
 }

@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 
+import { PickupTimeForm, type SavedPickup } from '@/components/booking/PickupTimeForm'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import type { Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
@@ -32,6 +33,12 @@ type FoundBooking = {
   ref: string
   title: string
   summary: string
+  detail: string
+  email: string
+  pickupDate: string
+  pickupTime: string
+  pickupLabel: string
+  canEditPickup: boolean
 }
 
 export default function ManageBooking(props: Props) {
@@ -42,6 +49,53 @@ export default function ManageBooking(props: Props) {
   const [state, setState] = useState<'default' | 'found' | 'empty' | 'loading'>(p.state)
   const [found, setFound] = useState<FoundBooking | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null)
+  const [signingIn, setSigningIn] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/auth/demo')
+      .then((res) => res.json())
+      .then((data) => {
+        const guest = typeof data?.guestEmail === 'string' ? data.guestEmail : null
+        setSessionEmail(guest)
+        if (guest) setEmail((current) => current || guest)
+      })
+      .catch(() => {})
+  }, [])
+
+  const signedInAsCustomer = Boolean(found && sessionEmail && sessionEmail.toLowerCase() === found.email)
+
+  const signInAsCustomer = async () => {
+    const guestEmail = (found?.email || email).trim().toLowerCase()
+    if (!guestEmail) return
+    setSigningIn(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/auth/demo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ role: 'guest', email: guestEmail }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.ok) {
+        setError(data?.message || 'Sign in failed.')
+        return
+      }
+      setSessionEmail(data.email || guestEmail)
+    } catch {
+      setError('Sign in failed.')
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
+  const applySaved = (saved: SavedPickup) => {
+    setFound((current) =>
+      current && current.ref === saved.ref
+        ? { ...current, pickupDate: saved.date, pickupTime: saved.time, pickupLabel: saved.label }
+        : current,
+    )
+  }
 
   return (
     <PublicPageShell
@@ -85,6 +139,12 @@ export default function ManageBooking(props: Props) {
                   ref: data.booking.ref,
                   title: data.booking.routeLabel || data.booking.serviceLabel,
                   summary: data.booking.summary,
+                  detail: data.booking.detail || data.booking.summary,
+                  email: email.trim().toLowerCase(),
+                  pickupDate: data.booking.pickupDate || '',
+                  pickupTime: data.booking.pickupTime || '',
+                  pickupLabel: data.booking.pickupLabel || 'Schedule to be confirmed',
+                  canEditPickup: Boolean(data.booking.canEditPickup),
                 })
                 setState('found')
               } else {
@@ -114,7 +174,32 @@ export default function ManageBooking(props: Props) {
           <article className="mt-6 rounded-2xl border border-line bg-bg p-5">
             <p className="font-mono text-xs text-muted">{found.ref}</p>
             <h2 className="mt-1 font-display text-xl font-bold text-heading">{found.title}</h2>
-            <p className="mt-1 text-sm text-muted">{found.summary}</p>
+            <p className="mt-1 text-sm font-semibold text-heading">{found.pickupLabel}</p>
+            <p className="mt-1 text-sm text-muted">{found.detail}</p>
+            {signedInAsCustomer || !found.canEditPickup ? (
+              <PickupTimeForm
+                bookingRef={found.ref}
+                date={found.pickupDate}
+                time={found.pickupTime}
+                label={found.pickupLabel}
+                canEdit={found.canEditPickup && signedInAsCustomer}
+                onSaved={applySaved}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={signInAsCustomer}
+                disabled={signingIn}
+                className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-hover disabled:opacity-60 sm:w-auto"
+              >
+                {signingIn ? 'Signing in…' : 'Sign in to change pickup'}
+              </button>
+            )}
+            {error && state === 'found' && (
+              <p role="alert" className="mt-3 text-sm text-error">
+                {error}
+              </p>
+            )}
             <div className="mt-5 flex flex-wrap gap-2">
               <button onClick={p.onAccount} className="rounded-full bg-navy px-4 py-2.5 text-sm font-semibold text-white dark:bg-primary dark:text-navy">Open trip</button>
               <button onClick={p.onMessages} className="rounded-full border border-line px-4 py-2.5 text-sm font-semibold text-heading">Message team</button>

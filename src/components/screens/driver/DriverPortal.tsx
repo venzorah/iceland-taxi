@@ -30,6 +30,8 @@ type DriverJob = {
   route: string
   pickup: string
   dropoff: string
+  pickupAddress?: string | null
+  mapUrl?: string | null
   time: string
   dateLabel: string
   pax: number
@@ -232,10 +234,22 @@ export default function DriverPortal(props: Props) {
                           <div>
                             <p className="text-xs text-muted">Pickup</p>
                             <p className="font-semibold text-heading">{primary.pickup}</p>
+                            {primary.pickupAddress && primary.mapUrl && (
+                              <a href={primary.mapUrl} target="_blank" rel="noreferrer" className="mt-1 block text-sm font-semibold text-link underline">
+                                {primary.pickupAddress}
+                              </a>
+                            )}
                           </div>
                           <div>
                             <p className="text-xs text-muted">Drop-off</p>
-                            <p className="font-semibold text-heading">{primary.dropoff}</p>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(primary.dropoff)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-semibold text-link underline"
+                            >
+                              {primary.dropoff}
+                            </a>
                           </div>
                         </div>
                       </div>
@@ -262,7 +276,7 @@ export default function DriverPortal(props: Props) {
                             <span className="grid h-11 w-11 place-items-center rounded-full border border-line text-muted"><Phone size={18} /></span>
                           )}
                           <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(primary.pickup)}`}
+                            href={primary.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(primary.pickup)}`}
                             target="_blank"
                             rel="noreferrer"
                             aria-label="Open navigation"

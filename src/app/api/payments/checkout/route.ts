@@ -19,6 +19,7 @@ const schema = z.object({
       passengers: z.number().int().positive().default(1),
       luggage: z.number().int().nonnegative().default(0),
       flightNumber: z.string().optional(),
+      pickupAddress: z.string().optional(),
       vehicleId: z.string().optional(),
       vehicleLabel: z.string().optional(),
       routeId: z.string().optional(),

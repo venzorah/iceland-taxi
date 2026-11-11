@@ -81,6 +81,7 @@ export type BookingPayPayload = {
   guestEmail: string
   guestPhone: string
   hotel: string
+  pickupAddress: string
   isQuote?: boolean
 }
 
@@ -152,6 +153,7 @@ export default function Booking(props: Props) {
     guestEmail,
     guestPhone,
     hotel,
+    pickupAddress: hotel.trim(),
   })
   const submitPay = () => {
     if (!canPay) return
@@ -228,6 +230,19 @@ export default function Booking(props: Props) {
                   </div>
                 </Section>
 
+                <Section title="Pickup address">
+                  <label className="block">
+                    <span className="text-xs font-medium text-muted">Street, hotel, or terminal</span>
+                    <input
+                      value={hotel}
+                      onChange={(e) => setHotel(e.target.value)}
+                      placeholder="The driver opens this address in Google Maps"
+                      className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted focus:border-focus"
+                    />
+                  </label>
+                  <p className="mt-2 text-xs text-muted">This address is sent to the driver. It does not change the published price.</p>
+                </Section>
+
                 {/* Extras */}
                 <Section title="Extras">
                   <div className="divide-y divide-line">
@@ -248,13 +263,9 @@ export default function Booking(props: Props) {
                       <span className="text-xs font-medium text-muted">Email</span>
                       <input value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
                     </label>
-                    <label className="block">
+                    <label className="block sm:col-span-2">
                       <span className="text-xs font-medium text-muted">Phone (with country code)</span>
                       <input value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
-                    </label>
-                    <label className="block">
-                      <span className="text-xs font-medium text-muted">Pickup details (does not change the price)</span>
-                      <input value={hotel} onChange={(e) => setHotel(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
                     </label>
                   </div>
                   <p className="mt-6 text-sm font-semibold text-heading">Where do you live?</p>

@@ -55,7 +55,12 @@ export type ListingQuery = {
 }
 
 export function normalizePlace(value: string | null | undefined) {
-  return (value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+  return (value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
 }
 
 /** A stored admin price. Zero, blank, and non-numbers are not a price. */
@@ -179,6 +184,56 @@ export function matchListing(listings: PublishedListing[], query: ListingQuery):
     return listings.find((listing) => listing.kind === 'service' && normalizePlace(listing.title) === destination) ?? null
   }
   return null
+}
+
+function placeMatches(query: string | null | undefined, label: string) {
+  const q = normalizePlace(query)
+  const l = normalizePlace(label)
+  if (!q || !l) return false
+  if (q === l) return true
+  const queryWords = q.split(' ').filter((word) => word.length >= 3)
+  const labelWords = l.split(' ').map((word) => word.replace(/[()]/g, ''))
+  if (queryWords.length === 0) return false
+  return queryWords.every((word) => labelWords.some((labelWord) => labelWord === word || labelWord.startsWith(word)))
+}
+
+/**
+ * Published options for a pickup and destination search.
+ * The fare stays the admin ISK price. Kilometres are never used to price a result.
+ */
+export function searchListings(
+  listings: PublishedListing[],
+  query: { pickup?: string | null; destination?: string | null; category?: string | null },
+): PublishedListing[] {
+  const pickup = query.pickup?.trim() || ''
+  const destination = query.destination?.trim() || ''
+  const category = query.category?.trim()
+  const scoped = category ? listings.filter((listing) => listing.category === category) : listings
+  const pool = scoped.length > 0 ? scoped : listings
+  if (!pickup && !destination) return pool
+
+  const matches = (listing: PublishedListing) => {
+    if (listing.kind === 'route') {
+      const forward = placeMatches(pickup, listing.fromLabel) && placeMatches(destination, listing.toLabel)
+      const reverse = placeMatches(pickup, listing.toLabel) && placeMatches(destination, listing.fromLabel)
+      return forward || reverse
+    }
+    return placeMatches(destination, listing.title) || placeMatches(pickup, listing.title)
+  }
+  const both = pool.filter(matches)
+  if (both.length > 0) return both
+
+  return pool.filter((listing) => {
+    if (listing.kind === 'route') {
+      return (
+        placeMatches(pickup, listing.fromLabel) ||
+        placeMatches(destination, listing.toLabel) ||
+        placeMatches(pickup, listing.toLabel) ||
+        placeMatches(destination, listing.fromLabel)
+      )
+    }
+    return placeMatches(destination, listing.title) || placeMatches(pickup, listing.title)
+  })
 }
 
 /** Price shown for a listing. Pickup details are accepted and ignored. */

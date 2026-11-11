@@ -59,6 +59,7 @@ export function toDriverJob(b: {
   passengers: number
   luggage: number
   flightNumber: string | null
+  pickupAddress?: string | null
   vehicleLabel: string | null
   notes: string | null
   status: BookingStatus
@@ -66,6 +67,7 @@ export function toDriverJob(b: {
   vehicle: { plate: string | null; name: string } | null
 }) {
   const [pickup, dropoff] = splitRoute(b.routeLabel)
+  const pickupAddress = addressForDriver(b.pickupAddress, b.notes)
   return {
     ref: b.ref,
     customer: b.guestName || 'Guest',
@@ -75,6 +77,8 @@ export function toDriverJob(b: {
     route: b.routeLabel,
     pickup,
     dropoff,
+    pickupAddress,
+    mapUrl: pickupAddress ? googleMapsUrl(pickupAddress) : googleMapsUrl(pickup),
     pickupAt: b.pickupAt?.toISOString() || null,
     time: b.pickupAt
       ? b.pickupAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -93,6 +97,17 @@ export function toDriverJob(b: {
     statusLabel: DRIVER_STATUS_LABEL[b.status] || b.status,
     nextAction: driverActionLabel(b.status),
   }
+}
+
+export function googleMapsUrl(address: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+}
+
+function addressForDriver(pickupAddress?: string | null, notes?: string | null) {
+  const direct = pickupAddress?.trim()
+  if (direct) return direct
+  const saved = notes?.match(/Pickup address:\s*(.+)/)?.[1]?.trim()
+  return saved || null
 }
 
 function splitRoute(label: string) {

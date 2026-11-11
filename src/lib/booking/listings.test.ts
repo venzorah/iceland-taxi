@@ -4,6 +4,7 @@ import {
   UNAVAILABLE_MESSAGE,
   adminPriceIsk,
   matchListing,
+  searchListings,
   publishedListings,
   shownAdminPrice,
   type CatalogueRoute,
@@ -105,6 +106,13 @@ describe('published listings', () => {
       'route-kef',
     )
     assert.equal(matchListing(listings, { destination: 'Golden Circle Private Tour' })?.id, 'svc-tour')
+  })
+
+  it('lists admin-priced options for a pickup and destination search', () => {
+    const found = searchListings(listings, { pickup: 'Keflavik airport', destination: 'Reykjavik' })
+    assert.deepEqual(found.map((listing) => listing.id), ['route-kef'])
+    assert.equal(found[0]?.fromIsk, 22900)
+    assert.equal(searchListings(listings, { pickup: 'Akureyri', destination: 'Vík' }).length, 0)
   })
 
   it('does not invent a listing for an unknown trip', () => {

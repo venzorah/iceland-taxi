@@ -25,6 +25,7 @@ const patchSchema = z.object({
   vehicleId: z.string().nullable().optional(),
   vehicleLabel: z.string().nullable().optional(),
   notes: z.string().optional(),
+  pickupAddress: z.string().nullable().optional(),
 })
 
 export async function PATCH(req: Request, ctx: Ctx) {
@@ -48,4 +49,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
     })
   }
   return jsonOk({ ok: true, booking: result.booking, ops: toOpsBooking(result.booking) })
+}
+
+export async function DELETE(_req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly()
+  if (blocked) return blocked
+  if (!process.env.DATABASE_URL) {
+    return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
+  }
+  const { ref } = await ctx.params
+  const booking = await prisma.booking.findUnique({ where: { ref } })
+  if (!booking) return jsonError(404, 'NOT_FOUND', 'Booking not found')
+  await prisma.message.deleteMany({ where: { bookingId: booking.id } })
+  await prisma.booking.delete({ where: { id: booking.id } })
+  return jsonOk({ ok: true, deleted: ref })
 }

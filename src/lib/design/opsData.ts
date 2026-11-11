@@ -27,6 +27,7 @@ export type OpsBooking = {
   currency: 'USD' | 'ISK' | 'EUR'
   status: BookingStatus
   flight?: string
+  pickupAddress?: string | null
 }
 
 export const TODAY_BOOKINGS: OpsBooking[] = [

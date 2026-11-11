@@ -140,7 +140,24 @@ export function DestinationsSection() {
                 <p className="mt-1 text-sm leading-snug text-muted">{item.note || 'No note yet'}</p>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <p className={`text-xs font-semibold ${item.active ? 'text-success' : 'text-muted'}`}>{item.active ? 'Shown on the public site' : 'Hidden'}</p>
-                  <button onClick={() => setDraft({ id: item.id, name: item.name, note: item.note || '', imageUrl: item.imageUrl || '', active: item.active })} className="text-xs font-semibold text-link">Edit</button>
+                  <span className="inline-flex gap-3">
+                    <button onClick={() => setDraft({ id: item.id, name: item.name, note: item.note || '', imageUrl: item.imageUrl || '', active: item.active })} className="text-xs font-semibold text-link">Edit</button>
+                    <button
+                      onClick={async () => {
+                        const res = await fetch(`/api/admin/destinations/${item.id}`, { method: 'DELETE' })
+                        const body = await res.json().catch(() => null)
+                        if (!res.ok || !body?.ok) {
+                          setMessage(body?.message || 'Could not delete the destination')
+                          return
+                        }
+                        setMessage('Deleted')
+                        await load()
+                      }}
+                      className="text-xs font-semibold text-error"
+                    >
+                      Delete
+                    </button>
+                  </span>
                 </div>
               </div>
             </li>

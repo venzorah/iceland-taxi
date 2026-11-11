@@ -19,7 +19,7 @@ export function Routes() {
   const [rows, setRows] = useState<RouteRow[]>([])
   const [msg, setMsg] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
-  const [draftIsk, setDraftIsk] = useState(0)
+  const [edit, setEdit] = useState({ from: '', to: '', isk: 0 })
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState({ from: '', to: '', isk: '' })
 
@@ -66,6 +66,17 @@ export function Routes() {
     load()
   }, [load])
 
+  const remove = async (id: string) => {
+    const res = await fetch(`/api/admin/routes/${id}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.ok) {
+      setMsg(data?.message || 'Could not delete the route')
+      return
+    }
+    setMsg('Deleted')
+    await load()
+  }
+
   const patch = async (id: string, body: Record<string, unknown>) => {
     const res = await fetch(`/api/admin/routes/${id}`, {
       method: 'PATCH',
@@ -85,7 +96,7 @@ export function Routes() {
   return (
     <div className="mx-auto max-w-[1400px] p-3 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">Fixed-price routes. Distance and duration are calculated from the map and can be overridden.{msg ? ` · ${msg}` : ''}</p>
+        <p className="text-sm text-muted">Locations and fixed prices. Checkout uses the saved ISK price, not kilometres.{msg ? ` · ${msg}` : ''}</p>
         <button onClick={() => setCreating((value) => !value)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary"><Plus size={15} /> New route</button>
       </div>
       {creating && (
@@ -133,17 +144,22 @@ export function Routes() {
               <button
                 onClick={() => {
                   setEditing(r.id)
-                  setDraftIsk(r.isk)
+                  setEdit({ from: r.from, to: r.to, isk: r.isk })
                 }}
                 className="ml-auto font-semibold text-link"
               >
                 Edit
               </button>
+              <button onClick={() => remove(r.id)} className="font-semibold text-error">Delete</button>
             </div>
             {editing === r.id && (
-              <div className="mt-3 flex gap-2">
-                <input type="number" value={draftIsk} onChange={(e) => setDraftIsk(Number(e.target.value) || 0)} className="flex-1 rounded-lg border border-input-line bg-input px-3 py-2 text-sm" />
-                <button onClick={() => patch(r.id, { fromIsk: draftIsk, override: true })} className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">Save</button>
+              <div className="mt-3 grid gap-2">
+                <input value={edit.from} onChange={(e) => setEdit({ ...edit, from: e.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm" />
+                <input value={edit.to} onChange={(e) => setEdit({ ...edit, to: e.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm" />
+                <div className="flex gap-2">
+                  <input type="number" value={edit.isk} onChange={(e) => setEdit({ ...edit, isk: Number(e.target.value) || 0 })} className="flex-1 rounded-lg border border-input-line bg-input px-3 py-2 text-sm" />
+                  <button onClick={() => patch(r.id, { fromLabel: edit.from, toLabel: edit.to, fromIsk: edit.isk, override: true })} className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">Save</button>
+                </div>
               </div>
             )}
           </li>
@@ -158,15 +174,15 @@ export function Routes() {
           <tbody className="divide-y divide-line">
             {rows.map((r) => (
               <tr key={r.id}>
-                <td className="px-4 py-3 font-medium text-heading">{r.from}</td>
-                <td className="px-4 py-3 font-medium text-heading">{r.to}</td>
+                <td className="px-4 py-3 font-medium text-heading">{editing === r.id ? <input value={edit.from} onChange={(e) => setEdit({ ...edit, from: e.target.value })} className="w-full rounded border border-input-line bg-input px-2 py-1" /> : r.from}</td>
+                <td className="px-4 py-3 font-medium text-heading">{editing === r.id ? <input value={edit.to} onChange={(e) => setEdit({ ...edit, to: e.target.value })} className="w-full rounded border border-input-line bg-input px-2 py-1" /> : r.to}</td>
                 <td className="px-4 py-3 tabular-nums text-text">{r.km ?? '—'} km</td>
                 <td className="px-4 py-3 tabular-nums text-text">
                   {r.min ?? '—'} min{r.override && <span className="ml-1.5 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning">Manual</span>}
                 </td>
                 <td className="px-4 py-3 tabular-nums font-semibold text-heading">
                   {editing === r.id ? (
-                    <input type="number" value={draftIsk} onChange={(e) => setDraftIsk(Number(e.target.value) || 0)} className="w-28 rounded border border-input-line bg-input px-2 py-1" />
+                    <input type="number" value={edit.isk} onChange={(e) => setEdit({ ...edit, isk: Number(e.target.value) || 0 })} className="w-28 rounded border border-input-line bg-input px-2 py-1" />
                   ) : (
                     `${r.isk.toLocaleString('en-US').replace(/,/g, '.')} kr`
                   )}
@@ -177,17 +193,20 @@ export function Routes() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   {editing === r.id ? (
-                    <button onClick={() => patch(r.id, { fromIsk: draftIsk, override: true })} className="text-xs font-semibold text-link">Save</button>
+                    <button onClick={() => patch(r.id, { fromLabel: edit.from, toLabel: edit.to, fromIsk: edit.isk, override: true })} className="text-xs font-semibold text-link">Save</button>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setEditing(r.id)
-                        setDraftIsk(r.isk)
-                      }}
-                      className="text-xs font-semibold text-link"
-                    >
-                      Edit
-                    </button>
+                    <span className="inline-flex gap-3">
+                      <button
+                        onClick={() => {
+                          setEditing(r.id)
+                          setEdit({ from: r.from, to: r.to, isk: r.isk })
+                        }}
+                        className="text-xs font-semibold text-link"
+                      >
+                        Edit
+                      </button>
+                      <button onClick={() => remove(r.id)} className="text-xs font-semibold text-error">Delete</button>
+                    </span>
                   )}
                 </td>
               </tr>

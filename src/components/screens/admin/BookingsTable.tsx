@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, Filter, MessageCircle, X } from 'lucide-react'
+import { ChevronRight, Filter, X } from 'lucide-react'
 
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
@@ -89,7 +89,21 @@ export function BookingsTable() {
     setSheetOpen(true)
   }
 
-  const save = async (patch: { status?: string; driverId?: string | null; notes?: string }) => {
+  const remove = async (ref: string) => {
+    setSaveMsg(null)
+    const res = await fetch(`/api/bookings/${ref}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.ok) {
+      setSaveMsg(data?.message || 'Could not delete booking')
+      return
+    }
+    setSelected(null)
+    setSheetOpen(false)
+    setSaveMsg('Deleted')
+    await load()
+  }
+
+  const save = async (patch: { status?: string; driverId?: string | null; notes?: string; pickupAddress?: string | null }) => {
     if (!selected) return
     setSaveMsg(null)
     const res = await fetch(`/api/bookings/${selected.ref}`, {
@@ -99,6 +113,7 @@ export function BookingsTable() {
         status: patch.status ? STATUS_TO_API[patch.status] || patch.status : undefined,
         driverId: patch.driverId,
         notes: patch.notes,
+        pickupAddress: patch.pickupAddress,
       }),
     })
     const data = await res.json()
@@ -271,7 +286,7 @@ export function BookingsTable() {
                 <X size={18} />
               </button>
             </div>
-            <BookingDetail booking={selected} drivers={drivers} onSave={save} />
+            <BookingDetail booking={selected} drivers={drivers} onSave={save} onDelete={() => remove(selected.ref)} />
           </motion.aside>
         )}
       </AnimatePresence>
@@ -280,7 +295,7 @@ export function BookingsTable() {
         {selected && (
           <>
             <p className="font-mono text-xs text-muted">{selected.ref}</p>
-            <BookingDetail booking={selected} drivers={drivers} onSave={save} />
+            <BookingDetail booking={selected} drivers={drivers} onSave={save} onDelete={() => remove(selected.ref)} />
           </>
         )}
       </BottomSheet>
@@ -292,20 +307,24 @@ function BookingDetail({
   booking,
   drivers,
   onSave,
+  onDelete,
 }: {
   booking: OpsBooking
   drivers: DriverOption[]
-  onSave: (patch: { status?: string; driverId?: string | null; notes?: string }) => void
+  onSave: (patch: { status?: string; driverId?: string | null; notes?: string; pickupAddress?: string | null }) => void
+  onDelete: () => void
 }) {
   const [status, setStatus] = useState(booking.status)
   const [driverId, setDriverId] = useState('')
   const [notes, setNotes] = useState('')
+  const [address, setAddress] = useState(booking.pickupAddress || '')
 
   useEffect(() => {
     setStatus(booking.status)
     const match = drivers.find((d) => d.displayName === booking.driver)
     setDriverId(match?.id || '')
     setNotes('')
+    setAddress(booking.pickupAddress || '')
   }, [booking, drivers])
 
   return (
@@ -317,6 +336,7 @@ function BookingDetail({
           ['Service', booking.service],
           ['Pickup', booking.time],
           ['Passengers', String(booking.pax)],
+          ['Address', booking.pickupAddress || '—'],
           ['Vehicle', booking.vehicle],
           ['Total', `${money(booking.amount, booking.currency)} · ${booking.currency}`],
           ...(booking.flight ? [['Flight', booking.flight] as [string, string]] : []),
@@ -351,6 +371,13 @@ function BookingDetail({
           <option key={s}>{s}</option>
         ))}
       </select>
+      <label className="mt-4 block text-xs font-semibold text-muted">Pickup address</label>
+      <input
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        placeholder="Street or hotel the driver opens in Google Maps"
+        className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading placeholder:text-muted"
+      />
       <label className="mt-4 block text-xs font-semibold text-muted">Internal note</label>
       <textarea
         rows={3}
@@ -366,14 +393,15 @@ function BookingDetail({
               status,
               driverId: driverId || null,
               notes: notes || undefined,
+              pickupAddress: address,
             })
           }
           className="flex-1 rounded-lg bg-primary py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover xl:py-2.5"
         >
           Save changes
         </button>
-        <button className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-heading">
-          <MessageCircle size={15} /> Message
+        <button type="button" onClick={onDelete} className="whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-error">
+          Delete
         </button>
       </div>
     </>

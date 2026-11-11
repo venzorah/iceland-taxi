@@ -225,6 +225,8 @@ model Booking {
   passengers      Int            @default(1)
   luggage         Int            @default(0)
   flightNumber    String?
+  /// Street or hotel address the customer typed. It does not change the admin price.
+  pickupAddress   String?
   vehicleId       String?
   vehicle         Vehicle?       @relation(fields: [vehicleId], references: [id])
   vehicleLabel    String?

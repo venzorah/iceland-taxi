@@ -24,6 +24,7 @@ export type CreateBookingInput = {
   passengers: number
   luggage?: number
   flightNumber?: string
+  pickupAddress?: string
   vehicleId?: string
   vehicleLabel?: string
   driverId?: string
@@ -196,6 +197,7 @@ export async function createBooking(input: CreateBookingInput) {
       passengers: input.passengers,
       luggage: input.luggage ?? 0,
       flightNumber: input.flightNumber,
+      pickupAddress: input.pickupAddress?.trim() || null,
       vehicleId: resolved.meta.vehicleId,
       vehicleLabel: resolved.meta.vehicleLabel,
       driverId: input.driverId,
@@ -225,6 +227,7 @@ export async function updateBookingStatus(
     driverId?: string | null
     vehicleId?: string | null
     vehicleLabel?: string | null
+    pickupAddress?: string | null
     notes?: string
   },
 ) {
@@ -259,6 +262,7 @@ export async function updateBookingStatus(
       driverId: data.driverId === undefined ? undefined : data.driverId,
       vehicleId: data.vehicleId === undefined ? undefined : data.vehicleId,
       vehicleLabel: data.vehicleLabel === undefined ? undefined : data.vehicleLabel,
+      pickupAddress: data.pickupAddress === undefined ? undefined : data.pickupAddress?.trim() || null,
       notes: data.notes,
     },
     include: { driver: true, vehicle: true, payments: true },
@@ -280,6 +284,7 @@ export function toOpsBooking(b: {
   currency: string
   status: string
   flightNumber: string | null
+  pickupAddress?: string | null
 }) {
   const statusMap: Record<string, string> = {
     PENDING: 'Pending',
@@ -309,5 +314,6 @@ export function toOpsBooking(b: {
     currency: b.currency as 'USD' | 'ISK' | 'EUR',
     status: statusMap[b.status] || b.status,
     flight: b.flightNumber || undefined,
+    pickupAddress: b.pickupAddress?.trim() || null,
   }
 }

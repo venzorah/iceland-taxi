@@ -31,3 +31,17 @@ export async function PATCH(req: Request, ctx: Ctx) {
     return jsonError(404, 'NOT_FOUND', 'Route not found')
   }
 }
+
+export async function DELETE(_req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly()
+  if (blocked) return blocked
+  if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
+  const { id } = await ctx.params
+  try {
+    await prisma.booking.updateMany({ where: { routeId: id }, data: { routeId: null } })
+    await prisma.route.delete({ where: { id } })
+    return jsonOk({ ok: true, deleted: id })
+  } catch {
+    return jsonError(404, 'NOT_FOUND', 'Route not found')
+  }
+}

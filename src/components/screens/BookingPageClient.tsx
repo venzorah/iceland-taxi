@@ -7,7 +7,7 @@ import { CustomEnquiryForm, type EnquiryPayload } from '@/components/booking/Cus
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import Booking, { type BookingPayPayload, type BookingVehicle } from '@/components/screens/booking/Booking'
 import { useAppPrefs } from '@/components/providers/AppProviders'
-import { UNAVAILABLE_MESSAGE, listingLabel, matchListing } from '@/lib/booking/listings'
+import { UNAVAILABLE_MESSAGE, listingLabel, matchListing, searchListings } from '@/lib/booking/listings'
 import { formatChargedAmount, formatPrice } from '@/lib/design/data'
 
 export function BookingPageClient() {
@@ -190,12 +190,13 @@ export function BookingPageClient() {
             passengers,
             luggage: 0,
             flightNumber: payload.flight,
+            pickupAddress: payload.pickupAddress || undefined,
             vehicleId: payload.vehicleId,
             vehicleLabel: payload.vehicle,
             extras: payload.extras,
             customerCategory: nextCategory,
             currency: nextCategory === 'INTERNATIONAL' ? 'EUR' : payload.currency,
-            notes: payload.hotel ? `Pickup details: ${payload.hotel}` : undefined,
+            notes: undefined,
           },
           description: `Iceland Taxi Booking · ${listingLabel(listing)}`,
         }),
@@ -260,7 +261,13 @@ export function BookingPageClient() {
     }
   }
 
-  const showEnquiry = enquiryOnly || (listings !== null && !listing && Boolean(listingId || pickup || destination))
+  const searchCategory = params.get('category') || ''
+  const options = useMemo(() => {
+    if (!listings || listing) return []
+    if (!pickup && !destination) return listings
+    return searchListings(listings, { pickup, destination, category: searchCategory })
+  }, [listings, listing, pickup, destination, searchCategory])
+  const showEnquiry = enquiryOnly || (listings !== null && !listing && options.length === 0 && Boolean(listingId || pickup || destination))
   const showPicker = listings !== null && !listing && !showEnquiry
 
   if (payState === 'confirmed' && confirmation) {
@@ -338,7 +345,10 @@ export function BookingPageClient() {
         <div className="min-h-screen bg-surface px-4 py-8 text-text sm:px-6">
           <div className="mx-auto max-w-3xl">
             <button onClick={() => prefs.go('/')} className="text-sm font-semibold text-link">Back</button>
-            <h1 className="mt-4 font-display text-3xl font-bold text-heading">Book a published trip</h1>
+            <h1 className="mt-4 font-display text-3xl font-bold text-heading">{pickup && destination ? 'Choose a published price' : 'Book a published trip'}</h1>
+            {pickup && destination && (
+              <p className="mt-2 text-sm text-muted">{pickup} → {destination}. Prices are set by the team, not by kilometre.</p>
+            )}
             {listings === null && <p className="mt-4 text-sm text-muted">Loading published prices…</p>}
             {showEnquiry && (
               <div className="mt-6 space-y-4">
@@ -353,21 +363,38 @@ export function BookingPageClient() {
             )}
             {showPicker && (
               <div className="mt-6 space-y-6">
-                {listings.length === 0 ? (
+                {options.length === 0 ? (
                   <p className="text-sm text-muted">No published price is available yet.</p>
                 ) : (
-                  <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
-                    {listings.map((item) => (
+                  <ul className="space-y-3">
+                    {options.map((item) => (
                       <li key={`${item.kind}-${item.id}`}>
                         <button
-                          onClick={() => router.push(`/book?listing=${encodeURIComponent(item.id)}&kind=${item.kind}`)}
-                          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
+                          onClick={() => {
+                            const q = new URLSearchParams({
+                              listing: item.id,
+                              kind: item.kind,
+                              date,
+                              time,
+                              passengers: String(passengers),
+                            })
+                            router.push(`/book?${q.toString()}`)
+                          }}
+                          className="flex w-full items-center justify-between gap-4 rounded-2xl border border-line bg-card px-4 py-4 text-left transition-colors duration-150 hover:border-input-line"
                         >
-                          <span>
-                            <span className="block font-semibold text-heading">{listingLabel(item)}</span>
-                            <span className="block text-xs text-muted">{item.title}</span>
+                          <span className="min-w-0">
+                            <span className="block text-xs font-semibold uppercase tracking-wide text-muted">{item.title}</span>
+                            <span className="mt-1 block font-semibold text-heading">{item.kind === 'route' ? item.fromLabel : item.title}</span>
+                            {item.kind === 'route' && <span className="block text-sm text-muted">to {item.toLabel}</span>}
+                            <span className="mt-1 block text-xs text-muted">
+                              {item.minutes ? `${item.minutes} min` : 'Fixed price'}
+                              {item.km ? ` · ${item.km} km shown, not charged` : ''}
+                            </span>
                           </span>
-                          <span className="font-display text-lg font-bold text-heading">{formatPrice(item.fromIsk, prefs.currency === 'ISK' ? 'ISK' : 'EUR')}</span>
+                          <span className="shrink-0 text-right">
+                            <span className="block font-display text-lg font-bold text-heading">{formatPrice(item.fromIsk, prefs.currency === 'ISK' ? 'ISK' : 'EUR')}</span>
+                            <span className="block text-xs font-semibold text-link">Select</span>
+                          </span>
                         </button>
                       </li>
                     ))}

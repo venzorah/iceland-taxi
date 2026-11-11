@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { CustomEnquiryForm, type EnquiryPayload } from '@/components/booking/CustomEnquiryForm'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
-import Booking, { type BookingPayPayload } from '@/components/screens/booking/Booking'
+import Booking, { type BookingPayPayload, type BookingVehicle } from '@/components/screens/booking/Booking'
 import { useAppPrefs } from '@/components/providers/AppProviders'
 import { UNAVAILABLE_MESSAGE, listingLabel, matchListing } from '@/lib/booking/listings'
 import { formatChargedAmount, formatPrice } from '@/lib/design/data'
@@ -27,6 +27,8 @@ export function BookingPageClient() {
   const [payCurrency, setPayCurrency] = useState<'EUR' | 'ISK'>(prefs.currency === 'ISK' ? 'ISK' : 'EUR')
   const [chargedLabel, setChargedLabel] = useState<string | null>(null)
   const [quoteReady, setQuoteReady] = useState(false)
+  const [vehicles, setVehicles] = useState<BookingVehicle[] | null>(null)
+  const [selectedVehicle, setSelectedVehicle] = useState<BookingVehicle | null>(null)
   const [enquiryStatus, setEnquiryStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
   const [enquiryError, setEnquiryError] = useState<string | null>(null)
 
@@ -90,13 +92,41 @@ export function BookingPageClient() {
   }, [params])
 
   useEffect(() => {
-    if (!listing) {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/vehicles')
+        const data = await res.json()
+        if (cancelled) return
+        const rows = Array.isArray(data.vehicles) ? data.vehicles : []
+        setVehicles(
+          rows.map((vehicle: BookingVehicle) => ({
+            id: vehicle.id,
+            name: vehicle.name,
+            pax: vehicle.pax,
+            bags: vehicle.bags,
+            upgradeIsk: Math.max(0, Number(vehicle.upgradeIsk) || 0),
+          })),
+        )
+      } catch {
+        if (!cancelled) setVehicles([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!listing || vehicles === null) {
       setQuoteReady(false)
       setChargedLabel(null)
       return
     }
+    if (vehicles.length > 0 && !selectedVehicle?.id) return
     let cancelled = false
     setQuoteReady(false)
+    setChargedLabel(null)
     setError(null)
     ;(async () => {
       try {
@@ -106,13 +136,17 @@ export function BookingPageClient() {
           body: JSON.stringify({
             listingId: listing.id,
             listingKind: listing.kind,
+            vehicleId: selectedVehicle?.id,
             customerCategory: category,
             currency: quoteCurrency,
           }),
         })
         const data = await res.json()
         if (cancelled) return
-        if (!res.ok || !data.ok || data.quote?.amountIskSnapshot !== listing.fromIsk) {
+        const upgrade = Math.max(0, Number(data.meta?.vehicleUpgradeIsk) || 0)
+        const pricedVehicleId = data.meta?.vehicleId as string | undefined
+        const matchesVehicle = !selectedVehicle?.id || pricedVehicleId === selectedVehicle.id
+        if (!res.ok || !data.ok || !matchesVehicle || data.quote?.amountIskSnapshot !== listing.fromIsk + upgrade) {
           setQuoteReady(false)
           setChargedLabel(null)
           setError(data.message || UNAVAILABLE_MESSAGE)
@@ -131,7 +165,7 @@ export function BookingPageClient() {
     return () => {
       cancelled = true
     }
-  }, [listing, category, quoteCurrency])
+  }, [listing, category, quoteCurrency, vehicles, selectedVehicle])
 
   const onPay = async (payload: BookingPayPayload) => {
     if (!listing) {
@@ -156,6 +190,7 @@ export function BookingPageClient() {
             passengers,
             luggage: 0,
             flightNumber: payload.flight,
+            vehicleId: payload.vehicleId,
             vehicleLabel: payload.vehicle,
             extras: payload.extras,
             customerCategory: nextCategory,
@@ -171,7 +206,13 @@ export function BookingPageClient() {
         setError(data.message || UNAVAILABLE_MESSAGE)
         return
       }
-      if (data.booking?.listingId !== listing.id || data.booking?.adminPriceIsk !== listing.fromIsk) {
+      const upgrade = Math.max(0, Number(data.booking?.vehicle?.upgradeIsk) || 0)
+      if (
+        data.booking?.listingId !== listing.id ||
+        data.booking?.adminPriceIsk !== listing.fromIsk ||
+        (payload.vehicleId && data.booking?.vehicleId !== payload.vehicleId) ||
+        data.booking?.amountIskSnapshot !== listing.fromIsk + upgrade
+      ) {
         setPayState('default')
         setError(UNAVAILABLE_MESSAGE)
         return
@@ -263,6 +304,8 @@ export function BookingPageClient() {
           quoteReady={quoteReady}
           chargedLabel={chargedLabel}
           unavailableMessage={quoteReady ? null : error}
+          vehicles={vehicles ?? undefined}
+          onVehicleChange={setSelectedVehicle}
           pickup={listing.fromLabel}
           destination={listing.toLabel}
           date={date}

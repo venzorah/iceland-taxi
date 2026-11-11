@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Baby, Check, CheckCircle2, Copy, Lock, MessageCircle, Plane, Repeat, Signpost } from 'lucide-react'
 
 import { SiteHeader } from '@/components/site/SiteHeader'
@@ -46,6 +46,8 @@ type Props = Partial<typeof args> & {
   quoteReady?: boolean
   chargedLabel?: string | null
   unavailableMessage?: string | null
+  vehicles?: BookingVehicle[]
+  onVehicleChange?: (vehicle: BookingVehicle) => void
   onThemeChange?: (t: 'light' | 'dark') => void
   onLanguageChange?: (l: Lang) => void
   onCurrencyChange?: (c: Currency) => void
@@ -59,10 +61,19 @@ type Props = Partial<typeof args> & {
   }
 }
 
+export type BookingVehicle = {
+  id?: string
+  name: string
+  pax: number
+  bags: number
+  upgradeIsk: number
+}
+
 export type BookingPayPayload = {
   category: string
   currency: Currency
   vehicle: string
+  vehicleId?: string
   extras: { childSeat: boolean; returnTrip: boolean; meetGreet: boolean }
   flight: string
   totalIsk: number
@@ -84,7 +95,7 @@ export default function Booking(props: Props) {
   const p = { ...args, ...props }
   const th = p.theme as 'light' | 'dark'
   const [category, setCategory] = useState(p.customerCategory)
-  const [vehicle, setVehicle] = useState('Standard Sedan')
+  const [vehicleKey, setVehicleKey] = useState<string | null>(null)
   const [extras, setExtras] = useState({ childSeat: false, returnTrip: false, meetGreet: true })
   const [flight, setFlight] = useState('FI 615')
   const [guestName, setGuestName] = useState('Emma Larsen')
@@ -93,22 +104,47 @@ export default function Booking(props: Props) {
   const [hotel, setHotel] = useState('Hotel Borg, Pósthússtræti 11')
 
   const currency: Currency = category === 'international' ? 'EUR' : (p.currency === 'ISK' ? 'ISK' : 'EUR')
-  const vehicleSpec = FLEET.find((v) => v.name === vehicle)!
+  const catalogue = useMemo<BookingVehicle[]>(() => {
+    if (p.vehicles && p.vehicles.length > 0) return p.vehicles
+    return VEHICLES.flatMap((v) => {
+      const spec = FLEET.find((f) => f.name === v.name)
+      if (!spec) return []
+      return [{ name: v.name, pax: spec.pax, bags: spec.bags, upgradeIsk: 0 }]
+    })
+  }, [p.vehicles])
+  const vehicleKeyOf = (v: BookingVehicle) => v.id || v.name
+  const vehicleSpec =
+    catalogue.find((v) => vehicleKeyOf(v) === vehicleKey && v.pax >= p.passengers) ||
+    catalogue.find((v) => v.pax >= p.passengers) ||
+    catalogue[0]
+  const vehicle = vehicleSpec?.name || 'Vehicle'
+
+  const onVehicleChange = p.onVehicleChange
+  useEffect(() => {
+    if (!vehicleSpec) return
+    const nextKey = vehicleKeyOf(vehicleSpec)
+    if (vehicleKey !== nextKey) setVehicleKey(nextKey)
+    onVehicleChange?.(vehicleSpec)
+  }, [onVehicleChange, vehicleKey, vehicleSpec])
 
   const listingPrice = p.listing?.fromIsk ?? 0
+  const vehicleExtra = vehicleSpec?.upgradeIsk ?? 0
   const lines = useMemo(() => {
     if (!p.listing || listingPrice <= 0) return []
     const label = p.listing.kind === 'route' ? `${p.listing.fromLabel} → ${p.listing.toLabel}` : p.listing.title
-    return [{ label, isk: listingPrice }]
-  }, [p.listing, listingPrice])
-  const total = listingPrice
-  const totalLabel = p.chargedLabel || (listingPrice > 0 ? formatPrice(listingPrice, currency) : '')
-  const canPay = Boolean(p.listing && listingPrice > 0 && p.quoteReady && !p.unavailableMessage)
+    const rows = [{ label, isk: listingPrice }]
+    if (vehicleSpec && vehicleExtra > 0) rows.push({ label: `${vehicleSpec.name} additional`, isk: vehicleExtra })
+    return rows
+  }, [p.listing, listingPrice, vehicleExtra, vehicleSpec])
+  const total = listingPrice + vehicleExtra
+  const totalLabel = p.quoteReady && p.chargedLabel ? p.chargedLabel : (total > 0 ? formatPrice(total, currency) : '')
+  const canPay = Boolean(p.listing && listingPrice > 0 && vehicleSpec && p.quoteReady && !p.unavailableMessage)
 
   const payPayload = (): BookingPayPayload => ({
     category,
     currency,
     vehicle,
+    vehicleId: vehicleSpec?.id,
     extras,
     flight,
     totalIsk: total,
@@ -168,23 +204,22 @@ export default function Booking(props: Props) {
                 {/* Vehicle */}
                 <Section title="Vehicle">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {VEHICLES.map((v) => {
-                      const spec = FLEET.find((f) => f.name === v.name)!
+                    {catalogue.map((spec) => {
                       const tooSmall = spec.pax < p.passengers
-                      const active = vehicle === v.name
+                      const active = vehicle === spec.name
                       return (
                         <button
-                          key={v.name}
+                          key={spec.id || spec.name}
                           disabled={tooSmall}
-                          onClick={() => setVehicle(v.name)}
+                          onClick={() => setVehicleKey(spec.id || spec.name)}
                           className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${active ? 'border-heading bg-card' : 'border-line bg-card hover:border-input-line'}`}
                         >
                           <span>
-                            <span className="block font-semibold text-heading">{v.name}</span>
+                            <span className="block font-semibold text-heading">{spec.name}</span>
                             <span className="block text-xs text-muted">{spec.pax} seats · {spec.bags} bags</span>
                           </span>
                           <span className="text-right">
-                            <span className="block text-sm font-bold text-heading">Included</span>
+                            <span className="block text-sm font-bold text-heading">{spec.upgradeIsk > 0 ? `+ ${formatPrice(spec.upgradeIsk, currency)}` : 'Included'}</span>
                             {active && <Check size={16} className="ml-auto mt-1 text-mint-text" />}
                           </span>
                         </button>
@@ -263,16 +298,16 @@ export default function Booking(props: Props) {
                   </ul>
                   <div className="mt-4 flex items-end justify-between border-t border-line pt-4">
                     <span className="text-sm font-semibold text-heading">Total, VAT included</span>
-                    <span data-listing-price={listingPrice} className="font-display text-3xl font-extrabold text-heading">{totalLabel}</span>
+                    <span data-listing-price={listingPrice} data-vehicle-extra={vehicleExtra} className="font-display text-3xl font-extrabold text-heading">{totalLabel}</span>
                   </div>
                   <p className="mt-2 text-xs text-muted">
-                    Fixed price saved by the team. Pickup details do not change it.
+                    Published trip price{vehicleExtra > 0 ? `, plus ${formatPrice(vehicleExtra, currency)} for ${vehicle}` : ''}. Pickup details do not change it.
                   </p>
                   {p.unavailableMessage && <p className="mt-2 text-sm font-semibold text-error">{p.unavailableMessage}</p>}
                   <p className="mt-2 text-xs text-muted">
                     You will be charged in <strong className="text-heading">{currency}</strong>.{currency === 'EUR' && ` Rate used: 1 EUR = ${ISK_PER_EUR} ISK.`}
                   </p>
-                  <p className="mt-1 text-xs text-muted">{vehicleSpec.name}: {vehicleSpec.pax} seats, {vehicleSpec.bags} bags</p>
+                  <p className="mt-1 text-xs text-muted">{vehicleSpec ? `${vehicleSpec.name}: ${vehicleSpec.pax} seats, ${vehicleSpec.bags} bags` : 'Choose a vehicle'}</p>
                   <button onClick={submitPay} disabled={p.state === 'paying' || !canPay} className="mt-6 hidden w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover disabled:opacity-70 lg:flex">
                     <Lock size={15} /> {p.state === 'paying' ? 'Processing payment…' : canPay ? `Pay ${totalLabel}` : 'Unavailable'}
                   </button>
@@ -289,7 +324,7 @@ export default function Booking(props: Props) {
               <div className="mx-auto flex max-w-2xl items-center gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-muted">Total · {currency}</p>
-                  <p data-listing-price={listingPrice} className="font-display text-xl font-extrabold text-heading">{totalLabel || 'Unavailable'}</p>
+                  <p data-listing-price={listingPrice} data-vehicle-extra={vehicleExtra} className="font-display text-xl font-extrabold text-heading">{totalLabel || 'Unavailable'}</p>
                 </div>
                 <button onClick={submitPay} disabled={p.state === 'paying' || !canPay} className="ml-auto flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-primary py-3.5 text-base font-bold text-on-primary transition-transform duration-100 ease-out active:scale-[0.98] disabled:opacity-70 sm:max-w-xs">
                   <Lock size={16} /> {p.state === 'paying' ? 'Processing…' : canPay ? 'Pay now' : 'Unavailable'}

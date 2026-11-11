@@ -66,6 +66,8 @@ export async function quoteFromCatalogue(params: {
   serviceId?: string
   pickup?: string
   destination?: string
+  vehicleId?: string
+  vehicleLabel?: string
   customerCategory: QuoteInput['customerCategory']
   currency?: QuoteInput['currency']
   depositPct?: number
@@ -77,11 +79,31 @@ export async function quoteFromCatalogue(params: {
     return { available: false as const, message: UNAVAILABLE_MESSAGE }
   }
 
+  let vehicleUpgradeIsk = 0
+  let pricedVehicleId: string | undefined
+  let pricedVehicleLabel: string | undefined
+  if (params.vehicleId || params.vehicleLabel) {
+    const vehicle = await prisma.vehicle.findFirst({
+      where: {
+        active: true,
+        ...(params.vehicleId ? { id: params.vehicleId } : { name: params.vehicleLabel }),
+      },
+    })
+    if (!vehicle) {
+      return { available: false as const, message: 'That vehicle is not available.' }
+    }
+    vehicleUpgradeIsk = Math.max(0, vehicle.upgradeIsk)
+    pricedVehicleId = vehicle.id
+    pricedVehicleLabel = vehicle.name
+  }
+
   const { iskPerUsd, iskPerEur } = await getExchangeRates()
   const routeLabel = listing.kind === 'route' ? `${listing.fromLabel} → ${listing.toLabel}` : listing.title
   const quote = buildQuote({
     baseIsk: price,
     baseLabel: routeLabel,
+    vehicleUpgradeIsk,
+    vehicleLabel: pricedVehicleLabel,
     customerCategory: params.customerCategory,
     currency: params.currency,
     iskPerUsd,
@@ -103,7 +125,9 @@ export async function quoteFromCatalogue(params: {
       routeId: listing.routeId || undefined,
       listingId: listing.id,
       listingKind: listing.kind,
-      vehicleUpgradeIsk: 0,
+      vehicleId: pricedVehicleId,
+      vehicleLabel: pricedVehicleLabel,
+      vehicleUpgradeIsk,
     },
   }
 }
@@ -119,6 +143,8 @@ export async function createBooking(input: CreateBookingInput) {
     customerCategory: input.quote.customerCategory,
     currency: input.quote.currency,
     depositPct: input.quote.depositPct,
+    vehicleId: input.vehicleId,
+    vehicleLabel: input.vehicleLabel,
   })
   if (!resolved.available) {
     return { ok: false as const, code: 'UNAVAILABLE' as const, message: resolved.message }
@@ -170,8 +196,8 @@ export async function createBooking(input: CreateBookingInput) {
       passengers: input.passengers,
       luggage: input.luggage ?? 0,
       flightNumber: input.flightNumber,
-      vehicleId: input.vehicleId,
-      vehicleLabel: input.vehicleLabel,
+      vehicleId: resolved.meta.vehicleId,
+      vehicleLabel: resolved.meta.vehicleLabel,
       driverId: input.driverId,
       status,
       currency: quoted.currency,

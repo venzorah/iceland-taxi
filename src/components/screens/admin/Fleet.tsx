@@ -142,7 +142,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
     <div className="mx-auto max-w-[1400px] p-3 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
-          {view === 'drivers' ? 'Drivers cannot be assigned to overlapping journeys. Availability includes a 30-minute buffer.' : 'Vehicle price adjustments apply on top of each service price.'} · {msg}
+          {view === 'drivers' ? 'Drivers cannot be assigned to overlapping journeys. Availability includes a 30-minute buffer.' : 'Set an additional cost for each car. It is added to the published trip price. 0 means the car is included.'} · {msg}
         </p>
         <button onClick={startCreate} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary">
           <Plus size={15} /> {view === 'drivers' ? 'Add driver' : 'Add vehicle'}
@@ -180,7 +180,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
               <label className="text-xs font-semibold text-muted">Seats<input required type="number" min={1} value={draft.pax || ''} onChange={(event) => setDraft({ ...draft, pax: event.target.value })} className={inputClass} /></label>
               <label className="text-xs font-semibold text-muted">Bags<input required type="number" min={0} value={draft.bags || ''} onChange={(event) => setDraft({ ...draft, bags: event.target.value })} className={inputClass} /></label>
               <label className="text-xs font-semibold text-muted">Registration<input value={draft.plate || ''} onChange={(event) => setDraft({ ...draft, plate: event.target.value })} className={inputClass} /></label>
-              <label className="text-xs font-semibold text-muted">Price adjustment ISK<input type="number" min={0} value={draft.upgradeIsk || ''} onChange={(event) => setDraft({ ...draft, upgradeIsk: event.target.value })} className={inputClass} /></label>
+              <label className="text-xs font-semibold text-muted sm:col-span-2">Additional cost ISK<span className="mt-0.5 block font-normal">Added to the published trip price when a customer selects this car.</span><input type="number" min={0} value={draft.upgradeIsk || ''} onChange={(event) => setDraft({ ...draft, upgradeIsk: event.target.value })} className={inputClass} /></label>
             </>
           )}
           {editing && (
@@ -212,7 +212,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-heading">{vehicle.name} <span className="font-mono text-xs font-normal text-muted">{vehicle.plate}</span></p>
                   <p className="truncate text-xs text-muted">{vehicle.category} · {vehicle.pax} seats · {vehicle.bags} bags · {vehicle.driver}</p>
-                  <p className="mt-1 text-xs text-text">{vehicle.active ? 'Active' : 'Hidden'} · ISK {vehicle.upgradeIsk.toLocaleString('en-US')} adjustment</p>
+                  <p className="mt-1 text-xs text-text">{vehicle.active ? 'Active' : 'Hidden'} · {vehicle.upgradeIsk > 0 ? `ISK ${vehicle.upgradeIsk.toLocaleString('en-US')} added to the trip price` : 'Included in the trip price'}</p>
                 </div>
                 <button onClick={() => startEdit(vehicle.id)} className="shrink-0 text-xs font-semibold text-link">Edit</button>
               </li>

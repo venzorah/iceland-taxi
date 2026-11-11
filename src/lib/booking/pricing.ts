@@ -89,7 +89,7 @@ export function buildQuote(input: QuoteInput): QuoteResult {
   if (input.vehicleUpgradeIsk && input.vehicleUpgradeIsk > 0) {
     lines.push({
       key: 'vehicle',
-      label: `${input.vehicleLabel || 'Vehicle'} upgrade`,
+      label: `${input.vehicleLabel || 'Vehicle'} additional`,
       isk: input.vehicleUpgradeIsk,
     })
   }

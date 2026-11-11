@@ -11,7 +11,16 @@ const SEASONS = [
   { name: 'Christmas & New Year', range: '20 Dec – 2 Jan', adj: '+25%' },
 ]
 
-type Extra = { id: string; key: string; labelEn: string; isk: number; active: boolean }
+type Extra = { id: string; key: string; labelEn: string; isk: number; active: boolean; isNew?: boolean }
+
+function addonKey(label: string) {
+  const slug = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40)
+  return slug || `addon-${Date.now()}`
+}
 
 export function Pricing() {
   const [rate, setRate] = useState(138)
@@ -55,14 +64,29 @@ export function Pricing() {
       setMsg(rateData.message || 'Could not save rate')
       return
     }
+    const usedKeys = new Set(extras.filter((extra) => !extra.isNew).map((extra) => extra.key))
     for (const extra of extras) {
+      const labelEn = extra.labelEn.trim()
+      if (!labelEn) {
+        setMsg('Each add-on needs a name')
+        return
+      }
+      let key = extra.isNew ? addonKey(labelEn) : extra.key
+      if (extra.isNew) {
+        let n = 2
+        while (usedKeys.has(key)) {
+          key = `${addonKey(labelEn)}-${n}`
+          n += 1
+        }
+        usedKeys.add(key)
+      }
       const res = await fetch('/api/admin/pricing', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          key: extra.key,
-          labelEn: extra.labelEn,
-          isk: extra.isk,
+          key,
+          labelEn,
+          isk: Math.max(0, Math.round(Number(extra.isk) || 0)),
           active: extra.active,
         }),
       })
@@ -141,30 +165,60 @@ export function Pricing() {
         <button className="mt-3 text-sm font-semibold text-link">+ Add season</button>
       </Panel>
 
-      <Panel title="Optional extras">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {extras.length === 0 && (
-            <>
-              <Input label="Child seat" value="2.500 kr" />
-              <Input label="Meet & greet sign" value="Free" />
-              <Input label="Extra stop" value="4.900 kr" />
-            </>
-          )}
+      <Panel title="Add-ons" hint="Edit a name or a cost, or add a new add-on. The cost is in ISK.">
+        <div className="space-y-3">
+          {extras.length === 0 && <p className="text-sm text-muted">No add-ons yet.</p>}
           {extras.map((extra) => (
-            <label key={extra.id} className="block min-w-0">
-              <span className="text-xs font-semibold text-muted">{extra.labelEn}</span>
-              <input
-                type="number"
-                value={extra.isk}
-                onChange={(e) =>
-                  setExtras((list) =>
-                    list.map((x) => (x.id === extra.id ? { ...x, isk: Number(e.target.value) || 0 } : x)),
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus"
-              />
-            </label>
+            <div key={extra.id} className="grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-[1fr_160px_auto] sm:items-end">
+              <label className="block min-w-0">
+                <span className="text-xs font-semibold text-muted">Add-on</span>
+                <input
+                  value={extra.labelEn}
+                  onChange={(e) =>
+                    setExtras((list) => list.map((x) => (x.id === extra.id ? { ...x, labelEn: e.target.value } : x)))
+                  }
+                  className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus"
+                />
+              </label>
+              <label className="block min-w-0">
+                <span className="text-xs font-semibold text-muted">Cost ISK</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={extra.isk}
+                  onChange={(e) =>
+                    setExtras((list) =>
+                      list.map((x) => (x.id === extra.id ? { ...x, isk: Number(e.target.value) || 0 } : x)),
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus"
+                />
+              </label>
+              <label className="flex items-center gap-2 pb-2 text-sm text-heading">
+                <input
+                  type="checkbox"
+                  checked={extra.active}
+                  onChange={(e) =>
+                    setExtras((list) => list.map((x) => (x.id === extra.id ? { ...x, active: e.target.checked } : x)))
+                  }
+                  className="h-4 w-4 accent-[var(--mint)]"
+                />
+                Active
+              </label>
+            </div>
           ))}
+          <button
+            type="button"
+            onClick={() =>
+              setExtras((list) => [
+                ...list,
+                { id: `new-${Date.now()}`, key: '', labelEn: '', isk: 0, active: true, isNew: true },
+              ])
+            }
+            className="text-sm font-semibold text-link"
+          >
+            + Add add-on
+          </button>
         </div>
       </Panel>
 

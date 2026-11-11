@@ -20,6 +20,7 @@ async function main() {
   await prisma.staffProfile.deleteMany()
   await prisma.user.deleteMany()
   await prisma.exchangeRate.deleteMany()
+  await prisma.tripReminder.deleteMany()
   await prisma.seoPage.deleteMany()
 
   await prisma.companySettings.upsert({
@@ -498,6 +499,14 @@ async function main() {
         configured: Boolean(process.env.SMS_API_KEY),
         lastError: process.env.SMS_API_KEY ? null : 'SMS_API_KEY is not set',
       },
+    ],
+  })
+
+  await prisma.tripReminder.createMany({
+    data: [
+      { offsetMinutes: 7 * 24 * 60, active: true, sortOrder: 0 },
+      { offsetMinutes: 3 * 24 * 60, active: true, sortOrder: 1 },
+      { offsetMinutes: 5 * 60, active: true, sortOrder: 2 },
     ],
   })
 

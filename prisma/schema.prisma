@@ -436,6 +436,16 @@ model IntegrationStatus {
   updatedAt DateTime @updatedAt
 }
 
+/// How long before pickup a reminder email is sent. Admin can change these.
+model TripReminder {
+  id             String   @id @default(cuid())
+  offsetMinutes  Int      @unique
+  active         Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 /// Outbound email. bookingId is stored as text so a deleted booking still keeps the send record.
 model EmailNotice {
   id         String    @id @default(cuid())

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { TripReminders } from './TripReminders'
 
 type Workspace = {
   source: string
@@ -543,6 +544,7 @@ export function SettingsSection() {
           </li>
         ))}
       </ul>
+      <TripReminders />
     </Shell>
   )
 }

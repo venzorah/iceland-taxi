@@ -168,6 +168,7 @@ Repo layout is a **single Next.js app at the repository root** (`package.json`, 
    - `DATABASE_URL` — Postgres connection string (required for live booking/admin persistence; UI still boots without it)
    - `NEXT_PUBLIC_APP_URL` — public site URL (payment return links)
    - Optional: `GOOGLE_MAPS_API_KEY`, `TEYA_CLIENT_ID`, `TEYA_CLIENT_SECRET`, `TEYA_STORE_ID`, `TEYA_ENVIRONMENT` (`sandbox` only), `TEYA_WEBHOOK_PUBLIC_KEY`
+   - Email: `SMTP_URL`, `MAIL_FROM`, and `CRON_SECRET` (booking, account, enquiry, and trip reminder mail). Admin mail goes to the company email and active staff accounts. Set the company email in admin. Do not invent one.
    - Optional Web Push: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
    - Optional WhatsApp Cloud API (outbound notices only): `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and optionally `WHATSAPP_NOTIFY_E164`, `WHATSAPP_API_VERSION`
 5. After deploy, run `npx prisma db push` so `StaffNotification`, `EditorialPost`, `Enquiry`, booking listing snapshots, announcement link labels, and theme settings exist. The official WhatsApp number is `+3548353111`. Phone, email, address and registration stay empty until set. Do not invent them. Custom enquiries are answered on the customer's email or WhatsApp number. Admin saves for fleet, catalogue, pages, SEO, staff, theme, and refunds need that database.

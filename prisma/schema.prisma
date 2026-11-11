@@ -436,6 +436,24 @@ model IntegrationStatus {
   updatedAt DateTime @updatedAt
 }
 
+/// Outbound email. bookingId is stored as text so a deleted booking still keeps the send record.
+model EmailNotice {
+  id         String    @id @default(cuid())
+  kind       String
+  dedupeKey  String    @unique
+  bookingId  String?
+  bookingRef String?
+  toEmail    String
+  subject    String
+  status     String
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([kind, status])
+  @@index([bookingRef])
+}
+
 /// Browser Web Push subscription. Never stores message bodies.
 model PushSubscription {
   id         String   @id @default(cuid())

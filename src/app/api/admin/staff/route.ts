@@ -71,5 +71,11 @@ export async function POST(req: Request) {
     },
     include: { staffProfile: true },
   })
+  try {
+    const { notifyAccountCreated } = await import('@/lib/email/notices')
+    await notifyAccountCreated(user)
+  } catch (error) {
+    console.error(error)
+  }
   return jsonOk({ ok: true, staff: present(user) }, { status: 201 })
 }

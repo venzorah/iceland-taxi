@@ -60,6 +60,12 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const { ref } = await ctx.params
   const booking = await prisma.booking.findUnique({ where: { ref } })
   if (!booking) return jsonError(404, 'NOT_FOUND', 'Booking not found')
+  try {
+    const { notifyBookingDeleted } = await import('@/lib/email/notices')
+    await notifyBookingDeleted(booking)
+  } catch (error) {
+    console.error(error)
+  }
   await prisma.message.deleteMany({ where: { bookingId: booking.id } })
   await prisma.booking.delete({ where: { id: booking.id } })
   return jsonOk({ ok: true, deleted: ref })

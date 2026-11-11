@@ -217,6 +217,13 @@ export async function createBooking(input: CreateBookingInput) {
     include: { payments: true, vehicle: true, driver: true },
   })
 
+  try {
+    const { notifyBookingCreated } = await import('@/lib/email/notices')
+    await notifyBookingCreated(booking.id)
+  } catch (error) {
+    console.error(error)
+  }
+
   return { ok: true as const, booking, quote: quoted }
 }
 
@@ -267,6 +274,13 @@ export async function updateBookingStatus(
     },
     include: { driver: true, vehicle: true, payments: true },
   })
+
+  try {
+    const { notifyBookingUpdated } = await import('@/lib/email/notices')
+    await notifyBookingUpdated({ status: existing.status, driverId: existing.driverId }, booking.id)
+  } catch (error) {
+    console.error(error)
+  }
 
   return { ok: true as const, booking }
 }

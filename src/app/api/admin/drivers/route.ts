@@ -37,5 +37,11 @@ export async function POST(req: Request) {
     },
     include: { driver: true },
   })
+  try {
+    const { notifyAccountCreated } = await import('@/lib/email/notices')
+    await notifyAccountCreated(user)
+  } catch (error) {
+    console.error(error)
+  }
   return jsonOk({ ok: true, driver: user.driver }, { status: 201 })
 }

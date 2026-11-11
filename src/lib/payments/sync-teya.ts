@@ -191,6 +191,12 @@ async function markCaptured(payment: Payment, bookingId: string, raw: unknown, t
       where: { id: bookingId },
       data: { status: BookingStatus.CONFIRMED },
     })
+    try {
+      const { notifyBookingConfirmed } = await import('@/lib/email/notices')
+      await notifyBookingConfirmed(bookingId)
+    } catch (error) {
+      console.error(error)
+    }
   }
 }
 

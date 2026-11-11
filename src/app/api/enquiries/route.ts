@@ -45,6 +45,12 @@ export async function POST(req: Request) {
         notes: parsed.data.notes || null,
       },
     })
+    try {
+      const { notifyEnquiryReceived } = await import('@/lib/email/notices')
+      await notifyEnquiryReceived(enquiry)
+    } catch (error) {
+      console.error(error)
+    }
     return jsonOk({ ok: true, enquiry }, { status: 201 })
   } catch (error) {
     console.error(error)

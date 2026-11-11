@@ -29,6 +29,12 @@ export async function POST(req: Request) {
       preferredCurrency: parsed.data.category === 'RESIDENT' ? 'ISK' : 'EUR',
     },
   })
+  try {
+    const { notifyAccountCreated } = await import('@/lib/email/notices')
+    await notifyAccountCreated(customer)
+  } catch (error) {
+    console.error(error)
+  }
   return jsonOk({ ok: true, customer }, { status: 201 })
 }
 
@@ -41,6 +47,7 @@ export async function PATCH(req: Request) {
   const email = parsed.data.email.trim().toLowerCase()
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing && existing.role !== 'CUSTOMER') return jsonError(409, 'CONFLICT', 'That email belongs to a staff or driver account.')
+  const created = !existing
   const category = parsed.data.category || existing?.category || 'INTERNATIONAL'
   const customer = await prisma.user.upsert({
     where: { email },
@@ -57,5 +64,13 @@ export async function PATCH(req: Request) {
       preferredCurrency: parsed.data.category === 'RESIDENT' ? 'ISK' : parsed.data.category === 'INTERNATIONAL' ? 'EUR' : undefined,
     },
   })
+  if (created) {
+    try {
+      const { notifyAccountCreated } = await import('@/lib/email/notices')
+      await notifyAccountCreated(customer)
+    } catch (error) {
+      console.error(error)
+    }
+  }
   return jsonOk({ ok: true, customer })
 }

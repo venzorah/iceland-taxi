@@ -13,7 +13,7 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
-      // Magic Patterns UI uses <img> and natural apostrophes in copy; keep design fidelity.
+      // KM Consulting & Tech UI uses <img> and natural apostrophes in copy; keep design fidelity.
       "@next/next/no-img-element": "off",
       "react/no-unescaped-entities": "off",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],

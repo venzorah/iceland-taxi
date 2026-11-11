@@ -3,7 +3,7 @@
 import { useAppPrefs } from '@/components/providers/AppProviders'
 import { PUBLIC_PATHS } from '@/lib/design/routes'
 
-/** Shared prefs + navigation for Magic Patterns public pages. */
+/** Shared prefs + navigation for KM Consulting & Tech public pages. */
 export function usePublicChrome() {
   const prefs = useAppPrefs()
   return {

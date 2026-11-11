@@ -1,8 +1,8 @@
 # Iceland Taxi Booking
 
-Production-bound booking platform for **Iceland Taxi Booking** — airport transfers, private taxis, tours, and vacation drivers. Built from the Magic Patterns design (exact UI) on Next.js with PostgreSQL/Prisma, Google Maps, and Teya payments.
+Production-bound booking platform for **Iceland Taxi Booking** — airport transfers, private taxis, tours, and vacation drivers. Built by KM Consulting & Tech on Next.js with PostgreSQL/Prisma, Google Maps, and Teya payments.
 
-**Design source:** [Magic Patterns OS prototype](https://www.magicpatterns.com/os/efK8cNyhF3fFvvbvHv6MNb/9hdh9VBZWuSFDMPVuUgJCN)
+**Designed by:** KM Consulting & Tech
 
 ## Surfaces
 
@@ -63,7 +63,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Without `DATABASE_URL`, the UI still runs and list APIs serve the Magic Patterns seed fallback so local UI work is unblocked. Writes that need persistence return stub responses or errors accordingly.
+Without `DATABASE_URL`, the UI still runs and list APIs serve the KM Consulting & Tech seed fallback so local UI work is unblocked. Writes that need persistence return stub responses or errors accordingly.
 
 ## Scripts
 
@@ -143,19 +143,19 @@ Sandbox card that completes without a 3DS challenge: Visa `4427800000180034`, an
 
 ```
 src/app/                 # Next.js routes + API
-src/components/screens/  # Magic Patterns screens (ported)
+src/components/screens/  # KM Consulting & Tech screens (ported)
 src/components/site/     # Shared chrome (header, footer, tabs, sheets)
 src/lib/design/          # Design tokens data / i18n / ops helpers
 src/lib/payments/        # Pluggable payments (Teya first)
 src/lib/maps/            # Google Maps helpers
 prisma/                  # Schema + seed
-design-src/              # Faithful Magic Patterns export (reference)
+design-src/              # KM Consulting & Tech design export (reference)
 public/brand/            # Official logos
 ```
 
 ## Seed data
 
-`prisma/seed.ts` loads catalogue and ops demo records aligned with the Magic Patterns shared data. Company contact/legal fields are explicitly left empty. Demo driver emails use `@example.local` only.
+`prisma/seed.ts` loads catalogue and ops demo records aligned with the KM Consulting & Tech shared data. Company contact/legal fields are explicitly left empty. Demo driver emails use `@example.local` only.
 
 ## Deploy notes (Vercel)
 

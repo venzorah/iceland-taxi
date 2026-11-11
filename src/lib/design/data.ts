@@ -6,16 +6,16 @@ export const LOGO_LIGHT = '/brand/logo-dark-navy-text.png'
 export const LOGO_DARK = '/brand/logo-dark-white-text.png'
 
 export const IMG = {
-  hero: 'https://cdn.magicpatterns.com/patterns/generated-images/7db922cc-9fca-421a-b5d1-a03e222e9570.jpg',
-  airport: 'https://cdn.magicpatterns.com/patterns/generated-images/eaad9406-8077-461d-b065-8f05c7371f6b.jpg',
-  goldenCircle: 'https://cdn.magicpatterns.com/patterns/generated-images/e3147a54-6262-4018-8ef0-4aa996090a25.jpg',
-  northernLights: 'https://cdn.magicpatterns.com/patterns/generated-images/393a50f2-7ddb-4702-97b9-db093684d1a3.jpg',
-  southCoast: 'https://cdn.magicpatterns.com/patterns/generated-images/b8399b1f-8dbe-43f9-b02a-7b7cc03acb28.jpg',
-  privateDriver: 'https://cdn.magicpatterns.com/patterns/generated-images/ab63a697-a74d-4cb8-ba4e-420b0676a52f.jpg',
-  fleet: 'https://cdn.magicpatterns.com/patterns/generated-images/bb2684b8-70ee-41bf-a260-8cde5cd7b4d2.jpg',
-  reykjavik: 'https://cdn.magicpatterns.com/patterns/generated-images/6c762c8f-4671-4ed3-896e-4f1c0f17f247.jpg',
-  glacierLagoon: 'https://cdn.magicpatterns.com/patterns/generated-images/1d4a0a8f-4487-4611-91fc-fa86a995378e.jpg',
-  blueLagoon: 'https://cdn.magicpatterns.com/patterns/generated-images/7d74ce25-2bd0-4460-a6ce-62e8ff747133.jpg',
+  hero: '/photos/hero.jpg',
+  airport: '/photos/airport.jpg',
+  goldenCircle: '/photos/golden-circle.jpg',
+  northernLights: '/photos/northern-lights.jpg',
+  southCoast: '/photos/south-coast.jpg',
+  privateDriver: '/photos/private-driver.jpg',
+  fleet: '/photos/fleet.jpg',
+  reykjavik: '/photos/reykjavik.jpg',
+  glacierLagoon: '/photos/glacier-lagoon.jpg',
+  blueLagoon: '/photos/blue-lagoon.jpg',
 }
 
 /** Historical USD snapshots: ISK per 1 USD (admin ExchangeRate.iskPerUsd). */

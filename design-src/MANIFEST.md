@@ -1,4 +1,4 @@
-# Magic Patterns Iceland Taxi Booking — export manifest
+# KM Consulting & Tech Iceland Taxi Booking — export manifest
 
 OS id: `efK8cNyhF3fFvvbvHv6MNb`
 

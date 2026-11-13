@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { SiteContentProvider } from '@/components/providers/SiteContent'
 import { MessageAlerts } from '@/components/alerts/MessageAlerts'
 import { InstallPrompt } from '@/components/site/InstallPrompt'
 import { WelcomeSplash } from '@/components/site/WelcomeSplash'
@@ -94,10 +95,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={value}>
+      <SiteContentProvider>
       <WelcomeSplash />
       <InstallPrompt />
       <MessageAlerts />
       {children}
+      </SiteContentProvider>
     </AppContext.Provider>
   )
 }

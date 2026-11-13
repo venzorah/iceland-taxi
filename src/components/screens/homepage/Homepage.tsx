@@ -7,7 +7,8 @@ import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteFooter } from '@/components/site/SiteFooter'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
-import { DESTINATIONS, FLEET, IMG, formatPrice, type Currency } from '@/lib/design/data'
+import { DESTINATIONS, FLEET, formatPrice, type Currency } from '@/lib/design/data'
+import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
 import { type Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 import { whatsappHref } from '@/lib/whatsapp'
@@ -50,6 +51,8 @@ export default function Homepage(props: Props) {
   const th = theme as 'light' | 'dark'
   const lang = language as Lang
   const cur = currency as Currency
+  const images = useSiteImages()
+  const text = useSiteBlock
   const listings = usePublishedListings()
   const routes = (listings || []).filter((listing) => listing.kind === 'route')
   const tours = (listings || []).filter((listing) => listing.category === 'tour')
@@ -74,13 +77,13 @@ export default function Homepage(props: Props) {
         <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
           <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
             <div className="relative hidden overflow-hidden rounded-2xl sm:block">
-              <img src={IMG.airport} alt="Chauffeur loading luggage outside Keflavík Airport" className="aspect-[4/3] w-full object-cover" />
+              <img src={images.airport} alt="Chauffeur loading luggage outside Keflavík Airport" className="aspect-[4/3] w-full object-cover" />
             </div>
             <div>
-              <p className="flex items-center gap-2 text-sm font-semibold text-mint-text"><Plane size={16} /> Keflavík International Airport</p>
-              <h2 className="mt-3 text-balance font-display text-2xl font-bold leading-tight text-heading sm:text-4xl">Airport transfers, met at arrivals</h2>
+              <p className="flex items-center gap-2 text-sm font-semibold text-mint-text"><Plane size={16} /> {text('home.airport.kicker')}</p>
+              <h2 className="mt-3 text-balance font-display text-2xl font-bold leading-tight text-heading sm:text-4xl">{text('home.airport.title')}</h2>
               <p className="mt-4 text-base leading-relaxed text-muted">
-                Private transfers between KEF, Reykjavík, the Blue Lagoon and hotels across the southwest. Add your flight number and your driver follows your arrival time.
+                {text('home.airport.body')}
               </p>
               <ul className="mt-8 divide-y divide-line border-y border-line">
                 {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
@@ -110,8 +113,8 @@ export default function Homepage(props: Props) {
           <div className="mx-auto w-full min-w-0 max-w-7xl">
             <div className="flex flex-wrap items-end justify-between gap-4 px-4 sm:px-6 lg:px-8">
               <div className="max-w-2xl">
-                <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Private sightseeing tours</h2>
-                <p className="mt-3 text-base text-muted">Your own vehicle and driver, your own schedule. Stop where you want, stay as long as you like.</p>
+                <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">{text('home.tours.title')}</h2>
+                <p className="mt-3 text-base text-muted">{text('home.tours.body')}</p>
               </div>
               <a href="/private-tours" className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-bold text-link hover:underline">Discover Private Tours <ArrowRight size={16} /></a>
             </div>
@@ -121,7 +124,7 @@ export default function Homepage(props: Props) {
               {tours.map((tour) => (
                 <article key={tour.id} className="group flex w-[min(82%,20rem)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card sm:w-[60%] md:w-auto md:shrink">
                   <div className="overflow-hidden">
-                    <img src={tour.imageUrl || IMG.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
+                    <img src={tour.imageUrl || images.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                   </div>
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
                     <h3 className="font-display text-lg font-bold text-heading sm:text-xl">{tour.title}</h3>
@@ -150,9 +153,9 @@ export default function Homepage(props: Props) {
         <section className="relative isolate overflow-hidden bg-navy">
           <div className="mx-auto grid w-full min-w-0 max-w-7xl lg:grid-cols-2">
             <div className="min-w-0 px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
-              <h2 className="font-display text-2xl font-bold text-white sm:text-4xl">A private driver for your whole stay</h2>
+              <h2 className="font-display text-2xl font-bold text-white sm:text-4xl">{text('home.driver.title')}</h2>
               <p className="mt-4 max-w-lg text-base leading-relaxed text-white/80">
-                Keep the same driver and vehicle for a few hours or several days. Plan your itinerary together, or ask for a custom quotation.
+                {text('home.driver.body')}
               </p>
               <div className="mt-8 flex w-full min-w-0 flex-wrap gap-2">
                 {['2 hours', '4 hours', '8 hours', 'Full day', 'Multi-day'].map((d) => (
@@ -166,7 +169,7 @@ export default function Homepage(props: Props) {
                 <button onClick={() => onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</button>
               </div>
             </div>
-            <img src={IMG.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />
+            <img src={images.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />
           </div>
         </section>
 
@@ -194,7 +197,7 @@ export default function Homepage(props: Props) {
               <div>
                 <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Our fleet</h2>
                 <p className="mt-3 text-base text-muted">Choose the vehicle that fits your group and luggage. Capacities are per vehicle. <a href="/fleet" className="font-semibold text-link hover:underline">Full fleet page</a></p>
-                <img src={IMG.fleet} alt="Sedan, SUV and minivan parked in Reykjavík" className="mt-8 hidden aspect-[16/10] w-full rounded-2xl object-cover sm:block" />
+                <img src={images.fleet} alt="Sedan, SUV and minivan parked in Reykjavík" className="mt-8 hidden aspect-[16/10] w-full rounded-2xl object-cover sm:block" />
               </div>
               <div className="min-w-0 overflow-hidden rounded-2xl border border-line bg-card">
                 <ul className="divide-y divide-line sm:hidden">
@@ -305,7 +308,7 @@ export default function Homepage(props: Props) {
 
         {/* CTA */}
         <section className="relative isolate overflow-hidden">
-          <img src={IMG.northernLights} alt="Northern lights above snowy mountains" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+          <img src={images.northernLights} alt="Northern lights above snowy mountains" className="absolute inset-0 -z-10 h-full w-full object-cover" />
           <div className="absolute inset-0 -z-10 bg-navy/60" />
           <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-16 text-center sm:px-6 sm:py-24 lg:px-8 lg:py-32">
             <h2 className="font-display text-3xl font-extrabold text-white sm:text-5xl">Your Journey Across Iceland Starts Here.</h2>

@@ -436,6 +436,23 @@ model IntegrationStatus {
   updatedAt DateTime @updatedAt
 }
 
+/// Uploaded public image. Built-in photos stay in /public and are listed beside these.
+model MediaAsset {
+  id        String   @id @default(cuid())
+  name      String
+  mime      String
+  alt       String   @default("")
+  data      Bytes
+  createdAt DateTime @default(now())
+}
+
+/// Admin override for a public image or piece of site copy. Missing keys keep the built-in text.
+model SiteBlock {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 /// How long before pickup a reminder email is sent. Admin can change these.
 model TripReminder {
   id             String   @id @default(cuid())

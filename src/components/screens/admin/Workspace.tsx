@@ -307,6 +307,7 @@ type EditorialDraft = {
   excerpt: string
   body: string
   tag: string
+  imageUrl: string
   published: boolean
 }
 
@@ -323,7 +324,7 @@ export function PagesSection() {
       return
     }
     setRows(
-      (body.posts || []).map((post: { id: string | null; kind: 'blog' | 'guide'; slug: string; title: string; excerpt: string; body: string[]; tag: string; published: boolean }) => ({
+      (body.posts || []).map((post: { id: string | null; kind: 'blog' | 'guide'; slug: string; title: string; excerpt: string; body: string[]; tag: string; img?: string; published: boolean }) => ({
         id: post.id,
         kind: post.kind,
         slug: post.slug,
@@ -331,6 +332,7 @@ export function PagesSection() {
         excerpt: post.excerpt,
         body: Array.isArray(post.body) ? post.body.join('\n\n') : '',
         tag: post.tag || '',
+        imageUrl: post.img || '',
         published: post.published,
       })),
     )
@@ -343,7 +345,7 @@ export function PagesSection() {
 
   const save = async () => {
     if (!draft) return
-    const payload = { kind: draft.kind, slug: draft.slug, title: draft.title, excerpt: draft.excerpt, body: draft.body, tag: draft.tag, published: draft.published }
+    const payload = { kind: draft.kind, slug: draft.slug, title: draft.title, excerpt: draft.excerpt, body: draft.body, tag: draft.tag, imageUrl: draft.imageUrl, published: draft.published }
     const res = await fetch(draft.id ? `/api/admin/editorial/${draft.id}` : '/api/admin/editorial', {
       method: draft.id ? 'PATCH' : 'POST',
       headers: { 'content-type': 'application/json' },
@@ -362,8 +364,8 @@ export function PagesSection() {
   return (
     <Shell message={message}>
       <div className="mb-3 flex justify-end gap-2">
-        <button onClick={() => setDraft({ id: null, kind: 'blog', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New blog post</button>
-        <button onClick={() => setDraft({ id: null, kind: 'guide', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm font-semibold text-heading">New guide</button>
+        <button onClick={() => setDraft({ id: null, kind: 'blog', slug: '', title: '', excerpt: '', body: '', tag: '', imageUrl: '', published: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New blog post</button>
+        <button onClick={() => setDraft({ id: null, kind: 'guide', slug: '', title: '', excerpt: '', body: '', tag: '', imageUrl: '', published: false })} className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm font-semibold text-heading">New guide</button>
       </div>
       {draft && (
         <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
@@ -371,6 +373,7 @@ export function PagesSection() {
           <label className="text-xs font-semibold text-muted">Title<input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Excerpt<textarea rows={2} value={draft.excerpt} onChange={(event) => setDraft({ ...draft, excerpt: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Body<textarea rows={6} value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
+          <label className="text-xs font-semibold text-muted">Image address<input value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} placeholder="/photos/hero.jpg or a library address" className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" /></label>
           <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.published} onChange={(event) => setDraft({ ...draft, published: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Published</label>
           <div className="flex gap-2">
             <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>

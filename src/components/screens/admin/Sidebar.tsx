@@ -3,7 +3,7 @@
 import React from 'react'
 import {
   BarChart3, Bus, Megaphone, CalendarCheck, Car, CreditCard, ExternalLink, FileText, Globe, Inbox, LayoutDashboard, MapPinned, MessageSquare,
-  Palette, Route, Search, Settings, Shield, Star, Tag, Users, UserSquare2,
+  Palette, Route, Search, Settings, Shield, Star, Tag, Users, UserSquare2, Images,
 } from 'lucide-react'
 
 import { LOGO_DARK } from '@/lib/design/data'
@@ -12,7 +12,7 @@ const GROUPS = [
   { title: 'Operations', items: [['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarCheck], ['enquiries', 'Enquiries', Inbox], ['messages', 'Messages', MessageSquare], ['drivers', 'Drivers', UserSquare2], ['vehicles', 'Vehicles', Car]] },
   { title: 'Catalogue', items: [['services', 'Services', Bus], ['routes', 'Routes', Route], ['pricing', 'Pricing', Tag], ['destinations', 'Destinations', MapPinned]] },
   { title: 'Business', items: [['customers', 'Customers', Users], ['payments', 'Payments & refunds', CreditCard], ['reports', 'Reports', BarChart3], ['reviews', 'Reviews', Star]] },
-  { title: 'Website', items: [['announcements', 'Announcements', Megaphone], ['pages', 'Pages & blog', FileText], ['seo', 'SEO & landing pages', Search], ['languages', 'Languages', Globe]] },
+  { title: 'Website', items: [['announcements', 'Announcements', Megaphone], ['content', 'Website content', FileText], ['library', 'Image library', Images], ['pages', 'Pages & blog', FileText], ['seo', 'SEO & landing pages', Search], ['languages', 'Languages', Globe]] },
   { title: 'System', items: [['staff', 'Staff & permissions', Shield], ['appearance', 'Appearance & theme', Palette], ['settings', 'System settings', Settings]] },
 ] as const
 
@@ -20,7 +20,7 @@ const ACCESS: Record<string, string[] | 'all'> = {
   'Super Admin': 'all',
   'Booking Manager': ['overview', 'bookings', 'enquiries', 'messages', 'customers'],
   'Finance Manager': ['overview', 'payments', 'reports', 'pricing'],
-  'Content Manager': ['announcements', 'pages', 'seo', 'languages', 'destinations', 'reviews', 'appearance'],
+  'Content Manager': ['announcements', 'content', 'library', 'pages', 'seo', 'languages', 'destinations', 'reviews', 'appearance'],
 }
 
 /** The same sections as the sidebar, as a tappable list for the phone and tablet menu sheet. */

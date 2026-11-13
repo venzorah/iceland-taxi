@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Route, Search,
-  Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft,
+  Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft, Images,
 } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
@@ -27,6 +27,8 @@ import { Pricing } from '@/components/screens/admin/Pricing'
 import { Routes } from '@/components/screens/admin/Routes'
 import { Seo } from '@/components/screens/admin/Seo'
 import { Staff } from '@/components/screens/admin/Staff'
+import { ImageLibrary } from '@/components/screens/admin/ImageLibrary'
+import { WebsiteContent } from '@/components/screens/admin/WebsiteContent'
 import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from '@/components/screens/admin/Workspace'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
@@ -83,7 +85,7 @@ export default function MobileAdmin(props: Props) {
   const [editing, setEditing] = useState<ServiceRow | null>(null)
   const [chat, setChat] = useState<string | null>(null)
   const th = p.theme as 'light' | 'dark'
-  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries' | null>(null)
+  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries' | 'content' | 'library' | null>(null)
   const [localAnn, setLocalAnn] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
   const announcements = props.onAnnouncementsChange ? props.announcements ?? ANNOUNCEMENTS_SEED : localAnn
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
@@ -261,6 +263,8 @@ export default function MobileAdmin(props: Props) {
               {page === 'enquiries' && <Enquiries />}
               {page === 'routes' && <Routes />}
               {page === 'pricing' && <Pricing />}
+              {page === 'content' && <WebsiteContent />}
+              {page === 'library' && <ImageLibrary />}
             </div>
           </div>
         )}
@@ -705,6 +709,8 @@ const MORE_TITLES: Record<string, string> = {
   settings: 'Settings',
   routes: 'Routes',
   pricing: 'Pricing',
+  content: 'Website content',
+  library: 'Image library',
   enquiries: 'Custom enquiries',
 }
 
@@ -723,10 +729,12 @@ function MoreTab({
   liveAnnouncements: number
   onOpenAnnouncements: () => void
   onOpenPayments: () => void
-  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries') => void
+  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries' | 'content' | 'library') => void
 }) {
   const items = [
     ['Custom enquiries', MessageSquare, () => onOpenPage('enquiries')],
+    ['Website content', FileText, () => onOpenPage('content')],
+    ['Image library', Images, () => onOpenPage('library')],
     ['Drivers', UserSquare2, () => onOpenPage('drivers')],
     ['Vehicles', Car, () => onOpenPage('vehicles')],
     ['Routes', Route, () => onOpenPage('routes')],

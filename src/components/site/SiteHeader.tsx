@@ -7,7 +7,8 @@ import { AnnouncementBar } from '@/components/site/AnnouncementBar'
 import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
-import { LOGO_DARK, LOGO_LIGHT, type Currency } from '@/lib/design/data'
+import { useSiteImages } from '@/components/providers/SiteContent'
+import { type Currency } from '@/lib/design/data'
 import { t, type Lang } from '@/lib/design/i18n'
 import { HEADER_NAV } from '@/lib/design/routes'
 
@@ -29,6 +30,7 @@ type Props = {
 }
 
 export function SiteHeader({ theme, language, currency, onThemeChange, onLanguageChange, onCurrencyChange, onBook, onHome, onSignIn, mobileTitle, onMobileBack, announcements = ANNOUNCEMENTS_SEED }: Props) {
+  const images = useSiteImages()
   const [open, setOpen] = useState(false)
   const hasBar = visibleAnnouncements(announcements).length > 0
   const nav = HEADER_NAV.map((item) => ({ label: t(language, item.i18n), href: item.href }))
@@ -50,7 +52,7 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
           </div>
         )}
         <button onClick={onHome} className={`shrink-0 ${mobileTitle ? 'hidden sm:block' : ''}`} aria-label="Iceland Taxi Booking home">
-          <img src={theme === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-16 w-auto max-w-[15.5rem] object-contain object-left sm:max-w-none lg:h-[72px]" />
+          <img src={theme === 'dark' ? images.logoDark : images.logoLight} alt="Iceland Taxi Booking" className="h-16 w-auto max-w-[15.5rem] object-contain object-left sm:max-w-none lg:h-[72px]" />
         </button>
 
         <nav className="hidden flex-1 items-center gap-6 xl:flex">

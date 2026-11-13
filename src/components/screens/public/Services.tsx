@@ -4,7 +4,8 @@ import React from 'react'
 import { ArrowRight, Briefcase, Car, Clock, Plane, Route } from 'lucide-react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { IMG, type Currency } from '@/lib/design/data'
+import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
+import type { Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -30,16 +31,17 @@ type Props = {
   announcements?: AnnouncementState
 }
 
-const SERVICES = [
-  { id: 'airport', icon: Plane, title: 'Airport transfers', img: IMG.airport, body: 'Private meets at KEF with flight tracking, fixed routes to Reykjavík, Blue Lagoon and southwest hotels.', cta: 'Airport landing', go: 'onAirport' as const },
-  { id: 'taxi', icon: Car, title: 'Private taxi', img: IMG.reykjavik, body: 'Point-to-point city and regional rides with vehicle classes sized for passengers and luggage.', cta: 'Book a taxi', go: 'onBook' as const },
-  { id: 'tours', icon: Route, title: 'Private tours', img: IMG.goldenCircle, body: 'Golden Circle, South Coast, Northern Lights and custom day tours, your pace, your stops.', cta: 'Tours landing', go: 'onTours' as const },
-  { id: 'driver', icon: Clock, title: 'Private driver', img: IMG.privateDriver, body: 'Hourly, half-day, full-day and multi-day chauffeur hire for itineraries that change on the road.', cta: 'Driver landing', go: 'onPrivateDriver' as const },
-  { id: 'corporate', icon: Briefcase, title: 'Corporate travel', img: IMG.fleet, body: 'Staff transfers, visitor meets and invoiced company bookings. Send a custom enquiry for a trip that is not already published.', cta: 'Request a custom trip', go: 'onEnquire' as const },
-]
-
 export default function Services(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
+  const images = useSiteImages()
+  const text = useSiteBlock
+  const services = [
+    { id: 'airport', icon: Plane, title: text('services.airport.title'), img: images.airport, body: text('services.airport.body'), cta: 'Airport landing', go: 'onAirport' as const },
+    { id: 'taxi', icon: Car, title: text('services.taxi.title'), img: images.reykjavik, body: text('services.taxi.body'), cta: 'Book a taxi', go: 'onBook' as const },
+    { id: 'tours', icon: Route, title: text('services.tours.title'), img: images.goldenCircle, body: text('services.tours.body'), cta: 'Tours landing', go: 'onTours' as const },
+    { id: 'driver', icon: Clock, title: text('services.driver.title'), img: images.privateDriver, body: text('services.driver.body'), cta: 'Driver landing', go: 'onPrivateDriver' as const },
+    { id: 'corporate', icon: Briefcase, title: text('services.corporate.title'), img: images.fleet, body: text('services.corporate.body'), cta: 'Request a custom trip', go: 'onEnquire' as const },
+  ]
   const th = p.theme as 'light' | 'dark'
   const handlers = {
     onAirport: p.onAirport,
@@ -73,7 +75,7 @@ export default function Services(props: Props) {
         <p className="mt-3 max-w-2xl text-base text-muted">Every service is configured in Admin with live prices, durations and vehicle rules. Choose a category to book or open its SEO landing page.</p>
 
         <div className="mt-10 grid gap-4 sm:gap-6">
-          {SERVICES.map((s) => {
+            {services.map((s) => {
             const Icon = s.icon
             return (
               <article key={s.id} className="grid overflow-hidden rounded-2xl border border-line bg-card sm:grid-cols-[280px_1fr]">

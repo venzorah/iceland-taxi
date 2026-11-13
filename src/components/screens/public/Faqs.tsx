@@ -4,7 +4,8 @@ import React, { useState } from 'react'
 import { Plus } from 'lucide-react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { FAQS, type Currency } from '@/lib/design/data'
+import { useFaqs } from '@/components/providers/SiteContent'
+import { type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 type Props = {
@@ -35,7 +36,8 @@ const EXTRA = [
 export default function Faqs(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
-  const items = [...FAQS, ...EXTRA]
+  const faqs = useFaqs()
+  const items = [...faqs, ...EXTRA]
   const [open, setOpen] = useState<number | null>(0)
   const goContact = p.onContact || p.onHome
 

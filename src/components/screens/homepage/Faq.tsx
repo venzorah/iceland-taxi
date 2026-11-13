@@ -4,13 +4,14 @@ import React, { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
 
-import { FAQS } from '@/lib/design/data'
+import { useFaqs } from '@/components/providers/SiteContent'
 
 export function Faq() {
+  const faqs = useFaqs()
   const [open, setOpen] = useState<number | null>(0)
   return (
     <div className="mt-10 divide-y divide-line border-y border-line">
-      {FAQS.map((f, i) => {
+      {faqs.map((f, i) => {
         const isOpen = open === i
         return (
           <div key={f.q}>

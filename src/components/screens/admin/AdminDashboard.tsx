@@ -21,6 +21,8 @@ import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, type AnnouncementState } from '@/lib/design/announcements'
 import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from './Workspace'
 import { Enquiries } from './Enquiries'
+import { ImageLibrary } from './ImageLibrary'
+import { WebsiteContent } from './WebsiteContent'
 
 export const args = {
   section: 'overview',
@@ -57,7 +59,7 @@ export default function AdminDashboard(props: Props) {
 
   const titles: Record<string, string> = {
     overview: 'Today', bookings: 'Bookings', enquiries: 'Enquiries', messages: 'Messages', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
-    vehicles: 'Vehicles', destinations: 'Destinations', customers: 'Customers', reports: 'Reports', reviews: 'Reviews', announcements: 'Announcements', pages: 'Pages & blog', seo: 'SEO & landing pages', languages: 'Languages', staff: 'Staff & permissions', appearance: 'Appearance & Theme', settings: 'System settings',
+    vehicles: 'Vehicles', destinations: 'Destinations', customers: 'Customers', reports: 'Reports', reviews: 'Reviews', announcements: 'Announcements', content: 'Website content', library: 'Image library', pages: 'Pages & blog', seo: 'SEO & landing pages', languages: 'Languages', staff: 'Staff & permissions', appearance: 'Appearance & Theme', settings: 'System settings',
   }
   const body = (() => {
     switch (section) {
@@ -79,6 +81,8 @@ export default function AdminDashboard(props: Props) {
       case 'drivers': return <Fleet view="drivers" />
       case 'vehicles': return <Fleet view="vehicles" />
       case 'announcements': return <AnnouncementsManager value={announcements} onChange={setAnnouncements} />
+      case 'content': return <WebsiteContent />
+      case 'library': return <ImageLibrary />
       case 'seo': return <Seo />
       case 'staff': return <Staff />
       case 'appearance': return <Appearance />

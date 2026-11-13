@@ -6,7 +6,8 @@ import { ArrowRight, Clock, Plane, Shield } from 'lucide-react'
 
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { IMG, formatPrice, type Currency } from '@/lib/design/data'
+import { useSiteImages } from '@/components/providers/SiteContent'
+import { formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -31,6 +32,7 @@ type Props = {
 export default function AirportTransfer(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
+  const images = useSiteImages()
   const cur = p.currency as Currency
   const router = useRouter()
   const listings = usePublishedListings()
@@ -56,7 +58,7 @@ export default function AirportTransfer(props: Props) {
       announcements={p.announcements}
     >
       <section className="relative overflow-hidden bg-navy text-white">
-        <img src={IMG.airport} alt="Private transfer at Keflavík Airport" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+        <img src={images.airport} alt="Private transfer at Keflavík Airport" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <p className="flex items-center gap-2 text-sm font-semibold text-cyan"><Plane size={16} /> Keflavík International Airport (KEF)</p>
           <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private airport transfers with flight tracking</h1>

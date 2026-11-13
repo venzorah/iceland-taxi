@@ -8,7 +8,8 @@ import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { formatPrice } from '@/lib/design/data'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { IMG, type Currency } from '@/lib/design/data'
+import { useSiteImages } from '@/components/providers/SiteContent'
+import { type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 import { whatsappHref } from '@/lib/whatsapp'
@@ -40,6 +41,7 @@ const PACKAGES = [
 export default function PrivateDriver(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
+  const images = useSiteImages()
   const router = useRouter()
   const driverListings = (usePublishedListings() || []).filter((listing) => listing.category === 'driver')
   const [whatsappE164, setWhatsappE164] = useState<string | null>(null)
@@ -71,7 +73,7 @@ export default function PrivateDriver(props: Props) {
       announcements={p.announcements}
     >
       <section className="relative overflow-hidden bg-navy text-white">
-        <img src={IMG.privateDriver} alt="Private chauffeur beside a vehicle" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+        <img src={images.privateDriver} alt="Private chauffeur beside a vehicle" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private driver & chauffeur hire in Iceland</h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Hourly to multi-day hire with a dedicated vehicle. Ideal when the itinerary is still taking shape.</p>

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Route, Search,
+  BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, LogOut, MapPinned, MessageSquare, Moon, Palette, Plus, Route, Search,
   Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft, Images,
 } from 'lucide-react'
 
@@ -32,6 +32,7 @@ import { WebsiteContent } from '@/components/screens/admin/WebsiteContent'
 import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from '@/components/screens/admin/Workspace'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
+import { signOutToHome } from '@/lib/auth/sign-out'
 
 export const viewport = 'mobile'
 
@@ -203,6 +204,9 @@ export default function MobileAdmin(props: Props) {
         <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-bg px-4">
           <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-12 w-auto" />
           <div className="ml-auto flex items-center gap-1">
+            <button type="button" onClick={signOutToHome} aria-label="Sign out" className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-semibold text-heading">
+              <LogOut size={18} /> Sign out
+            </button>
             <button aria-label="Search" className="grid h-10 w-10 place-items-center rounded-full text-heading"><Search size={19} /></button>
             <StaffNoticeBell
               onOpenChat={(ref) => { setPage(null); setTab('messages'); setChat(ref) }}
@@ -776,6 +780,9 @@ function MoreTab({
         ))}
       </ul>
       <button onClick={onOpenDesktop} className="mt-4 w-full text-center text-sm font-semibold text-link">Open desktop dashboard</button>
+      <button type="button" onClick={signOutToHome} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-line text-sm font-semibold text-heading">
+        <LogOut size={16} /> Sign out
+      </button>
       <p className="mt-2 text-center text-xs text-muted">Signed in as Juliet · admin@example.local</p>
     </div>
   )

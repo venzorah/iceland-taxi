@@ -45,6 +45,8 @@ export async function POST(req: Request) {
   const jar = await cookies()
 
   if (parsed.data.role === 'logout') {
+    jar.delete(STAFF_COOKIE)
+    jar.delete(DRIVER_COOKIE)
     jar.delete(GUEST_EMAIL_COOKIE)
     return jsonOk({ ok: true, cleared: true })
   }

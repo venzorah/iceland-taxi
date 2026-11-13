@@ -2,10 +2,12 @@ import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { jsonError, jsonOk, prisma } from '@/lib/api'
 import { DEMO_DRIVER_EMAIL, DEMO_DRIVER_ID, DRIVER_COOKIE, STAFF_COOKIE } from '@/lib/auth/demo'
+import { verifyPassword } from '@/lib/auth/password'
 
 const schema = z.object({
   email: z.string().email().optional(),
   driverId: z.string().optional(),
+  password: z.string().optional(),
 })
 
 /** Demo driver login. Sets an httpOnly cookie. Not production auth. */
@@ -44,6 +46,13 @@ export async function POST(req: Request) {
       })
 
   if (!driver) return jsonError(404, 'NOT_FOUND', `Driver not found. Try ${DEMO_DRIVER_EMAIL}`)
+  if (!driver.active) return jsonError(403, 'SUSPENDED', 'This driver account is suspended.')
+  if (driver.user.passwordHash) {
+    const password = parsed.data.password || ''
+    if (!(await verifyPassword(password, driver.user.passwordHash))) {
+      return jsonError(401, 'UNAUTHORIZED', 'Email or password is wrong.')
+    }
+  }
 
   jar.delete(STAFF_COOKIE)
   jar.set(DRIVER_COOKIE, driver.id, {

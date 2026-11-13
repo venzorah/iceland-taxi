@@ -18,11 +18,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Choose a refund.')
   const payment = await prisma.payment.findUnique({ where: { id } })
   if (!payment) return jsonError(404, 'NOT_FOUND', 'Payment not found')
-  if (payment.status === 'REFUNDED') return jsonOk({ ok: true, payment })
+  if (payment.status === 'REFUNDED') return jsonOk({ ok: true, payment: { id: payment.id, status: payment.status } })
   if (payment.status === 'FAILED' || payment.status === 'REQUIRES_CREDENTIALS') {
     return jsonError(400, 'VALIDATION_ERROR', 'This payment was not captured, so it cannot be refunded.')
   }
-  const updated = await prisma.payment.update({ where: { id }, data: { status: 'REFUNDED' } })
+  const updated = await prisma.payment.update({ where: { id }, data: { status: 'REFUNDED' }, select: { id: true, status: true } })
   await prisma.booking.update({ where: { id: payment.bookingId }, data: { status: 'REFUNDED' } })
   return jsonOk({ ok: true, payment: updated })
 }

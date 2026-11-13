@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Menu, Moon, Plus, Search, Sun } from 'lucide-react'
+import { LogOut, Menu, Moon, Plus, Search, Sun } from 'lucide-react'
+
+import { signOutToHome } from '@/lib/auth/sign-out'
 
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { MobileNav, Sidebar } from './Sidebar'
@@ -101,7 +103,7 @@ export default function AdminDashboard(props: Props) {
   return (
     <div className={th === 'dark' ? 'dark' : ''}>
       <div className="flex h-screen overflow-hidden bg-surface font-sans text-text">
-        <Sidebar active={section} role={p.role} onSelect={go} onViewSite={p.onViewSite} />
+        <Sidebar active={section} role={p.role} onSelect={go} onViewSite={p.onViewSite} onSignOut={signOutToHome} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-16 shrink-0 items-center gap-2 border-b border-line bg-bg px-2 sm:h-20 sm:gap-4 sm:px-6">
@@ -119,6 +121,9 @@ export default function AdminDashboard(props: Props) {
               </button>
               <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="grid h-10 w-10 sm:h-9 sm:w-9 place-items-center rounded-lg text-heading transition-colors duration-150 hover:bg-surface">
                 {th === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+              </button>
+              <button type="button" onClick={signOutToHome} className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-heading hover:bg-surface sm:px-3">
+                <LogOut size={16} /> <span className="hidden sm:inline">Sign out</span>
               </button>
               <StaffNoticeBell
                 onOpenChat={(ref) => {
@@ -150,6 +155,10 @@ export default function AdminDashboard(props: Props) {
           onViewSite={() => {
             setMenuOpen(false)
             p.onViewSite?.()
+          }}
+          onSignOut={() => {
+            setMenuOpen(false)
+            signOutToHome()
           }}
         />
       </BottomSheet>

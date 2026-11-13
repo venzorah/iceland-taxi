@@ -521,7 +521,7 @@ export function SettingsSection() {
               ? 'WhatsApp delivery is off. Add the official company WhatsApp number here. No number is invented, and customer messages are not sent to WhatsApp until one is saved.'
               : data?.integrations?.find((item) => item.key === 'whatsapp')?.configured
                 ? 'Outbound WhatsApp notices are sent when a customer messages. Inbound WhatsApp chats are not synced into this inbox.'
-                : 'Each new customer message creates a staff notification and a WhatsApp link with the booking reference. The private message is not included. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server to send that notice automatically. Inbound WhatsApp chats are not synced.'}
+                : 'Each new customer message creates a staff notification and a WhatsApp link with the booking reference. The private message is not included. Automatic sending is configured on the server, not in this screen. Inbound WhatsApp chats are not synced.'}
           </p>
           <form onSubmit={save} className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input

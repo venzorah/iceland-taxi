@@ -14,6 +14,7 @@ import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 import { ReadBadge } from '@/components/messages/ReadBadge'
 import { bookingWhatsAppText, whatsappHref } from '@/lib/whatsapp'
+import { endSession } from '@/lib/auth/sign-out'
 
 export const args = {
   tab: 'upcoming',
@@ -214,9 +215,20 @@ export default function CustomerDashboard(props: Props) {
               <h1 className="font-display text-2xl font-bold text-heading sm:text-3xl">Emma Larsen</h1>
               <MessageAlertControl className="mt-3" />
             </div>
-            <div className="hidden gap-2 sm:flex">
-              <button className="whitespace-nowrap rounded-full border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading">Request a custom trip</button>
-              <button onClick={p.onBook} className="whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Book a ride</button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  await endSession()
+                  if (p.onHome) p.onHome()
+                  else window.location.assign('/')
+                }}
+                className="whitespace-nowrap rounded-full border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading"
+              >
+                Sign out
+              </button>
+              <button className="hidden whitespace-nowrap rounded-full border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading sm:inline">Request a custom trip</button>
+              <button onClick={p.onBook} className="hidden whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover sm:inline">Book a ride</button>
             </div>
           </div>
 

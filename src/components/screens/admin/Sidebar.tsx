@@ -2,7 +2,7 @@
 
 import React from 'react'
 import {
-  BarChart3, Bus, Megaphone, CalendarCheck, Car, CreditCard, ExternalLink, FileText, Globe, Inbox, LayoutDashboard, MapPinned, MessageSquare,
+  BarChart3, Bus, Megaphone, CalendarCheck, Car, CreditCard, ExternalLink, FileText, Globe, Inbox, LayoutDashboard, LogOut, MapPinned, MessageSquare,
   Palette, Route, Search, Settings, Shield, Star, Tag, Users, UserSquare2, Images,
 } from 'lucide-react'
 
@@ -24,7 +24,7 @@ const ACCESS: Record<string, string[] | 'all'> = {
 }
 
 /** The same sections as the sidebar, as a tappable list for the phone and tablet menu sheet. */
-export function MobileNav({ active, role, onSelect, onViewSite }: { active: string; role: string; onSelect: (s: string) => void; onViewSite?: () => void }) {
+export function MobileNav({ active, role, onSelect, onViewSite, onSignOut }: { active: string; role: string; onSelect: (s: string) => void; onViewSite?: () => void; onSignOut?: () => void }) {
   const allowed = ACCESS[role] ?? 'all'
   return (
     <div>
@@ -62,11 +62,14 @@ export function MobileNav({ active, role, onSelect, onViewSite }: { active: stri
           </div>
         )
       })}
+      <button type="button" onClick={onSignOut} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-heading">
+        <LogOut size={16} /> Sign out
+      </button>
     </div>
   )
 }
 
-export function Sidebar({ active, role, onSelect, onViewSite }: { active: string; role: string; onSelect: (s: string) => void; onViewSite?: () => void }) {
+export function Sidebar({ active, role, onSelect, onViewSite, onSignOut }: { active: string; role: string; onSelect: (s: string) => void; onViewSite?: () => void; onSignOut?: () => void }) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-navy text-white lg:flex">
       <div className="flex h-20 items-center border-b border-white/10 px-4">
@@ -107,6 +110,9 @@ export function Sidebar({ active, role, onSelect, onViewSite }: { active: string
         </div>
         <button onClick={onViewSite} className="mt-3 flex items-center gap-1.5 text-xs font-medium text-cyan hover:underline">
           <ExternalLink size={13} /> View public website
+        </button>
+        <button type="button" onClick={onSignOut} className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white">
+          <LogOut size={13} /> Sign out
         </button>
       </div>
     </aside>

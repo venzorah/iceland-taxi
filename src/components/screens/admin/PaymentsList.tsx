@@ -8,7 +8,6 @@ type PaymentRow = {
   status: string
   amount: number
   currency: string
-  providerRef?: string | null
   createdAt: string
   booking?: { ref: string; guestName?: string | null; status?: string } | null
 }
@@ -36,12 +35,12 @@ export function PaymentsList() {
 
   return (
     <div className="mx-auto max-w-[1200px] p-3 sm:p-6">
-      <p className="text-sm text-muted">{msg} · card details are never stored; Teya hosted checkout only.</p>
+      <p className="text-sm text-muted">{msg} · Card numbers and payment keys stay with the payment provider. This screen shows the booking, amount, and status only.</p>
       <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-bg">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-line text-xs font-semibold text-muted">
             <tr>
-              {['Created', 'Booking', 'Provider', 'Amount', 'Status', 'Provider ref', ''].map((h) => (
+              {['Created', 'Booking', 'Provider', 'Amount', 'Status', ''].map((h) => (
                 <th key={h} className="px-4 py-3">{h}</th>
               ))}
             </tr>
@@ -63,7 +62,6 @@ export function PaymentsList() {
                       : `$${p.amount.toLocaleString('en-US')}`}
                 </td>
                 <td className="px-4 py-3 text-xs font-semibold text-heading">{p.status}</td>
-                <td className="px-4 py-3 font-mono text-xs text-muted">{p.providerRef || '—'}</td>
                 <td className="px-4 py-3 text-right">
                   {p.status === 'REFUNDED' ? (
                     <span className="text-xs font-semibold text-muted">Refunded</span>
@@ -95,8 +93,8 @@ export function PaymentsList() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted">
-                  No payments yet. Checkout without Teya sandbox keys saves an unpaid booking and does not mark it paid.
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
+                  No payments yet. A booking stays unpaid until the payment provider confirms it.
                 </td>
               </tr>
             )}

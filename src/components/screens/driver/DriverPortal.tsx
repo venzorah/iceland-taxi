@@ -5,6 +5,7 @@ import { Briefcase, History, LogIn, Moon, Navigation, Phone, Plane, StickyNote, 
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
 import { armMessageSound, rememberAlertAudience } from '@/lib/alerts/client'
+import { endSession } from '@/lib/auth/sign-out'
 import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 
@@ -63,6 +64,7 @@ export default function DriverPortal(props: Props) {
   const [jobs, setJobs] = useState<DriverJob[]>([])
   const [history, setHistory] = useState<DriverJob[]>([])
   const [email, setEmail] = useState('ari.driver@example.local')
+  const [password, setPassword] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   useArmMessageSoundOnPointer()
@@ -99,7 +101,7 @@ export default function DriverPortal(props: Props) {
       const res = await fetch('/api/driver/auth', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password: password || undefined }),
       })
       const data = await res.json()
       if (!res.ok || !data.ok) {
@@ -113,7 +115,7 @@ export default function DriverPortal(props: Props) {
   }
 
   const logout = async () => {
-    await fetch('/api/driver/auth', { method: 'DELETE' })
+    await endSession()
     setDriver(null)
     setJobs([])
     setHistory([])
@@ -156,6 +158,14 @@ export default function DriverPortal(props: Props) {
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-sm font-semibold text-heading outline-none focus:border-focus"
             />
+            <label className="mt-3 block text-xs font-semibold text-muted">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Required once an admin has set one"
+              className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-sm font-semibold text-heading outline-none placeholder:text-muted focus:border-focus"
+            />
             {msg && <p className="mt-2 text-sm text-error">{msg}</p>}
             <button
               disabled={busy}
@@ -191,7 +201,7 @@ export default function DriverPortal(props: Props) {
             <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="ml-auto grid h-10 w-10 place-items-center rounded-full text-heading">
               {th === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button onClick={logout} className="hidden text-xs font-semibold text-muted hover:text-heading sm:inline">Sign out</button>
+            <button type="button" onClick={logout} className="inline-flex h-10 items-center rounded-full px-3 text-sm font-semibold text-heading hover:bg-surface">Sign out</button>
           </div>
         </header>
 

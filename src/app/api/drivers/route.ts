@@ -5,10 +5,17 @@ export async function GET() {
   const data = await withDb(
     async () => {
       const drivers = await prisma.driver.findMany({
-        include: { vehicle: true, user: { select: { email: true, phone: true } } },
+        include: { vehicle: true, user: { select: { email: true, phone: true, passwordHash: true } } },
         orderBy: { displayName: 'asc' },
       })
-      return { source: 'database' as const, drivers }
+      return {
+        source: 'database' as const,
+        drivers: drivers.map(({ user, ...driver }) => ({
+          ...driver,
+          hasPassword: Boolean(user.passwordHash),
+          user: { email: user.email, phone: user.phone },
+        })),
+      }
     },
     () => ({
       source: 'seed-fallback' as const,

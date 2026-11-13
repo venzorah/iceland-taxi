@@ -2,13 +2,17 @@ import { z } from 'zod'
 
 import { jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
+import { hashPassword } from '@/lib/auth/password'
 
 const createSchema = z.object({
   displayName: z.string().min(1),
   email: z.string().email(),
+  phone: z.string().nullable().optional(),
+  password: z.string().min(8).optional(),
   licenceNotes: z.string().nullable().optional(),
   vehicleId: z.string().nullable().optional(),
   status: z.string().optional(),
+  active: z.boolean().optional(),
 })
 
 export async function POST(req: Request) {
@@ -20,18 +24,21 @@ export async function POST(req: Request) {
   const email = parsed.data.email.trim().toLowerCase()
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return jsonError(409, 'CONFLICT', 'That email is already used.')
+  const passwordHash = parsed.data.password ? await hashPassword(parsed.data.password) : null
   const user = await prisma.user.create({
     data: {
       email,
       name: parsed.data.displayName.trim(),
+      phone: parsed.data.phone?.trim() || null,
+      passwordHash,
       role: 'DRIVER',
       driver: {
         create: {
           displayName: parsed.data.displayName.trim(),
           licenceNotes: parsed.data.licenceNotes?.trim() || null,
           vehicleId: parsed.data.vehicleId || null,
-          status: parsed.data.status?.trim() || 'Available',
-          active: true,
+          status: parsed.data.active === false ? 'Suspended' : parsed.data.status?.trim() || 'Available',
+          active: parsed.data.active !== false && parsed.data.status?.trim() !== 'Suspended',
         },
       },
     },

@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { ImageField, type LibraryImage } from '@/components/screens/admin/ImageField'
 
 type Block = { key: string; kind: 'image' | 'text'; group: string; label: string; value: string }
-type LibraryImage = { id: string; name: string; url: string }
 
 export function WebsiteContent() {
   const [blocks, setBlocks] = useState<Block[]>([])
@@ -60,7 +60,7 @@ export function WebsiteContent() {
     <div className="space-y-8 p-4 sm:p-6">
       <div>
         <h2 className="font-display text-base font-bold text-heading">Website content</h2>
-        <p className="mt-1 text-sm text-muted">Edit the public wording and the photos used on the site. Clearing a field and saving restores the original.</p>
+        <p className="mt-1 text-sm text-muted">Edit the public wording and photos. Upload a new picture or pick one from the library, then save. Clearing a text field and saving restores the original.</p>
         <p className="mt-2 text-xs text-muted">{message}</p>
       </div>
       {groups.map((group) => (
@@ -72,15 +72,12 @@ export function WebsiteContent() {
                 <label className="block text-xs font-semibold text-muted">
                   {block.label}
                   {block.kind === 'image' ? (
-                    <span className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <img src={block.value} alt="" className="h-16 w-24 rounded-lg object-cover" />
-                      <select value={block.value} onChange={(event) => update(block.key, event.target.value)} className="min-w-0 flex-1 rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus">
-                        <option value={block.value}>{block.value}</option>
-                        {images.filter((image) => image.url !== block.value).map((image) => (
-                          <option key={image.id} value={image.url}>{image.name} · {image.url}</option>
-                        ))}
-                      </select>
-                    </span>
+                    <ImageField
+                      value={block.value}
+                      images={images}
+                      onUploaded={(image) => setImages((current) => [image, ...current.filter((item) => item.id !== image.id)])}
+                      onChange={(url) => update(block.key, url)}
+                    />
                   ) : (
                     <textarea rows={block.value.length > 120 ? 4 : 2} value={block.value} onChange={(event) => update(block.key, event.target.value)} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
                   )}

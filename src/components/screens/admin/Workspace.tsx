@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { ImageField } from './ImageField'
 import { TripReminders } from './TripReminders'
 
 type Workspace = {
@@ -123,7 +124,10 @@ export function DestinationsSection() {
         <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
           <label className="text-xs font-semibold text-muted">Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Note<input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
-          <label className="text-xs font-semibold text-muted">Image URL<input value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} placeholder="Optional" className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" /></label>
+          <div className="text-xs font-semibold text-muted">
+            Photo
+            <ImageField allowClear value={draft.imageUrl} onChange={(imageUrl) => setDraft({ ...draft, imageUrl })} />
+          </div>
           <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Shown on the public site</label>
           <div className="flex gap-2">
             <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
@@ -373,7 +377,10 @@ export function PagesSection() {
           <label className="text-xs font-semibold text-muted">Title<input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Excerpt<textarea rows={2} value={draft.excerpt} onChange={(event) => setDraft({ ...draft, excerpt: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Body<textarea rows={6} value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
-          <label className="text-xs font-semibold text-muted">Image address<input value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} placeholder="/photos/hero.jpg or a library address" className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" /></label>
+          <div className="text-xs font-semibold text-muted">
+            Photo
+            <ImageField allowClear value={draft.imageUrl} onChange={(imageUrl) => setDraft({ ...draft, imageUrl })} />
+          </div>
           <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.published} onChange={(event) => setDraft({ ...draft, published: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Published</label>
           <div className="flex gap-2">
             <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>

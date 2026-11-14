@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { jsonError, jsonOk } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { quoteFromCatalogue } from '@/lib/booking/service'
 
 const schema = z.object({
@@ -22,7 +22,7 @@ const schema = z.object({
   depositPct: z.number().min(0).max(100).optional(),
 })
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required for live quoting')
   }
@@ -41,3 +41,5 @@ export async function POST(req: Request) {
     return jsonError(500, 'QUOTE_ERROR', 'Could not build quote')
   }
 }
+
+export const POST = apiHandler(handlePOST)

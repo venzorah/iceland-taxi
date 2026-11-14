@@ -1,8 +1,10 @@
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('pricing')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const [extras, rate, vehicles] = await Promise.all([
     prisma.pricingExtra.findMany({ orderBy: { sortOrder: 'asc' } }),
@@ -29,8 +31,8 @@ const rateSchema = z.object({
   iskPerEur: z.number().positive(),
 })
 
-export async function POST(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePOST(req: Request) {
+  const blocked = await rejectDriverOnly('pricing')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = await req.json().catch(() => null)
@@ -71,3 +73,6 @@ export async function POST(req: Request) {
   })
   return jsonOk({ ok: true, extra })
 }
+
+export const GET = apiHandler(handleGET)
+export const POST = apiHandler(handlePOST)

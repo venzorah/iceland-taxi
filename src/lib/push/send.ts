@@ -20,6 +20,7 @@ export async function pushMessageAlert(input: {
   authorRole: string
   guestEmail: string | null
   driverId: string | null
+  channel?: string
 }) {
   const vapid = vapidConfig()
   if (!vapid.enabled || !vapid.publicKey || !vapid.privateKey || !vapid.subject) return { sent: 0, skipped: 'VAPID keys are not set' }
@@ -32,11 +33,11 @@ export async function pushMessageAlert(input: {
   webpush.setVapidDetails(subject, vapid.publicKey, vapid.privateKey)
 
   const or: Array<Record<string, unknown>> = []
-  if (input.authorRole === 'customer') or.push({ audience: 'staff' })
+  if (input.authorRole === 'customer' || input.authorRole === 'driver') or.push({ audience: 'staff' })
   if (input.authorRole === 'staff' && input.guestEmail) {
     or.push({ audience: 'customer', guestEmail: input.guestEmail.toLowerCase() })
   }
-  if (input.driverId && input.authorRole !== 'driver') {
+  if (input.driverId && input.channel === 'driver_ops' && input.authorRole === 'staff') {
     or.push({ audience: 'driver', driverId: input.driverId })
   }
   if (or.length === 0) return { sent: 0, skipped: 'no recipients' }

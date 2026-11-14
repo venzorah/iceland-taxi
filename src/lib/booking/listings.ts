@@ -4,6 +4,7 @@ export type ListingKind = 'route' | 'service'
 export type ListingCategory = 'airport' | 'taxi' | 'tour' | 'driver' | 'custom'
 
 export type PublishedListing = {
+  iskPerEur?: number
   id: string
   kind: ListingKind
   serviceId: string | null

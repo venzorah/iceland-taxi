@@ -2,7 +2,7 @@ import { Role } from '@prisma/client'
 import { z } from 'zod'
 
 import { STAFF_ROLES } from '@/lib/admin/content'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 const patchSchema = z.object({
@@ -13,8 +13,8 @@ const patchSchema = z.object({
 
 type Ctx = { params: Promise<{ id: string }> }
 
-export async function PATCH(req: Request, ctx: Ctx) {
-  const blocked = await rejectDriverOnly()
+async function handlePATCH(req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly('staff')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const { id } = await ctx.params
@@ -53,3 +53,5 @@ export async function PATCH(req: Request, ctx: Ctx) {
     },
   })
 }
+
+export const PATCH = apiHandler(handlePATCH)

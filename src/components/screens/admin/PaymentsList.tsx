@@ -67,28 +67,8 @@ export function PaymentsList() {
                 <td className="px-4 py-3 text-right">
                   {p.status === 'REFUNDED' ? (
                     <span className="text-xs font-semibold text-muted">Refunded</span>
-                  ) : p.status === 'FAILED' || p.status === 'REQUIRES_CREDENTIALS' ? (
-                    <span className="text-xs text-muted">Not captured</span>
                   ) : (
-                    <button
-                      onClick={async () => {
-                        const res = await fetch(`/api/admin/payments/${p.id}`, {
-                          method: 'PATCH',
-                          headers: { 'content-type': 'application/json' },
-                          body: JSON.stringify({ status: 'REFUNDED' }),
-                        })
-                        const body = await res.json().catch(() => null)
-                        if (!res.ok || !body?.ok) {
-                          setMsg(body?.message || 'Could not save the refund')
-                          return
-                        }
-                        setRows((current) => current.map((row) => (row.id === p.id ? { ...row, status: 'REFUNDED' } : row)))
-                        setMsg('Refund saved')
-                      }}
-                      className="text-xs font-semibold text-link"
-                    >
-                      Mark refunded
-                    </button>
+                    <span className="text-xs text-muted">{p.status === 'CAPTURED' ? 'Refund review — processing pending' : 'Not captured'}</span>
                   )}
                 </td>
               </tr>

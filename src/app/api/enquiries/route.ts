@@ -1,6 +1,6 @@
 import { EnquiryChannel } from '@prisma/client'
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 
 const schema = z.object({
   name: z.string().trim().min(1),
@@ -15,7 +15,7 @@ const schema = z.object({
   notes: z.string().trim().max(2000).optional(),
 })
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required to save an enquiry')
   }
@@ -57,3 +57,5 @@ export async function POST(req: Request) {
     return jsonError(503, 'DATABASE_ERROR', 'Could not save the enquiry')
   }
 }
+
+export const POST = apiHandler(handlePOST)

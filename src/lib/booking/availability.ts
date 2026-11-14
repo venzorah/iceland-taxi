@@ -1,10 +1,12 @@
-import { BookingStatus } from '@prisma/client'
+import { BookingStatus, type Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 const BLOCKING: BookingStatus[] = [
   BookingStatus.AWAITING_PAYMENT,
   BookingStatus.CONFIRMED,
+  BookingStatus.REFUND_REQUESTED,
   BookingStatus.DRIVER_ASSIGNED,
+  BookingStatus.ACKNOWLEDGED,
   BookingStatus.DRIVER_EN_ROUTE,
   BookingStatus.IN_PROGRESS,
 ]
@@ -22,14 +24,14 @@ function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {
 }
 
 /** Prevent double-booking the same driver or vehicle across overlapping windows. */
-export async function checkAvailability(window: AvailabilityWindow) {
+export async function checkAvailability(window: AvailabilityWindow, db: Prisma.TransactionClient = prisma) {
   const conflicts: { type: 'vehicle' | 'driver'; bookingRef: string }[] = []
 
   if (!window.vehicleId && !window.driverId) {
     return { available: true as const, conflicts }
   }
 
-  const candidates = await prisma.booking.findMany({
+  const candidates = await db.booking.findMany({
     where: {
       status: { in: BLOCKING },
       pickupAt: { not: null },

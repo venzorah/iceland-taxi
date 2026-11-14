@@ -36,11 +36,7 @@ export function StaffNoticeBell({
   useEffect(() => {
     let alive = true
     const load = async () => {
-      await fetch('/api/auth/demo', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ role: 'staff' }),
-      }).catch(() => {})
+
       const data = await fetch('/api/admin/notifications').then((r) => r.json()).catch(() => null)
       if (!alive || !data?.ok) return
       setItems(data.items || [])

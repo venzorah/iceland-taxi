@@ -4,8 +4,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Briefcase, History, LogIn, Moon, Navigation, Phone, Plane, StickyNote, Sun, Users, CalendarDays } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
-import { armMessageSound, rememberAlertAudience } from '@/lib/alerts/client'
-import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
+import { rememberAlertAudience } from '@/lib/alerts/client'
+import { CustomerMessages } from '@/components/customer/CustomerMessages'
+import { useLivePolling } from '@/lib/polling/use-live-polling'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 
 export const viewport = 'mobile'
@@ -24,6 +25,7 @@ type Props = Partial<typeof args> & { onThemeChange?: (t: 'light' | 'dark') => v
 
 type DriverJob = {
   ref: string
+  pickupAt: string | null
   customer: string
   phone: string | null
   service: string
@@ -50,6 +52,7 @@ type DriverInfo = {
   displayName: string
   status: string
   email: string
+  phone?: string | null
   vehicle?: { name: string; plate: string | null } | null
 }
 
@@ -62,80 +65,58 @@ export default function DriverPortal(props: Props) {
   const [driver, setDriver] = useState<DriverInfo | null>(null)
   const [jobs, setJobs] = useState<DriverJob[]>([])
   const [history, setHistory] = useState<DriverJob[]>([])
-  const [email, setEmail] = useState('ari.driver@example.local')
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [selected, setSelected] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   useArmMessageSoundOnPointer()
 
-  const load = useCallback(async () => {
-    const me = await fetch('/api/driver/me').then((r) => r.json())
-    if (!me.authenticated) {
-      setDriver(null)
-      setJobs([])
-      setHistory([])
-      return
-    }
-    setDriver(me.driver)
-    const list = await fetch('/api/driver/bookings').then((r) => r.json())
-    if (list.ok) {
-      setJobs(list.active || [])
-      setHistory(list.history || [])
-    }
-  }, [])
-
-  useEffect(() => {
-    if (driver) rememberAlertAudience('driver')
-  }, [driver])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  const login = async () => {
-    armMessageSound()
-    setBusy(true)
-    setMsg(null)
+  const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/driver/auth', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) {
-        setMsg(data.message || 'Login failed')
-        return
-      }
-      await load()
-    } finally {
-      setBusy(false)
-    }
-  }
+      const response = await fetch('/api/driver/me', { signal, cache: 'no-store' })
+      const me = await response.json()
+      if (!response.ok) throw new Error(me.message || 'Could not load your driver account.')
+      if (signal?.aborted) return
+      if (!me.authenticated) { setDriver(null); setJobs([]); setHistory([]); setLoadError(''); return }
+      const responseJobs = await fetch('/api/driver/bookings', { signal, cache: 'no-store' })
+      const list = await responseJobs.json()
+      if (!responseJobs.ok || !list.ok) throw new Error(list.message || 'Could not load assigned journeys.')
+      if (signal?.aborted) return
+      setDriver(me.driver); setJobs(list.active); setHistory(list.history); setLoadError('')
+    } catch (error) { if (!signal?.aborted) setLoadError(error instanceof Error ? error.message : 'Could not refresh journeys.'); throw error }
+    finally { if (!signal?.aborted) setLoading(false) }
+  }, [])
+  useLivePolling(load, true, 15000)
+  useEffect(() => { if (driver) rememberAlertAudience('driver') }, [driver])
+
+  const login = async () => { window.location.assign('/login?next=/driver') }
 
   const logout = async () => {
-    await fetch('/api/driver/auth', { method: 'DELETE' })
+    await fetch('/api/auth/signout', { method: 'POST' })
+    window.location.assign('/login?next=/driver')
     setDriver(null)
     setJobs([])
     setHistory([])
   }
 
-  const advance = async (ref: string) => {
+  const advance = async (job: DriverJob) => {
     setBusy(true)
     setMsg(null)
     try {
-      const res = await fetch(`/api/driver/bookings/${ref}`, { method: 'PATCH' })
+      const res = await fetch(`/api/driver/bookings/${encodeURIComponent(job.ref)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedStatus: job.status }) })
       const data = await res.json()
       if (!res.ok || !data.ok) {
         setMsg(data.message || 'Could not update status')
         return
       }
       await load()
-    } finally {
+    } catch { setMsg('Could not confirm the update. Refresh this journey before retrying.') } finally {
       setBusy(false)
     }
   }
 
-  const primary = useMemo(() => jobs.find((j) => j.nextAction) || jobs[0] || null, [jobs])
+  const primary = useMemo(() => jobs.find(j => j.ref === selected) || jobs.find(j => ['DRIVER_EN_ROUTE', 'IN_PROGRESS'].includes(j.status)) || jobs.find((j) => j.nextAction) || jobs[0] || null, [jobs, selected])
   const later = useMemo(() => jobs.filter((j) => j.ref !== primary?.ref), [jobs, primary])
   const stepIndex = primary ? Math.max(0, FLOW.indexOf(primary.statusLabel as (typeof FLOW)[number])) : -1
 
@@ -146,25 +127,16 @@ export default function DriverPortal(props: Props) {
           <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6">
             <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="mx-auto h-14 w-auto" />
             <h1 className="mt-4 text-center font-display text-xl font-bold text-heading">Driver portal</h1>
-            <p className="mt-1 text-center text-sm leading-relaxed text-muted">Demo login, no admin powers. Use a seeded driver email.</p>
-            <div className="mt-4">
-              <DemoPortalButtons />
-            </div>
-            <label className="mt-6 block text-xs font-semibold text-muted">Driver email</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-sm font-semibold text-heading outline-none focus:border-focus"
-            />
+            <p className="mt-1 text-center text-sm leading-relaxed text-muted">{loading ? 'Loading your driver account…' : loadError || 'Sign in with your registered driver account. Contact operations if your account is not active.'}</p>
             {msg && <p className="mt-2 text-sm text-error">{msg}</p>}
             <button
-              disabled={busy}
+              disabled={busy || loading}
               onClick={login}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-bold text-on-primary disabled:opacity-60"
             >
               <LogIn size={16} /> Sign in
             </button>
-            <p className="mt-3 text-center text-xs text-muted">Try ari.driver@example.local</p>
+            {loadError && <button onClick={() => { void load().catch(() => {}) }} className="mt-3 w-full text-sm text-link">Try again</button>}
             <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} className="mt-4 w-full text-center text-xs font-semibold text-link">
               Toggle theme
             </button>
@@ -191,7 +163,7 @@ export default function DriverPortal(props: Props) {
             <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="ml-auto grid h-10 w-10 place-items-center rounded-full text-heading">
               {th === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button onClick={logout} className="hidden text-xs font-semibold text-muted hover:text-heading sm:inline">Sign out</button>
+            <button onClick={logout} className="text-xs font-semibold text-muted hover:text-heading">Sign out</button>
           </div>
         </header>
 
@@ -199,9 +171,10 @@ export default function DriverPortal(props: Props) {
           {tab === 'today' ? (
             <div className="mx-auto max-w-xl p-4 sm:p-6 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-x-12 lg:p-8">
               <div>
-                <p className="text-sm text-muted">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {driver.displayName}</p>
+                <p className="text-sm text-muted">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Atlantic/Reykjavik' })} · {driver.displayName}</p>
                 <h1 className="font-display text-2xl font-bold text-heading lg:text-3xl">Next pickup</h1>
-                <MessageAlertControl className="mt-3" />
+                <p className="mt-1 text-sm text-muted">{driver.status} · Times in Iceland</p><MessageAlertControl className="mt-3" /><DriverProfile driver={driver} onSaved={load} />
+                {loadError && <p role="alert" className="mt-3 text-sm text-error">{loadError} <button onClick={() => { void load().catch(() => {}) }} className="underline">Refresh</button></p>}
                 {msg && <p className="mt-2 text-sm text-error">{msg}</p>}
 
                 {!primary ? (
@@ -221,7 +194,7 @@ export default function DriverPortal(props: Props) {
                         <p className="font-display text-4xl font-extrabold tabular-nums">{primary.time}</p>
                         <p className="font-mono text-xs text-white/70">{primary.ref}</p>
                       </div>
-                      <p className="mt-1 text-sm text-white/80">{primary.service} · {primary.vehicle}{primary.plate ? ` · ${primary.plate}` : ''}</p>
+                      <p className="mt-1 text-sm text-white/80">{primary.dateLabel} · {primary.service} · {primary.vehicle}{primary.plate ? ` · ${primary.plate}` : ''}</p>
                     </div>
                     <div className="space-y-4 p-5">
                       <div className="flex gap-3">
@@ -296,7 +269,7 @@ export default function DriverPortal(props: Props) {
                       {primary.nextAction && (
                         <button
                           disabled={busy}
-                          onClick={() => advance(primary.ref)}
+                          onClick={() => advance(primary)}
                           className="hidden w-full rounded-2xl bg-primary py-4 text-base font-bold text-on-primary transition-transform duration-150 active:scale-[0.98] disabled:opacity-60 lg:block"
                         >
                           {primary.nextAction}
@@ -308,19 +281,20 @@ export default function DriverPortal(props: Props) {
               </div>
 
               <div className="lg:pt-12">
-                <h2 className="mt-8 font-display text-base font-bold text-heading lg:mt-0">Later today</h2>
+                <h2 className="mt-8 font-display text-base font-bold text-heading lg:mt-0">Other assigned journeys</h2>
                 <ul className="mt-3 divide-y divide-line border-y border-line">
                   {later.map((u) => (
-                    <li key={u.ref} className="flex items-center gap-4 py-3.5">
+                    <li key={u.ref}><button onClick={() => setSelected(u.ref)} className="flex w-full items-center gap-4 py-3.5 text-left">
                       <p className="w-12 font-display font-bold tabular-nums text-heading">{u.time}</p>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-heading">{u.route}</p>
-                        <p className="text-xs text-muted">{u.pax} pax · {u.vehicle} · {u.statusLabel}</p>
+                        <p className="text-xs text-muted">{u.dateLabel} · {u.pax} pax · {u.vehicle} · {u.statusLabel}</p>
                       </div>
-                    </li>
+                    </button></li>
                   ))}
-                  {later.length === 0 && <li className="py-6 text-center text-sm text-muted">No further jobs today.</li>}
+                  {later.length === 0 && <li className="py-6 text-center text-sm text-muted">No other assigned journeys.</li>}
                 </ul>
+                <div className="mt-6"><CustomerMessages trips={[...jobs, ...history].map(j => ({ ref: j.ref, routeLabel: j.route }))} audience="driver" driverConversation /></div>
               </div>
             </div>
           ) : (
@@ -330,10 +304,10 @@ export default function DriverPortal(props: Props) {
                 {history.map((j) => (
                   <li key={j.ref} className="py-3.5">
                     <p className="text-sm font-semibold text-heading">{j.route}</p>
-                    <p className="text-xs text-muted">{j.dateLabel} · <span className="font-mono">{j.ref}</span> · Completed</p>
+                    <p className="text-xs text-muted">{j.dateLabel} · <span className="font-mono">{j.ref}</span> · {j.statusLabel}</p>
                   </li>
                 ))}
-                {history.length === 0 && <li className="py-8 text-center text-sm text-muted">No completed journeys yet.</li>}
+                {history.length === 0 && <li className="py-8 text-center text-sm text-muted">No past journeys yet.</li>}
               </ul>
             </div>
           )}
@@ -343,7 +317,7 @@ export default function DriverPortal(props: Props) {
           <div className="absolute inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] mx-auto max-w-xl px-4 pb-3 sm:px-6 lg:hidden">
             <button
               disabled={busy}
-              onClick={() => advance(primary.ref)}
+              onClick={() => advance(primary)}
               className="w-full rounded-2xl bg-primary py-4 text-base font-bold text-on-primary transition-transform duration-150 active:scale-[0.98] disabled:opacity-60"
             >
               {primary.nextAction}
@@ -362,4 +336,32 @@ export default function DriverPortal(props: Props) {
       </div>
     </div>
   )
+}
+
+function DriverProfile({ driver, onSaved }: { driver: DriverInfo; onSaved: () => Promise<void> }) {
+  const [name, setName] = useState(driver.displayName)
+  const [phone, setPhone] = useState(driver.phone || '')
+  const [status, setStatus] = useState(driver.status)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  useEffect(() => { setStatus(driver.status) }, [driver.status])
+  return <details className="mt-4 rounded-xl border border-line bg-surface p-4"><summary className="cursor-pointer text-sm font-semibold text-heading">My account & availability</summary><form className="mt-4 space-y-3" onSubmit={async e => {
+    e.preventDefault(); if (saving) return
+    setSaving(true); setMessage('')
+    try {
+      const response = await fetch('/api/driver/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName: name, phone, ...(status !== driver.status ? { status } : {}) }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.message || 'Could not save your account.')
+      setMessage('Account saved.'); await onSaved()
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not save your account.') }
+    finally { setSaving(false) }
+  }}>
+    <p className="break-all text-sm text-muted">{driver.email}</p>
+    <label className="block text-sm">Name<input required maxLength={100} value={name} onChange={e => setName(e.target.value)} className="mt-1 block w-full rounded-lg border border-line bg-input p-2 text-heading" /></label>
+    <label className="block text-sm">Phone<input type="tel" maxLength={30} value={phone} onChange={e => setPhone(e.target.value)} className="mt-1 block w-full rounded-lg border border-line bg-input p-2 text-heading" /></label>
+    <label className="block text-sm">Availability<select value={status} disabled={driver.status === 'On trip'} onChange={e => setStatus(e.target.value)} className="mt-1 block w-full rounded-lg border border-line bg-input p-2 text-heading">{driver.status === 'On trip' && <option>On trip</option>}<option>Available</option><option>Unavailable</option></select></label>
+    <p className="text-xs text-muted">Your assigned journeys remain visible when you are unavailable. Contact operations to change an assignment.</p>
+    <button disabled={saving} className="rounded-xl bg-primary px-4 py-2 font-semibold text-on-primary disabled:opacity-50">{saving ? 'Saving…' : 'Save account'}</button>
+    {message && <p role="status" className="text-sm">{message}</p>}
+  </form></details>
 }

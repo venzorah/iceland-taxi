@@ -1,7 +1,10 @@
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { DRIVERS } from '@/lib/design/opsData'
-import { jsonOk, prisma, withDb } from '@/lib/api'
+import { apiHandler, jsonOk, prisma, withDb } from '@/lib/api'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('bookings')
+  if (blocked) return blocked
   const data = await withDb(
     async () => {
       const drivers = await prisma.driver.findMany({
@@ -18,3 +21,5 @@ export async function GET() {
   )
   return jsonOk({ ok: true, ...data })
 }
+
+export const GET = apiHandler(handleGET)

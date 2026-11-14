@@ -1,5 +1,6 @@
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { getDemoStaff } from '@/lib/auth/demo'
 import { whatsappCloudCredentials } from '@/lib/env'
 import { ensureOfficialWhatsApp } from '@/lib/company-whatsapp'
@@ -10,7 +11,9 @@ const patchSchema = z.object({
   all: z.boolean().optional(),
 })
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('notifications')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const staff = await getDemoStaff()
   if (!staff) return jsonError(401, 'UNAUTHORIZED', 'Staff session required')
@@ -42,7 +45,9 @@ export async function GET() {
   })
 }
 
-export async function PATCH(req: Request) {
+async function handlePATCH(req: Request) {
+  const blocked = await rejectDriverOnly('notifications')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const staff = await getDemoStaff()
   if (!staff) return jsonError(401, 'UNAUTHORIZED', 'Staff session required')
@@ -56,3 +61,6 @@ export async function PATCH(req: Request) {
   }
   return jsonOk({ ok: true })
 }
+
+export const GET = apiHandler(handleGET)
+export const PATCH = apiHandler(handlePATCH)

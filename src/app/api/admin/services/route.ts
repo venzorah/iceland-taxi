@@ -1,9 +1,11 @@
 import { ServiceKind } from '@prisma/client'
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('services')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const services = await prisma.service.findMany({ orderBy: { sortOrder: 'asc' } })
   return jsonOk({ ok: true, services })
@@ -23,8 +25,8 @@ const createSchema = z.object({
   sortOrder: z.number().int().optional(),
 })
 
-export async function POST(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePOST(req: Request) {
+  const blocked = await rejectDriverOnly('services')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = await req.json().catch(() => null)
@@ -33,3 +35,6 @@ export async function POST(req: Request) {
   const service = await prisma.service.create({ data: parsed.data })
   return jsonOk({ ok: true, service }, { status: 201 })
 }
+
+export const GET = apiHandler(handleGET)
+export const POST = apiHandler(handlePOST)

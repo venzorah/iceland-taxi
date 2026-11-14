@@ -1,11 +1,13 @@
 import { z } from 'zod'
 
 import { slugify } from '@/lib/admin/content'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { listEditorial } from '@/lib/content/editorial-store'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('editorial')
+  if (blocked) return blocked
   const posts = await listEditorial()
   return jsonOk({ ok: true, posts })
 }
@@ -23,8 +25,8 @@ const createSchema = z.object({
   published: z.boolean().optional(),
 })
 
-export async function POST(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePOST(req: Request) {
+  const blocked = await rejectDriverOnly('editorial')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
@@ -58,3 +60,6 @@ export async function POST(req: Request) {
   })
   return jsonOk({ ok: true, post }, { status: 201 })
 }
+
+export const GET = apiHandler(handleGET)
+export const POST = apiHandler(handlePOST)

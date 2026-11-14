@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ChevronLeft, ChevronRight, Menu, Moon, Sun, UserRound } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Menu, Moon, Sun } from 'lucide-react'
 
 import { AnnouncementBar } from '@/components/site/AnnouncementBar'
-import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
+import { AccountNavigation } from '@/components/site/AccountNavigation'
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { ANNOUNCEMENTS_SEED, visibleAnnouncements, type AnnouncementState } from '@/lib/design/announcements'
 import { LOGO_DARK, LOGO_LIGHT, type Currency } from '@/lib/design/data'
@@ -28,7 +28,7 @@ type Props = {
   announcements?: AnnouncementState
 }
 
-export function SiteHeader({ theme, language, currency, onThemeChange, onLanguageChange, onCurrencyChange, onBook, onHome, onSignIn, mobileTitle, onMobileBack, announcements = ANNOUNCEMENTS_SEED }: Props) {
+export function SiteHeader({ theme, language, currency, onThemeChange, onLanguageChange, onCurrencyChange, onBook, onHome, mobileTitle, onMobileBack, announcements = ANNOUNCEMENTS_SEED }: Props) {
   const [open, setOpen] = useState(false)
   const hasBar = visibleAnnouncements(announcements).length > 0
   const nav = HEADER_NAV.map((item) => ({ label: t(language, item.i18n), href: item.href }))
@@ -91,9 +91,7 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <button onClick={onSignIn} className="hidden whitespace-nowrap px-2 text-sm font-semibold text-heading lg:block">
-            {t(language, 'signIn')}
-          </button>
+          <div className="hidden lg:block"><AccountNavigation language={language} /></div>
           <button
             onClick={onBook}
             className="hidden whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover md:block"
@@ -132,19 +130,8 @@ export function SiteHeader({ theme, language, currency, onThemeChange, onLanguag
           onChange={(v) => onCurrencyChange?.(v as Currency)}
         />
 
-        <div className="mt-6">
-          <DemoPortalButtons />
-        </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            onClick={() => {
-              setOpen(false)
-              onSignIn?.()
-            }}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-line py-3.5 text-sm font-semibold text-heading active:bg-surface"
-          >
-            <UserRound size={17} /> {t(language, 'signIn')}
-          </button>
+          <AccountNavigation language={language} mobile />
           <button
             onClick={() => {
               setOpen(false)

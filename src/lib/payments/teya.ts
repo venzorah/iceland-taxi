@@ -101,7 +101,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
           ? input.depositAmount
           : input.amount
       const minor = toTeyaMinorUnits(chargeAmount, input.currency)
-      const idempotencyKey = `itb-${input.bookingRef}-${Date.now()}`
+      const idempotencyKey = input.idempotencyKey || `itb-${input.bookingRef}`
       const description = input.description || 'Iceland Taxi Booking'
 
       const payload: Record<string, unknown> = {

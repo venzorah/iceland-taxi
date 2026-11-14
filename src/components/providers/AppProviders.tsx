@@ -3,6 +3,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { useSiteSession } from './SessionProvider'
+import { SessionProvider } from './SessionProvider'
+
 import { MessageAlerts } from '@/components/alerts/MessageAlerts'
 import { InstallPrompt } from '@/components/site/InstallPrompt'
 import { WelcomeSplash } from '@/components/site/WelcomeSplash'
@@ -58,7 +61,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/admin/theme')
+    fetch('/api/appearance')
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled && data?.appearance?.defaultLang === 'is') setLanguage('is')
@@ -94,10 +97,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={value}>
+      <SessionProvider>
+      <CustomerPreferencesSync />
       <WelcomeSplash />
       <InstallPrompt />
       <MessageAlerts />
       {children}
+      </SessionProvider>
     </AppContext.Provider>
   )
 }
@@ -106,4 +112,27 @@ export function useAppPrefs() {
   const ctx = useContext(AppContext)
   if (!ctx) throw new Error('useAppPrefs must be used within AppProviders')
   return ctx
+}
+
+function CustomerPreferencesSync() {
+  const { user } = useSiteSession()
+  const { setCurrency, setLanguage, setCustomerCategory } = useAppPrefs()
+  useEffect(() => {
+    if (user?.role !== 'CUSTOMER') return
+    const controller = new AbortController()
+    const load = async () => {
+      try {
+        const response = await fetch('/api/account/profile', { signal: controller.signal, cache: 'no-store' })
+        const data = await response.json()
+        if (!response.ok || !data.profile || controller.signal.aborted) return
+        setCurrency(data.profile.preferredCurrency === 'ISK' ? 'ISK' : 'EUR')
+        setLanguage(data.profile.preferredLang === 'is' ? 'is' : 'en')
+        setCustomerCategory(data.profile.category === 'RESIDENT' ? 'resident' : 'international')
+      } catch { /* The profile screen reports errors and allows retrying. */ }
+    }
+    void load()
+    window.addEventListener('itb-profile-updated', load)
+    return () => { controller.abort(); window.removeEventListener('itb-profile-updated', load) }
+  }, [user?.id, user?.role, setCurrency, setLanguage, setCustomerCategory])
+  return null
 }

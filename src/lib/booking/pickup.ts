@@ -2,7 +2,7 @@
 
 export const PICKUP_TIME_ZONE = 'Atlantic/Reykjavik'
 
-export const PICKUP_LOCKED_STATUSES = ['COMPLETED', 'CANCELLED'] as const
+export const PICKUP_LOCKED_STATUSES = ['COMPLETED', 'CANCELLED', 'REFUND_REQUESTED', 'REFUNDED', 'DRIVER_EN_ROUTE', 'IN_PROGRESS'] as const
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/
@@ -152,4 +152,10 @@ export function customerPickupView(booking: {
     pickupLabel: booking.pickupAt ? formatPickupLabel(booking.pickupAt) : 'Schedule to be confirmed',
     canEditPickup: canEditPickup(booking.status),
   }
+}
+
+/** Use the saved occupied window; return-trip duration must not double on each edit. */
+export function existingPickupDuration(booking: { pickupAt: Date | null; endsAt: Date | null; durationMinutes: number | null; extras: unknown }) {
+  if (booking.pickupAt && booking.endsAt && booking.endsAt > booking.pickupAt) return Math.max(1, Math.round((booking.endsAt.getTime() - booking.pickupAt.getTime()) / 60000))
+  return Math.max(1, booking.durationMinutes || 60) * (returnTripFromExtras(booking.extras) ? 2 : 1)
 }

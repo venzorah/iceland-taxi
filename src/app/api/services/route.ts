@@ -1,7 +1,7 @@
 import { AIRPORT_ROUTES, FLEET, TOURS, DESTINATIONS, FAQS, SERVICE_CATEGORIES } from '@/lib/design/data'
-import { jsonOk, withDb, prisma } from '@/lib/api'
+import { apiHandler, jsonOk, withDb, prisma } from '@/lib/api'
 
-export async function GET() {
+async function handleGET() {
   const data = await withDb(
     async () => {
       const [services, routes, destinations, faqs, vehicles] = await Promise.all([
@@ -51,3 +51,5 @@ export async function GET() {
 
   return jsonOk({ ok: true, ...data })
 }
+
+export const GET = apiHandler(handleGET)

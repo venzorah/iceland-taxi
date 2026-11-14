@@ -108,7 +108,7 @@ export default function PrivateDriver(props: Props) {
                   <p className="text-sm text-muted">{listing.hoursLabel || 'Fixed price'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-display text-lg font-bold text-heading">{formatPrice(listing.fromIsk, p.currency)}</p>
+                  <p className="font-display text-lg font-bold text-heading">{formatPrice(listing.fromIsk, p.currency, listing.iskPerEur)}</p>
                   <button onClick={() => router.push(`/book?listing=${encodeURIComponent(listing.id)}&kind=service`)} className="text-sm font-bold text-link">Book</button>
                 </div>
               </li>

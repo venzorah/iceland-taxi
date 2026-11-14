@@ -23,6 +23,9 @@ export type OpsBooking = {
   pax: number
   vehicle: string
   driver: string | null
+  driverId?: string | null
+  notes?: string | null
+  pickupAt?: string | null
   amount: number
   currency: 'USD' | 'ISK' | 'EUR'
   status: BookingStatus

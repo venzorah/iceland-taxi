@@ -4,9 +4,10 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { MessageCircle, Search, Send } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
+import { CustomerMessages } from '@/components/customer/CustomerMessages'
 import { ReadBadge } from '@/components/messages/ReadBadge'
 import { rememberAlertAudience } from '@/lib/alerts/client'
-import { markThreadOpen } from '@/lib/messaging/read-state'
+import { useLivePolling } from '@/lib/polling/use-live-polling'
 import { staffMessageNotice, whatsappHref } from '@/lib/whatsapp'
 
 type Thread = {
@@ -30,73 +31,52 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [active, setActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
+  const [driverChat, setDriverChat] = useState(false)
   const [draft, setDraft] = useState('')
   const [q, setQ] = useState('')
   const [waNumber, setWaNumber] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [openRef, setOpenRef] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
   useArmMessageSoundOnPointer()
 
-  const loadThreads = useCallback(async () => {
-    await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
-    const [list, company] = await Promise.all([
-      fetch('/api/messages?as=staff').then((r) => r.json()),
-      fetch('/api/company').then((r) => r.json()),
-    ])
-    setThreads(markThreadOpen(list.threads || [], openRef))
-    setWaNumber(company.company?.whatsappE164 || null)
-  }, [openRef])
-
-  const loadThread = useCallback(async (ref: string) => {
-    await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
-    const data = await fetch(`/api/messages/${ref}?as=staff`).then((r) => r.json())
-    if (!data.ok) {
-      setErr(data.message || 'Failed to load')
-      setOpenRef(null)
-      return
-    }
-    setMessages(data.messages || [])
-    setOpenRef(ref)
-    setThreads((prev) => markThreadOpen(prev, ref))
-    setErr(null)
+  const loadThreads = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const [response, companyResponse] = await Promise.all([fetch('/api/messages?as=staff', { signal, cache: 'no-store' }), fetch('/api/company', { signal })])
+      const [list, company] = await Promise.all([response.json(), companyResponse.json()])
+      if (!response.ok || !list.ok) throw new Error(list.message || 'Could not load conversations.')
+      if (signal?.aborted) return
+      setThreads(list.threads); setActive(current => current || list.threads[0]?.ref || null)
+      setWaNumber(company.company?.whatsappE164 || null)
+    } catch (error) { if (!signal?.aborted) setErr(error instanceof Error ? error.message : 'Could not load conversations.'); throw error }
   }, [])
-
-  useEffect(() => {
-    rememberAlertAudience('staff')
-    loadThreads()
-    const timer = setInterval(loadThreads, 8000)
-    return () => clearInterval(timer)
-  }, [loadThreads])
-
-  useEffect(() => {
-    if (focusRef) setActive(focusRef)
-  }, [focusRef])
-
-  useEffect(() => {
-    if (!active) return
-    loadThread(active)
-    const t = setInterval(() => loadThread(active), 4000)
-    return () => clearInterval(t)
-  }, [active, loadThread])
+  const loadThread = useCallback(async (ref: string, signal?: AbortSignal) => {
+    try {
+      const response = await fetch(`/api/messages/${encodeURIComponent(ref)}?as=staff`, { signal, cache: 'no-store' })
+      const data = await response.json()
+      if (!response.ok || !data.ok) throw new Error(data.message || 'Could not load messages.')
+      if (!signal?.aborted) { setMessages(data.messages); setErr(null) }
+    } catch (error) { if (!signal?.aborted) setErr(error instanceof Error ? error.message : 'Could not load messages.'); throw error }
+  }, [])
+  useEffect(() => { rememberAlertAudience('staff') }, [])
+  useLivePolling(loadThreads, true, 30000)
+  useEffect(() => { if (focusRef) setActive(focusRef) }, [focusRef])
+  useEffect(() => { setMessages([]); setDraft(''); setErr(null) }, [active, driverChat])
+  const pollThread = useCallback(async (signal: AbortSignal) => { if (active) await loadThread(active, signal) }, [active, loadThread])
+  useLivePolling(pollThread, !!active && !driverChat, 10000)
 
   const send = async () => {
-    if (!active || !draft.trim()) return
-    const res = await fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ bookingRef: active, body: draft.trim(), as: 'staff' }),
-    })
-    const data = await res.json()
-    if (!res.ok || !data.ok) {
-      setErr(data.message || 'Send failed')
-      return
-    }
-    setDraft('')
-    await loadThread(active)
-    await loadThreads()
+    if (!active || !draft.trim() || sending) return
+    setSending(true)
+    try {
+      const response = await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ bookingRef:active, body:draft.trim(), as:'staff' }) })
+      const data = await response.json()
+      if (!response.ok || !data.ok) throw new Error(data.message || 'Message was not sent.')
+      setDraft(''); await loadThread(active); await loadThreads()
+    } catch(error) { setErr(error instanceof Error ? error.message : 'Message was not sent.') }
+    finally { setSending(false) }
   }
 
-  const thread = threads.find((t) => t.ref === active) || threads[0]
+  const thread = threads.find((t) => t.ref === active)
   const filtered = threads.filter(
     (t) => !q || t.customer.toLowerCase().includes(q.toLowerCase()) || t.ref.toLowerCase().includes(q.toLowerCase()),
   )
@@ -136,6 +116,7 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
       </div>
 
       <div className="flex min-h-[420px] flex-col bg-bg lg:min-h-0">
+        {err && <p role="alert" className="p-4 text-sm text-error">{err}</p>}
         {thread ? (
           <>
             <div className="flex items-center justify-between border-b border-line px-5 py-4">
@@ -153,6 +134,8 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
                 </button>
               )}
             </div>
+            <div className="flex gap-2 border-b border-line px-5 py-2"><button onClick={() => setDriverChat(false)} aria-pressed={!driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Customer</button><button onClick={() => setDriverChat(true)} aria-pressed={driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Assigned driver</button></div>
+            {driverChat ? <CustomerMessages key={thread.ref} trips={[{ ref: thread.ref, routeLabel: 'Driver conversation' }]} audience="staff" driverConversation /> : <>
             <div className="flex-1 space-y-3 overflow-y-auto bg-surface p-5">
               {messages.map((m) => (
                 <div
@@ -175,10 +158,11 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
                 placeholder="Reply…"
                 className="flex-1 rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm outline-none focus:border-focus"
               />
-              <button onClick={send} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-on-primary">
+              <button disabled={sending || !draft.trim()} onClick={send} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-on-primary">
                 <Send size={16} />
               </button>
             </div>
+            </>}
           </>
         ) : (
           <div className="grid flex-1 place-items-center text-sm text-muted">Select a conversation</div>

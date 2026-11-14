@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { ownsBooking, customerBookingsWhere } from '@/lib/customer/ownership'
 import { chatAuthorName, staffInboxWhere, threadReadState } from '@/lib/messaging/read-state'
 import { notifyStaffWhatsApp } from '@/lib/messaging/whatsapp-notify'
 
@@ -9,6 +10,7 @@ export type MessageActor =
 export async function listThreads(opts: {
   role: 'staff' | 'customer'
   guestEmail?: string | null
+  customerId?: string | null
 }) {
   if (opts.role === 'customer' && !opts.guestEmail) return []
 
@@ -17,12 +19,11 @@ export async function listThreads(opts: {
       opts.role === 'staff'
         ? staffInboxWhere()
         : {
-            guestEmail: { equals: opts.guestEmail!, mode: 'insensitive' },
-            messages: { some: {} },
+            ...customerBookingsWhere({ id: opts.customerId || '', email: opts.guestEmail!, role: 'CUSTOMER' }),
           },
     include: {
-      messages: { orderBy: { createdAt: 'desc' }, take: 1 },
-      _count: { select: { messages: true } },
+      messages: { where: opts.role === 'staff' ? {} : { channel: { not: 'driver_ops' } }, orderBy: { createdAt: 'desc' }, take: 1 },
+      _count: { select: { messages: { where: opts.role === 'staff' ? {} : { channel: { not: 'driver_ops' } } } } },
     },
     orderBy: { updatedAt: 'desc' },
     take: 50,
@@ -35,7 +36,7 @@ export async function listThreads(opts: {
         where: {
           bookingId: { in: ids },
           unread: true,
-          authorRole: opts.role === 'staff' ? 'customer' : 'staff',
+          ...(opts.role === 'staff' ? { authorRole: { in: ['customer', 'driver'] } } : { channel: { not: 'driver_ops' }, authorRole: 'staff' }),
         },
         _count: { _all: true },
       })
@@ -94,6 +95,7 @@ export async function getThreadMessages(bookingRef: string) {
     where: { ref: bookingRef },
     include: {
       messages: {
+        where: { channel: { not: 'driver_ops' } },
         orderBy: { createdAt: 'asc' },
         include: { author: { select: { name: true, email: true, role: true } } },
       },
@@ -126,12 +128,12 @@ export async function postMessage(opts: {
   body: string
   actor: MessageActor
 }) {
-  const booking = await prisma.booking.findUnique({ where: { ref: opts.bookingRef } })
+  const booking = await prisma.booking.findUnique({ where: { ref: opts.bookingRef }, include: { customer: { select: { email: true } } } })
   if (!booking) return { ok: false as const, code: 'NOT_FOUND' as const, message: 'Booking not found' }
 
   if (opts.actor.kind === 'customer') {
     const email = opts.actor.email.toLowerCase()
-    if (!booking.guestEmail || booking.guestEmail.toLowerCase() !== email) {
+    if (!ownsBooking({ id: opts.actor.userId || '', email, role: 'CUSTOMER' }, booking)) {
       return { ok: false as const, code: 'FORBIDDEN' as const, message: 'Email does not match this booking' }
     }
   }
@@ -156,7 +158,7 @@ export async function postMessage(opts: {
     bookingRef: booking.ref,
     messageId: message.id,
     authorRole: message.authorRole,
-    guestEmail: booking.guestEmail,
+    guestEmail: booking.customer?.email || booking.guestEmail,
     driverId: booking.driverId,
   }).catch(() => {})
 
@@ -179,6 +181,7 @@ export async function listMessageAlerts(viewer: {
   staff: boolean
   guestEmail: string | null
   driverId: string | null
+  customerId?: string | null
 }) {
   const roles: string[] = []
   const items = new Map<string, MessageAlertItem>()
@@ -191,7 +194,7 @@ export async function listMessageAlerts(viewer: {
   if (viewer.staff) {
     roles.push('staff')
     const rows = await prisma.message.findMany({
-      where: { unread: true, authorRole: 'customer', bookingId: { not: null } },
+      where: { unread: true, authorRole: { in: ['customer', 'driver'] }, bookingId: { not: null } },
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: { id: true, booking: { select: { ref: true } } },
@@ -205,7 +208,8 @@ export async function listMessageAlerts(viewer: {
       where: {
         unread: true,
         authorRole: 'staff',
-        booking: { guestEmail: { equals: viewer.guestEmail, mode: 'insensitive' } },
+        channel: { not: 'driver_ops' },
+        booking: customerBookingsWhere({ id: viewer.customerId || '', email: viewer.guestEmail, role: 'CUSTOMER' }),
       },
       orderBy: { createdAt: 'desc' },
       take: 20,
@@ -217,7 +221,7 @@ export async function listMessageAlerts(viewer: {
   if (viewer.driverId) {
     roles.push('driver')
     const rows = await prisma.message.findMany({
-      where: { unread: true, booking: { driverId: viewer.driverId } },
+      where: { unread: true, channel: 'driver_ops', authorRole: 'staff', booking: { driverId: viewer.driverId } },
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: { id: true, booking: { select: { ref: true } } },
@@ -235,6 +239,7 @@ export async function markThreadRead(bookingRef: string, reader: 'staff' | 'cust
     where: {
       bookingId: booking.id,
       unread: true,
+      channel: { not: 'driver_ops' },
       authorRole: reader === 'staff' ? 'customer' : 'staff',
     },
     data: { unread: false },

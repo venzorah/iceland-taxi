@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 const createSchema = z.object({
@@ -11,8 +11,8 @@ const createSchema = z.object({
 
 const patchSchema = createSchema.partial().extend({ email: z.string().email() })
 
-export async function POST(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePOST(req: Request) {
+  const blocked = await rejectDriverOnly('customers')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
@@ -38,8 +38,8 @@ export async function POST(req: Request) {
   return jsonOk({ ok: true, customer }, { status: 201 })
 }
 
-export async function PATCH(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePATCH(req: Request) {
+  const blocked = await rejectDriverOnly('customers')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
@@ -74,3 +74,6 @@ export async function PATCH(req: Request) {
   }
   return jsonOk({ ok: true, customer })
 }
+
+export const POST = apiHandler(handlePOST)
+export const PATCH = apiHandler(handlePATCH)

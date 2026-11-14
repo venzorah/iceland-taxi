@@ -1,12 +1,14 @@
 import { BookingStatus } from '@prisma/client'
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { toOpsBooking, updateBookingStatus } from '@/lib/booking/service'
 
 type Ctx = { params: Promise<{ ref: string }> }
 
-export async function GET(_req: Request, ctx: Ctx) {
+async function handleGET(_req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly('bookings')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
   }
@@ -21,6 +23,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 
 const patchSchema = z.object({
   status: z.nativeEnum(BookingStatus).optional(),
+  expectedStatus: z.nativeEnum(BookingStatus),
   driverId: z.string().nullable().optional(),
   vehicleId: z.string().nullable().optional(),
   vehicleLabel: z.string().nullable().optional(),
@@ -28,8 +31,8 @@ const patchSchema = z.object({
   pickupAddress: z.string().nullable().optional(),
 })
 
-export async function PATCH(req: Request, ctx: Ctx) {
-  const blocked = await rejectDriverOnly()
+async function handlePATCH(req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly('bookings')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
@@ -51,22 +54,16 @@ export async function PATCH(req: Request, ctx: Ctx) {
   return jsonOk({ ok: true, booking: result.booking, ops: toOpsBooking(result.booking) })
 }
 
-export async function DELETE(_req: Request, ctx: Ctx) {
-  const blocked = await rejectDriverOnly()
+async function handleDELETE(_req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly('bookings')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
   }
-  const { ref } = await ctx.params
-  const booking = await prisma.booking.findUnique({ where: { ref } })
-  if (!booking) return jsonError(404, 'NOT_FOUND', 'Booking not found')
-  try {
-    const { notifyBookingDeleted } = await import('@/lib/email/notices')
-    await notifyBookingDeleted(booking)
-  } catch (error) {
-    console.error(error)
-  }
-  await prisma.message.deleteMany({ where: { bookingId: booking.id } })
-  await prisma.booking.delete({ where: { id: booking.id } })
-  return jsonOk({ ok: true, deleted: ref })
+  await ctx.params
+  return jsonError(409, 'BOOKING_HISTORY_REQUIRED', 'Cancel the booking instead. Booking and payment history must be retained.')
 }
+
+export const GET = apiHandler(handleGET)
+export const PATCH = apiHandler(handlePATCH)
+export const DELETE = apiHandler(handleDELETE)

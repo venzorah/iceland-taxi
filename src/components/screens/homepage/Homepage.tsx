@@ -93,7 +93,7 @@ export default function Homepage(props: Props) {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted">Price</p>
-                      <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur)}</p>
+                      <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p>
                     </div>
                   </li>
                 ))}
@@ -133,7 +133,7 @@ export default function Homepage(props: Props) {
                     <div className="mt-auto flex items-end justify-between pt-6">
                       <div>
                         <p className="text-xs text-muted">Price</p>
-                        <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur)}</p>
+                        <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
                       </div>
                       <button onClick={() => onSearch?.({ category: 'tour', pickup: tour.title, destination: tour.title, listingId: tour.id, listingKind: 'service', date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
                         Book tour

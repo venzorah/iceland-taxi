@@ -553,7 +553,6 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
   useEffect(() => {
     let alive = true
     const load = async () => {
-      await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
       const [data, company] = await Promise.all([
         fetch('/api/messages?as=staff').then((r) => r.json()),
         fetch('/api/company').then((r) => r.json()).catch(() => null),
@@ -577,7 +576,6 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
     }
     let alive = true
     const load = async () => {
-      await fetch('/api/auth/demo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ role: 'staff' }) })
       const data = await fetch(`/api/messages/${chat}?as=staff`).then((r) => r.json())
       if (!alive) return
       if (data.ok) {

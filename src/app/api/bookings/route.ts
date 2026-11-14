@@ -1,5 +1,8 @@
+import { getCurrentUser } from '@/lib/auth/session'
+import { grantGuestBookingAccess } from '@/lib/customer/booking-access'
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma, withDb } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma, withDb } from '@/lib/api'
 import { createBooking, toOpsBooking } from '@/lib/booking/service'
 import { TODAY_BOOKINGS } from '@/lib/design/opsData'
 
@@ -54,7 +57,9 @@ const createSchema = z.object({
   awaitPaymentWithoutGateway: z.boolean().optional().default(true),
 })
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
+  const blocked = await rejectDriverOnly('bookings')
+  if (blocked) return blocked
   const url = new URL(req.url)
   const email = url.searchParams.get('email') || undefined
   const ref = url.searchParams.get('ref') || undefined
@@ -86,7 +91,7 @@ export async function GET(req: Request) {
   return jsonOk({ ok: true, ...data })
 }
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null)
   const parsed = createSchema.safeParse(body)
   if (!parsed.success) {
@@ -97,9 +102,14 @@ export async function POST(req: Request) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required to create bookings')
   }
 
+  const user = await getCurrentUser()
+  if (user?.role !== 'CUSTOMER' && (process.env.BOOKING_ACCESS_SECRET?.length || 0) < 32) return jsonError(503, 'BOOKING_ACCESS_NOT_CONFIGURED', 'Guest booking is temporarily unavailable.')
+  if (parsed.data.driverId) { const blocked = await rejectDriverOnly('bookings'); if (blocked) return blocked }
   try {
     const result = await createBooking({
       ...parsed.data,
+      customerId: user?.role === 'CUSTOMER' ? user.id : undefined,
+      guestEmail: user?.role === 'CUSTOMER' ? user.email : parsed.data.guestEmail,
       serviceLabel: parsed.data.serviceLabel || 'Published listing',
       routeLabel: parsed.data.routeLabel || 'Published listing',
       quote: { ...parsed.data.quote, baseIsk: parsed.data.quote.baseIsk ?? 0 },
@@ -107,6 +117,7 @@ export async function POST(req: Request) {
     if (!result.ok) {
       return jsonError(409, result.code, result.message, 'conflicts' in result ? { conflicts: result.conflicts } : undefined)
     }
+    if (!user) await grantGuestBookingAccess(result.booking.id)
     return jsonOk(
       {
         ok: true,
@@ -122,3 +133,6 @@ export async function POST(req: Request) {
     return jsonError(503, 'DATABASE_ERROR', 'Could not create booking')
   }
 }
+
+export const GET = apiHandler(handleGET)
+export const POST = apiHandler(handlePOST)

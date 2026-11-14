@@ -36,8 +36,8 @@ const COPY: Record<PolicyId, { title: string; sections: { h: string; p: string }
   cancellation: {
     title: 'Cancellation policy',
     sections: [
-      { h: 'Before you pay', p: 'Cancellation windows and fees are shown per service at checkout. Free-cancellation cutoffs differ for airport transfers, tours and multi-day drivers.' },
-      { h: 'How to cancel', p: 'Use Manage booking or your account messages. WhatsApp deep links are available when you need a faster channel.' },
+      { h: 'Before you pay', p: 'Unpaid bookings can be cancelled before the trip starts. For paid bookings, submit a cancellation/refund request from your account for review. A request does not automatically issue a refund.' },
+      { h: 'How to cancel', p: 'Open My trips, choose the booking and use Cancel booking or Request cancellation / refund. For trips already en route, started or past pickup, contact our team.' },
       { h: 'No-shows', p: 'If the passenger is not present after the included waiting time and cannot be reached, the trip may be marked completed under the published no-show rules.' },
     ],
   },

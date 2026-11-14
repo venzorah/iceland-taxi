@@ -10,6 +10,7 @@ const ICELAND_TIME = 'Atlantic/Reykjavik'
 type LoadedBooking = NonNullable<Awaited<ReturnType<typeof loadBooking>>>
 
 const bookingInclude = {
+  customer: { select: { email: true } },
   driver: { include: { user: { select: { email: true, name: true } } } },
   vehicle: true,
 } as const
@@ -131,7 +132,7 @@ async function loadBooking(id: string) {
 async function sendToParties(booking: LoadedBooking, kind: string, subject: string, intro: string, includeDriver: boolean) {
   const text = `${intro}\n\n${bookingFacts(booking)}`
   const targets: { role: string; email: string | null }[] = [
-    { role: 'customer', email: booking.guestEmail },
+    { role: 'customer', email: booking.customer?.email || booking.guestEmail },
     ...(includeDriver ? [{ role: 'driver', email: booking.driver?.user.email || null }] : []),
   ]
   const admins = await adminEmails()

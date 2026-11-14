@@ -1,9 +1,11 @@
 import { z } from 'zod'
 
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('destinations')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const destinations = await prisma.destination.findMany({ orderBy: { sortOrder: 'asc' } })
   return jsonOk({ ok: true, destinations })
@@ -16,8 +18,8 @@ const createSchema = z.object({
   active: z.boolean().optional(),
 })
 
-export async function POST(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePOST(req: Request) {
+  const blocked = await rejectDriverOnly('destinations')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
@@ -34,3 +36,6 @@ export async function POST(req: Request) {
   })
   return jsonOk({ ok: true, destination }, { status: 201 })
 }
+
+export const GET = apiHandler(handleGET)
+export const POST = apiHandler(handlePOST)

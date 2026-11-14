@@ -15,6 +15,7 @@ export function HomePageClient() {
         destination: s.destination,
         date: s.date || '',
         time: s.time || '',
+        luggage: String(s.luggage),
         passengers: String(s.passengers),
       })
       prefs.go(`/book?${q.toString()}`)
@@ -26,6 +27,7 @@ export function HomePageClient() {
         kind: s.listingKind,
         date: s.date || '',
         time: s.time || '',
+        luggage: String(s.luggage),
         passengers: String(s.passengers),
       })
       prefs.go(`/book?${q.toString()}`)

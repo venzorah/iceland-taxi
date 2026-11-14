@@ -1,7 +1,10 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { CalendarClock, Home, MessageCircle, Plus, UserRound } from 'lucide-react'
+
+import Link from 'next/link'
+import { useSiteSession } from '@/components/providers/SessionProvider'
 
 import { AppTabBar } from '@/components/site/AppTabBar'
 import { BottomSheet } from '@/components/site/BottomSheet'
@@ -27,48 +30,13 @@ export function SiteTabBar({
   hidden?: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const [session, setSession] = useState<{ email: string; name: string | null } | null>(null)
-  const [email, setEmail] = useState('')
+  const { user: session, loading, accountHref, signOut: endSession } = useSiteSession()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-
-  const refresh = useCallback(async () => {
-    const data = await fetch('/api/auth/demo').then((r) => r.json()).catch(() => null)
-    if (data?.guestEmail) setSession({ email: data.guestEmail, name: data.guestName || null })
-    else setSession(null)
-  }, [])
-
-  useEffect(() => {
-    refresh()
-  }, [refresh])
-
-  const signIn = async () => {
-    setBusy(true)
-    setError('')
-    const res = await fetch('/api/auth/demo', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ role: 'guest', email: email.trim() }),
-    })
-    const data = await res.json().catch(() => null)
-    setBusy(false)
-    if (!res.ok || !data?.email) {
-      setError(data?.message || 'Could not sign in')
-      return
-    }
-    setSession({ email: data.email, name: data.name || null })
-    setEmail('')
-  }
-
   const signOut = async () => {
-    setBusy(true)
-    await fetch('/api/auth/demo', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ role: 'logout' }),
-    }).catch(() => null)
-    setSession(null)
-    setBusy(false)
+    setBusy(true); setError('')
+    try { await endSession() }
+    catch { setError('Could not sign out. Please try again.'); setBusy(false) }
   }
 
   return (
@@ -91,6 +59,7 @@ export function SiteTabBar({
         ]}
       />
       <BottomSheet open={open} onClose={() => setOpen(false)} title={t(language, 'profile')}>
+        {loading ? <p className="text-sm text-muted">Loading account…</p> : <>
         {session ? (
           <div className="space-y-4">
             <div className="rounded-2xl bg-surface px-4 py-4">
@@ -102,11 +71,11 @@ export function SiteTabBar({
               type="button"
               onClick={() => {
                 setOpen(false)
-                onTrips?.()
+                window.location.assign(accountHref)
               }}
               className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-navy text-sm font-bold text-white active:bg-navy-2 dark:bg-primary dark:text-on-primary"
             >
-              My trips
+              {session.role === 'CUSTOMER' ? 'My trips' : 'My account'}
             </button>
             <button
               type="button"
@@ -118,38 +87,13 @@ export function SiteTabBar({
             </button>
           </div>
         ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault()
-              signIn()
-            }}
-          >
-            <p className="text-sm leading-relaxed text-muted">{t(language, 'profileHint')}</p>
-            <label className="block">
-              <span className="text-xs font-semibold text-muted">{t(language, 'profileEmail')}</span>
-              <input
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="emma@example.local"
-                className="mt-1.5 min-h-12 w-full rounded-2xl border border-input-line bg-input px-4 text-base text-heading outline-none focus:border-focus"
-              />
-            </label>
-            {error && <p className="text-sm font-medium text-error">{error}</p>}
-            <button
-              type="submit"
-              disabled={busy}
-              className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary text-sm font-bold text-on-primary active:bg-primary-hover disabled:opacity-60"
-            >
-              {t(language, 'signIn')}
-            </button>
-            <p className="text-xs text-muted">Seeded demo: emma@example.local</p>
-          </form>
+          <div className="space-y-4">
+            <p className="text-sm leading-relaxed text-muted">Sign in to manage your account and trips.</p>
+            <Link href="/login" className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary text-sm font-bold text-on-primary">{t(language, 'signIn')}</Link>
+          </div>
         )}
+        {error && <p role="alert" className="mt-3 text-sm text-error">{error}</p>}
+        </>}
       </BottomSheet>
     </>
   )

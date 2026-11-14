@@ -1,7 +1,10 @@
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { enquiryFollowUp, type EnquiryChannelName } from '@/lib/booking/enquiry'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('enquiries')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   try {
     const rows = await prisma.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 200 })
@@ -23,3 +26,5 @@ export async function GET() {
     return jsonError(503, 'DATABASE_ERROR', 'Could not load enquiries')
   }
 }
+
+export const GET = apiHandler(handleGET)

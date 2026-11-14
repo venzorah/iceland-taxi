@@ -1,7 +1,10 @@
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { integrationConfigured, teyaCredentials } from '@/lib/env'
-import { jsonOk, prisma, withDb } from '@/lib/api'
+import { apiHandler, jsonOk, prisma, withDb } from '@/lib/api'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly()
+  if (blocked) return blocked
   const teya = teyaCredentials()
   const live = {
     teya: {
@@ -42,3 +45,5 @@ export async function GET() {
 
   return jsonOk({ ok: true, live, stored })
 }
+
+export const GET = apiHandler(handleGET)

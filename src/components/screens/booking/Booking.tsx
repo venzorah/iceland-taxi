@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Baby, Check, CheckCircle2, Copy, Lock, MessageCircle, Plane, Repeat, Signpost } from 'lucide-react'
 
 import { SiteHeader } from '@/components/site/SiteHeader'
-import { FLEET, IMG, ISK_PER_EUR, formatPrice, type Currency } from '@/lib/design/data'
+import { IMG, formatPrice, type Currency } from '@/lib/design/data'
 import { OFFICIAL_WHATSAPP_E164, whatsappHref } from '@/lib/whatsapp'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
@@ -15,11 +15,11 @@ export const args = {
   language: 'en',
   customerCategory: 'international',
   currency: 'EUR',
-  passengers: 2,
-  pickup: 'Keflavík Airport (KEF)',
-  destination: 'Reykjavík city centre',
-  date: '2025-03-14',
-  time: '15:30',
+  passengers: 1,
+  pickup: '',
+  destination: '',
+  date: '',
+  time: '',
 }
 
 export const argTypes = {
@@ -32,6 +32,9 @@ export const argTypes = {
 }
 
 type Props = Partial<typeof args> & {
+  initialCustomer?: { name?: string | null; email?: string; phone?: string | null }
+  luggage?: number
+  onJourneyChange?: (change: { date?: string; time?: string; passengers?: number; luggage?: number }) => void
   onBack?: () => void
   onPay?: (payload: BookingPayPayload) => void
   onStartEnquiry?: () => void
@@ -42,6 +45,7 @@ type Props = Partial<typeof args> & {
     fromLabel: string
     toLabel: string
     fromIsk: number
+    iskPerEur?: number
   } | null
   quoteReady?: boolean
   chargedLabel?: string | null
@@ -85,39 +89,30 @@ export type BookingPayPayload = {
   isQuote?: boolean
 }
 
-const VEHICLES = [
-  { name: 'Standard Sedan' },
-  { name: 'Premium Sedan' },
-  { name: 'SUV' },
-  { name: 'Minivan' },
-]
-
 export default function Booking(props: Props) {
   const p = { ...args, ...props }
   const th = p.theme as 'light' | 'dark'
   const [category, setCategory] = useState(p.customerCategory)
   const [vehicleKey, setVehicleKey] = useState<string | null>(null)
   const [extras, setExtras] = useState({ childSeat: false, returnTrip: false, meetGreet: true })
-  const [flight, setFlight] = useState('FI 615')
-  const [guestName, setGuestName] = useState('Emma Larsen')
-  const [guestEmail, setGuestEmail] = useState('emma.larsen@example.com')
-  const [guestPhone, setGuestPhone] = useState('+45 20 12 34 56')
-  const [hotel, setHotel] = useState('Hotel Borg, Pósthússtræti 11')
+  const [flight, setFlight] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  const [hotel, setHotel] = useState('')
 
   const currency: Currency = category === 'international' ? 'EUR' : (p.currency === 'ISK' ? 'ISK' : 'EUR')
-  const catalogue = useMemo<BookingVehicle[]>(() => {
-    if (p.vehicles && p.vehicles.length > 0) return p.vehicles
-    return VEHICLES.flatMap((v) => {
-      const spec = FLEET.find((f) => f.name === v.name)
-      if (!spec) return []
-      return [{ name: v.name, pax: spec.pax, bags: spec.bags, upgradeIsk: 0 }]
-    })
-  }, [p.vehicles])
+  const catalogue = useMemo<BookingVehicle[]>(() => p.vehicles || [], [p.vehicles])
+  const [validation, setValidation] = useState('')
+  useEffect(() => {
+    setGuestName(current => current || p.initialCustomer?.name || '')
+    setGuestEmail(p.initialCustomer?.email || '')
+    setGuestPhone(current => current || p.initialCustomer?.phone || '')
+  }, [p.initialCustomer])
   const vehicleKeyOf = (v: BookingVehicle) => v.id || v.name
   const vehicleSpec =
-    catalogue.find((v) => vehicleKeyOf(v) === vehicleKey && v.pax >= p.passengers) ||
-    catalogue.find((v) => v.pax >= p.passengers) ||
-    catalogue[0]
+    catalogue.find((v) => vehicleKeyOf(v) === vehicleKey && v.pax >= p.passengers && v.bags >= (p.luggage || 0)) ||
+    catalogue.find((v) => v.pax >= p.passengers && v.bags >= (p.luggage || 0))
   const vehicle = vehicleSpec?.name || 'Vehicle'
 
   const onVehicleChange = p.onVehicleChange
@@ -138,7 +133,7 @@ export default function Booking(props: Props) {
     return rows
   }, [p.listing, listingPrice, vehicleExtra, vehicleSpec])
   const total = listingPrice + vehicleExtra
-  const totalLabel = p.quoteReady && p.chargedLabel ? p.chargedLabel : (total > 0 ? formatPrice(total, currency) : '')
+  const totalLabel = p.quoteReady && p.chargedLabel ? p.chargedLabel : (total > 0 ? formatPrice(total, currency, p.listing?.iskPerEur) : '')
   const canPay = Boolean(p.listing && listingPrice > 0 && vehicleSpec && p.quoteReady && !p.unavailableMessage)
 
   const payPayload = (): BookingPayPayload => ({
@@ -157,6 +152,8 @@ export default function Booking(props: Props) {
   })
   const submitPay = () => {
     if (!canPay) return
+    if (!guestName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail) || !hotel.trim() || !p.date || !p.time) { setValidation('Enter your name, email, pickup address, and Iceland pickup date and time.'); return }
+    setValidation('')
     p.onPay?.(payPayload())
   }
 
@@ -167,7 +164,7 @@ export default function Booking(props: Props) {
 
         {p.state === 'confirmed' ? (
           <Confirmed
-            total={p.confirmation?.totalLabel || formatPrice(total, currency)}
+            total={p.confirmation?.totalLabel || formatPrice(total, currency, p.listing?.iskPerEur)}
             currency={currency}
             pickup={p.pickup}
             destination={p.destination}
@@ -182,7 +179,7 @@ export default function Booking(props: Props) {
         ) : (
           <main className="mx-auto max-w-7xl px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-6 sm:pt-8 lg:px-8 lg:py-12">
             <button onClick={p.onBack} className="hidden items-center gap-2 text-sm font-semibold text-link hover:underline sm:inline-flex"><ArrowLeft size={16} /> Change search</button>
-            <h1 className="px-1 font-display text-2xl font-bold text-heading sm:mt-4 sm:px-0 sm:text-4xl">Complete your airport transfer</h1>
+            <h1 className="px-1 font-display text-2xl font-bold text-heading sm:mt-4 sm:px-0 sm:text-4xl">Complete your booking</h1>
 
             <div className="mt-5 grid items-start gap-4 sm:mt-8 sm:gap-8 lg:grid-cols-[1fr_380px]">
               <div className="space-y-4 sm:space-y-6">
@@ -191,7 +188,7 @@ export default function Booking(props: Props) {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <ReadOnly label="Pickup" value={p.pickup} />
                     <ReadOnly label="Destination" value={p.destination} />
-                    <ReadOnly label="Date & time" value={`${p.date} · ${p.time}`} />
+                    <label className="text-sm">Pickup date (Iceland)<input aria-label="Pickup date" type="date" min={new Date().toISOString().slice(0, 10)} value={p.date} onChange={e => p.onJourneyChange?.({ date: e.target.value })} className="mt-1 w-full rounded-xl border border-line bg-input p-3 text-heading" /></label><label className="text-sm">Pickup time (Iceland)<input aria-label="Pickup time" type="time" value={p.time} onChange={e => p.onJourneyChange?.({ time: e.target.value })} className="mt-1 w-full rounded-xl border border-line bg-input p-3 text-heading" /></label><label className="text-sm">Passengers<input type="number" min={1} max={70} value={p.passengers} onChange={e => p.onJourneyChange?.({ passengers: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-line bg-input p-3 text-heading" /></label><label className="text-sm">Bags<input type="number" min={0} max={70} value={p.luggage || 0} onChange={e => p.onJourneyChange?.({ luggage: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-line bg-input p-3 text-heading" /></label>
                     <label className="block">
                       <span className="text-xs font-medium text-muted">Flight number</span>
                       <div className="mt-1 flex items-center gap-2 rounded-xl border border-input-line bg-input px-3 py-2.5 focus-within:border-focus">
@@ -200,15 +197,15 @@ export default function Booking(props: Props) {
                       </div>
                     </label>
                   </div>
-                  <p className="mt-4 text-sm text-muted">Estimated 45 min · 49 km · {p.passengers} passengers</p>
+                  <p className="mt-4 text-sm text-muted">{p.passengers} passengers · {p.luggage || 0} bags</p>
                 </Section>
 
                 {/* Vehicle */}
-                <Section title="Vehicle">
+                <Section title="Vehicle">{catalogue.length === 0 && <p className="text-sm text-muted">{p.vehicles ? 'No vehicles are available yet. Please contact our team.' : 'Loading vehicles…'}</p>}
                   <div className="grid gap-3 sm:grid-cols-2">
                     {catalogue.map((spec) => {
-                      const tooSmall = spec.pax < p.passengers
-                      const active = vehicle === spec.name
+                      const tooSmall = spec.pax < p.passengers || spec.bags < (p.luggage || 0)
+                      const active = vehicleSpec?.id ? vehicleSpec.id === spec.id : vehicle === spec.name
                       return (
                         <button
                           key={spec.id || spec.name}
@@ -221,7 +218,7 @@ export default function Booking(props: Props) {
                             <span className="block text-xs text-muted">{spec.pax} seats · {spec.bags} bags</span>
                           </span>
                           <span className="text-right">
-                            <span className="block text-sm font-bold text-heading">{spec.upgradeIsk > 0 ? `+ ${formatPrice(spec.upgradeIsk, currency)}` : 'Included'}</span>
+                            <span className="block text-sm font-bold text-heading">{spec.upgradeIsk > 0 ? `+ ${formatPrice(spec.upgradeIsk, currency, p.listing?.iskPerEur)}` : 'Included'}</span>
                             {active && <Check size={16} className="ml-auto mt-1 text-mint-text" />}
                           </span>
                         </button>
@@ -253,7 +250,7 @@ export default function Booking(props: Props) {
                 </Section>
 
                 {/* Customer */}
-                <Section title="Your details">
+                <Section title="Your details">{validation && <p role="alert" className="mb-3 text-sm text-error">{validation}</p>}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block">
                       <span className="text-xs font-medium text-muted">Full name</span>
@@ -261,7 +258,7 @@ export default function Booking(props: Props) {
                     </label>
                     <label className="block">
                       <span className="text-xs font-medium text-muted">Email</span>
-                      <input value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                      <input type="email" readOnly={!!p.initialCustomer?.email} value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
                     </label>
                     <label className="block sm:col-span-2">
                       <span className="text-xs font-medium text-muted">Phone (with country code)</span>
@@ -316,7 +313,7 @@ export default function Booking(props: Props) {
                   </p>
                   {p.unavailableMessage && <p className="mt-2 text-sm font-semibold text-error">{p.unavailableMessage}</p>}
                   <p className="mt-2 text-xs text-muted">
-                    You will be charged in <strong className="text-heading">{currency}</strong>.{currency === 'EUR' && ` Rate used: 1 EUR = ${ISK_PER_EUR} ISK.`}
+                    You will be charged in <strong className="text-heading">{currency}</strong>.
                   </p>
                   <p className="mt-1 text-xs text-muted">{vehicleSpec ? `${vehicleSpec.name}: ${vehicleSpec.pax} seats, ${vehicleSpec.bags} bags` : 'Choose a vehicle'}</p>
                   <button onClick={submitPay} disabled={p.state === 'paying' || !canPay} className="mt-6 hidden w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover disabled:opacity-70 lg:flex">
@@ -325,7 +322,7 @@ export default function Booking(props: Props) {
                   <button type="button" onClick={p.onStartEnquiry} className="mt-2 hidden w-full rounded-full border border-line py-3 text-sm font-semibold text-heading hover:bg-surface lg:block">
                     This trip is not listed
                   </button>
-                  <p className="mt-3 text-xs text-muted lg:text-center">Free cancellation up to 24 hours before pickup</p>
+                  <p className="mt-3 text-xs text-muted lg:text-center">Unpaid, unstarted bookings can be cancelled. Paid cancellation/refund requests are reviewed by the team.</p>
                 </div>
               </aside>
             </div>
@@ -380,7 +377,7 @@ function Confirmed({
       <div className="rounded-2xl border border-line bg-card p-5 sm:p-10">
         <CheckCircle2 size={40} className="text-mint-text" />
         <h1 className="mt-4 font-display text-3xl font-bold text-heading">Your transfer is booked</h1>
-        <p className="mt-2 text-muted">A confirmation has been sent to {email}. Driver details follow before pickup.</p>
+        <p className="mt-2 text-muted">Keep this reference to manage your booking. Contact email: {email}.</p>
         <div className="mt-8 flex items-center justify-between rounded-xl bg-surface px-5 py-4">
           <div>
             <p className="text-xs text-muted">Booking reference</p>

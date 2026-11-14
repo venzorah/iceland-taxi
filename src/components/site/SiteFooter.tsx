@@ -3,12 +3,11 @@
 import React, { useEffect, useState } from 'react'
 import { Mail, MessageCircle } from 'lucide-react'
 
-import { DemoPortalButtons } from '@/components/site/DemoPortalButtons'
 import { LOGO_DARK } from '@/lib/design/data'
 import { FOOTER_COLUMNS } from '@/lib/design/routes'
 import { whatsappHref } from '@/lib/whatsapp'
 
-export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { onStaff?: () => void; onStaffMobile?: () => void; onDriver?: () => void; onAccount?: () => void }) {
+export function SiteFooter(_props: { onStaff?: () => void; onStaffMobile?: () => void; onDriver?: () => void; onAccount?: () => void }) {
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null } | null>(null)
   useEffect(() => {
     fetch('/api/company')
@@ -56,8 +55,7 @@ export function SiteFooter({ onStaff, onStaffMobile, onDriver, onAccount }: { on
           </div>
         </div>
         <div className="mt-12 border-t border-white/15 pt-6 sm:mt-14">
-          <DemoPortalButtons tone="dark" />
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
             <p className="text-xs text-white/60">© {new Date().getFullYear()} Iceland Taxi Booking</p>
             <p className="text-xs leading-relaxed text-white/80">
               Designed by{' '}

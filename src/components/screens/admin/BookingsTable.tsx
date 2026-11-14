@@ -2,12 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, Filter, X } from 'lucide-react'
+import { ChevronRight, X } from 'lucide-react'
 
 import { BottomSheet } from '@/components/site/BottomSheet'
-import { usePublishedListings } from '@/components/booking/usePublishedListings'
-import { listingLabel } from '@/lib/booking/listings'
-import { formatIsk } from '@/lib/design/data'
+import { useLivePolling } from '@/lib/polling/use-live-polling'
 import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
 
 const FILTERS = ['All', 'Needs driver', 'Awaiting payment', 'Quotes', 'Completed']
@@ -37,46 +35,35 @@ export function BookingsTable() {
   const [loading, setLoading] = useState(true)
   const [source, setSource] = useState<string>('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
-  const listings = usePublishedListings()
-  const [draft, setDraft] = useState({ guestName: '', guestEmail: '', listingId: '', category: 'INTERNATIONAL' })
-  const selectedListing = (listings || []).find((listing) => listing.id === draft.listingId) || null
-
-  const load = useCallback(async () => {
-    setLoading(true)
+  const [search, setSearch] = useState('')
+  const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const [bRes, dRes] = await Promise.all([fetch('/api/bookings'), fetch('/api/drivers')])
+      const [bRes, dRes] = await Promise.all([fetch('/api/bookings', { signal, cache: 'no-store' }), fetch('/api/drivers', { signal, cache: 'no-store' })])
       const bJson = await bRes.json()
       const dJson = await dRes.json()
+      if (!bRes.ok || !bJson.ok || !dRes.ok || !dJson.ok) throw new Error(bJson.message || dJson.message || 'Could not load bookings.')
+      if (signal?.aborted) return
       const ops: OpsBooking[] = bJson.ops || bJson.bookings || []
       setRows(ops)
       setSource(bJson.source || 'unknown')
-      if (!selected && ops[0]) setSelected(ops[0])
-      const driverList: DriverOption[] = (dJson.drivers || []).map(
-        (d: { id?: string; displayName?: string; name?: string; status?: string }) => ({
+      setSelected(current => current && ops.some(b => b.ref === current.ref) ? current : null)
+      const driverList: DriverOption[] = (dJson.drivers || []).filter((d: { active?: boolean }) => d.active !== false).map(
+        (d: { active?: boolean; id?: string; displayName?: string; name?: string; status?: string }) => ({
           id: d.id || d.displayName || d.name || '',
           displayName: d.displayName || d.name || 'Driver',
           status: d.status || 'Available',
         }),
       )
       setDrivers(driverList)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }, [selected])
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    } catch (e) { if (!signal?.aborted) setSaveMsg(e instanceof Error ? e.message : 'Could not load bookings.'); throw e } finally { if (!signal?.aborted) setLoading(false) }
   }, [])
+  useLivePolling(load, true, 20000)
 
-  const filtered = rows.filter((b) =>
+  const filtered = rows.filter(b => !search || `${b.ref} ${b.customer} ${b.route} ${b.driver || ''}`.toLowerCase().includes(search.toLowerCase())).filter((b) =>
     filter === 'All'
       ? true
       : filter === 'Needs driver'
-        ? !b.driver && b.status !== 'Pending'
+        ? !b.driver && b.status === 'Confirmed'
         : filter === 'Awaiting payment'
           ? b.status === 'Awaiting Payment'
           : filter === 'Quotes'
@@ -91,25 +78,29 @@ export function BookingsTable() {
 
   const remove = async (ref: string) => {
     setSaveMsg(null)
-    const res = await fetch(`/api/bookings/${ref}`, { method: 'DELETE' })
+    try {
+    const res = await fetch(`/api/bookings/${ref}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'CANCELLED', expectedStatus: selected ? STATUS_TO_API[selected.status] : undefined }) })
     const data = await res.json().catch(() => null)
     if (!res.ok || !data?.ok) {
-      setSaveMsg(data?.message || 'Could not delete booking')
+      setSaveMsg(data?.message || 'Could not cancel booking')
       return
     }
     setSelected(null)
     setSheetOpen(false)
-    setSaveMsg('Deleted')
+    setSaveMsg(data.booking?.status === 'REFUND_REQUESTED' ? 'Cancellation/refund request saved for review. No refund was issued.' : 'Booking cancelled.')
     await load()
+    } catch { setSaveMsg('Could not confirm the cancellation. Refresh the booking before retrying.') }
   }
 
   const save = async (patch: { status?: string; driverId?: string | null; notes?: string; pickupAddress?: string | null }) => {
     if (!selected) return
     setSaveMsg(null)
+    try {
     const res = await fetch(`/api/bookings/${selected.ref}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
+        expectedStatus: STATUS_TO_API[selected.status],
         status: patch.status ? STATUS_TO_API[patch.status] || patch.status : undefined,
         driverId: patch.driverId,
         notes: patch.notes,
@@ -124,6 +115,7 @@ export function BookingsTable() {
     setSaveMsg('Saved')
     await load()
     if (data.ops) setSelected(data.ops)
+    } catch { setSaveMsg('Could not confirm the changes. Refresh the booking before retrying.') }
   }
 
   return (
@@ -141,70 +133,8 @@ export function BookingsTable() {
               </button>
             ))}
           </div>
-          <button
-            aria-label="More filters"
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-bg px-2.5 py-1.5 text-sm font-medium text-text sm:px-3"
-          >
-            <Filter size={14} /> <span className="hidden md:inline">Date · Service · Currency</span>
-          </button>
         </div>
-        <div className="mt-3 flex justify-end">
-          <button onClick={() => setCreating((value) => !value)} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New booking</button>
-        </div>
-        {creating && (
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault()
-              if (!selectedListing) {
-                setSaveMsg('This option is unavailable')
-                return
-              }
-              setSaveMsg(null)
-              const res = await fetch('/api/bookings', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  guestName: draft.guestName,
-                  guestEmail: draft.guestEmail,
-                  listingId: selectedListing.id,
-                  listingKind: selectedListing.kind,
-                  serviceLabel: selectedListing.title,
-                  routeLabel: listingLabel(selectedListing),
-                  quote: {
-                    customerCategory: draft.category,
-                    currency: draft.category === 'RESIDENT' ? 'ISK' : 'EUR',
-                  },
-                  awaitPaymentWithoutGateway: true,
-                }),
-              })
-              const data = await res.json().catch(() => null)
-              if (!res.ok || !data?.ok) {
-                setSaveMsg(data?.message || 'Could not save the booking')
-                return
-              }
-              setCreating(false)
-              setDraft({ guestName: '', guestEmail: '', listingId: '', category: 'INTERNATIONAL' })
-              setSaveMsg('Saved')
-              await load()
-            }}
-            className="mt-3 grid gap-2 rounded-xl border border-line bg-bg p-4 sm:grid-cols-2"
-          >
-            <input required value={draft.guestName} onChange={(event) => setDraft({ ...draft, guestName: event.target.value })} placeholder="Guest name" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
-            <input required type="email" value={draft.guestEmail} onChange={(event) => setDraft({ ...draft, guestEmail: event.target.value })} placeholder="Email" className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
-            <select required value={draft.listingId} onChange={(event) => setDraft({ ...draft, listingId: event.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus sm:col-span-2">
-              <option value="">Choose a published listing</option>
-              {(listings || []).map((listing) => (
-                <option key={listing.id} value={listing.id}>{listingLabel(listing)} · {formatIsk(listing.fromIsk)}</option>
-              ))}
-            </select>
-            <p className="text-sm font-semibold text-heading sm:col-span-2">{selectedListing ? `Fixed price ${formatIsk(selectedListing.fromIsk)}. Guest details do not change it.` : 'This option is unavailable until you choose a published listing.'}</p>
-            <select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} className="rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus">
-              <option value="INTERNATIONAL">International · EUR</option>
-              <option value="RESIDENT">Resident · ISK</option>
-            </select>
-            <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary sm:col-span-2">Save booking</button>
-          </form>
-        )}
+        <div className="mt-3 flex flex-wrap items-center gap-3"><label className="min-w-0 flex-1 text-sm text-muted">Search bookings<input aria-label="Search bookings" value={search} onChange={e => setSearch(e.target.value)} placeholder="Reference, customer, route or driver" className="mt-1 block w-full rounded-lg border border-line bg-input px-3 py-2 text-heading" /></label><a href="/book" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">New booking</a></div>
         <p className="mt-2 text-xs text-muted">
           {loading ? 'Loading bookings…' : `${filtered.length} bookings · source: ${source}`}
           {saveMsg ? ` · ${saveMsg}` : ''}
@@ -321,11 +251,10 @@ function BookingDetail({
 
   useEffect(() => {
     setStatus(booking.status)
-    const match = drivers.find((d) => d.displayName === booking.driver)
-    setDriverId(match?.id || '')
-    setNotes('')
+    setDriverId(booking.driverId || '')
+    setNotes(booking.notes || '')
     setAddress(booking.pickupAddress || '')
-  }, [booking, drivers])
+  }, [booking])
 
   return (
     <>
@@ -353,9 +282,10 @@ function BookingDetail({
         onChange={(e) => setDriverId(e.target.value)}
         className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm text-heading"
       >
-        <option value="">Choose a driver…</option>
+        <option value="">No driver assigned</option>
+        {booking.driverId && !drivers.some(d => d.id === booking.driverId) && <option value={booking.driverId}>{booking.driver || 'Assigned driver (inactive)'}</option>}
         {drivers.map((d) => (
-          <option key={d.id} value={d.id} disabled={d.status === 'Off duty'}>
+          <option key={d.id} value={d.id} disabled={['Off duty', 'Unavailable'].includes(d.status)}>
             {d.displayName}, {d.status}
           </option>
         ))}
@@ -367,7 +297,7 @@ function BookingDetail({
         onChange={(e) => setStatus(e.target.value as OpsBooking['status'])}
         className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm text-heading"
       >
-        {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Acknowledged', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', 'Refunded'].map((s) => (
+        {['Pending', 'Awaiting Payment', 'Confirmed', 'Driver Assigned', 'Acknowledged', 'Driver En Route', 'In Progress', 'Completed', 'Cancelled', 'Refund Requested', ...(booking.status === 'Refunded' ? ['Refunded'] : [])].map((s) => (
           <option key={s}>{s}</option>
         ))}
       </select>
@@ -378,12 +308,12 @@ function BookingDetail({
         placeholder="Street or hotel the driver opens in Google Maps"
         className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading placeholder:text-muted"
       />
-      <label className="mt-4 block text-xs font-semibold text-muted">Internal note</label>
+      <label className="mt-4 block text-xs font-semibold text-muted">Journey note</label>
       <textarea
         rows={3}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Visible to staff only"
+        placeholder="Visible to operations and the assigned driver"
         className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading placeholder:text-muted"
       />
       <div className="mt-5 flex gap-2">
@@ -392,7 +322,7 @@ function BookingDetail({
             onSave({
               status,
               driverId: driverId || null,
-              notes: notes || undefined,
+              notes,
               pickupAddress: address,
             })
           }
@@ -401,7 +331,7 @@ function BookingDetail({
           Save changes
         </button>
         <button type="button" onClick={onDelete} className="whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-error">
-          Delete
+          Cancel booking
         </button>
       </div>
     </>

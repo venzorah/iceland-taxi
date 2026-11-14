@@ -1,149 +1,26 @@
 'use client'
-
-import React, { useEffect, useState } from 'react'
-import { AlertCircle, ArrowRight, Plane, UserPlus } from 'lucide-react'
-
-import { CONVERSATIONS, DRIVERS, money, statusClass, type OpsBooking } from '@/lib/design/opsData'
-
-const WEEK = [
-  { d: 'Mon', usd: 1820, isk: 210 },
-  { d: 'Tue', usd: 2410, isk: 180 },
-  { d: 'Wed', usd: 1960, isk: 320 },
-  { d: 'Thu', usd: 3120, isk: 260 },
-  { d: 'Fri', usd: 3780, isk: 410 },
-  { d: 'Sat', usd: 4210, isk: 350 },
-  { d: 'Sun', usd: 2640, isk: 290 },
-]
-
-export function Overview({ onOpenBookings }: { onOpenBookings?: () => void }) {
-  const [bookings, setBookings] = useState<OpsBooking[]>([])
-  const [source, setSource] = useState('loading')
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const res = await fetch('/api/bookings')
-        const data = await res.json()
-        setBookings(data.ops || data.bookings || [])
-        setSource(data.source || 'unknown')
-      } catch {
-        setSource('error')
-      }
-    })()
-  }, [])
-
-  const sorted = [...bookings].filter((b) => b.time !== '—').sort((a, b) => a.time.localeCompare(b.time))
-  const needDriver = bookings.filter((b) => !b.driver && b.status !== 'Pending' && b.status !== 'Cancelled').length
-  const awaiting = bookings.filter((b) => b.status === 'Awaiting Payment').length
-  const quotes = bookings.filter((b) => b.status === 'Pending').length
-  const max = Math.max(...WEEK.map((w) => w.usd))
-  const usdTotal = bookings.filter((b) => b.currency === 'USD').reduce((s, b) => s + b.amount, 0)
-  const iskTotal = bookings.filter((b) => b.currency === 'ISK').reduce((s, b) => s + b.amount, 0)
-
-  return (
-    <div className="mx-auto max-w-[1400px] p-3 sm:p-6">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-bg px-4 py-3.5 text-sm sm:gap-x-6 sm:px-5">
-        <span className="font-semibold text-heading">Live · {source}</span>
-        <span className="text-muted"><strong className="text-heading">{bookings.length}</strong> bookings</span>
-        <span className="flex items-center gap-1.5 text-error"><AlertCircle size={15} /><strong>{needDriver}</strong> need a driver</span>
-        <span className="text-muted"><strong className="text-heading">{awaiting}</strong> awaiting payment</span>
-        <span className="text-muted"><strong className="text-heading">{quotes}</strong> quotation request</span>
-        <button onClick={onOpenBookings} className="inline-flex items-center gap-1 whitespace-nowrap font-semibold sm:ml-auto text-link hover:underline">All bookings <ArrowRight size={14} /></button>
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-[1fr_380px]">
-        <section className="rounded-xl border border-line bg-bg">
-          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-4 sm:px-5">
-            <h2 className="font-display text-base font-bold text-heading">Today&apos;s journeys</h2>
-            <span className="hidden text-xs text-muted sm:inline">Live · updates across desktop and mobile</span>
-          </div>
-          <ol className="divide-y divide-line">
-            {sorted.map((b) => (
-              <li key={b.ref} className="grid grid-cols-[52px_1fr] gap-x-3 gap-y-3 px-4 py-4 sm:grid-cols-[64px_1fr_auto] sm:gap-4 sm:px-5">
-                <p className="font-display text-lg font-bold tabular-nums text-heading">{b.time}</p>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-heading">{b.route}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusClass(b.status)}`}>{b.status}</span>
-                  </div>
-                  <p className="mt-1 text-sm text-muted">
-                    {b.customer} · {b.pax} pax · {b.vehicle} · <span className="font-mono text-xs">{b.ref}</span>
-                    {b.flight && <span className="ml-2 inline-flex items-center gap-1"><Plane size={12} />{b.flight}</span>}
-                  </p>
-                </div>
-                <div className="col-start-2 flex items-center justify-between gap-3 sm:col-start-auto sm:justify-end">
-                  {b.driver ? (
-                    <span className="text-sm text-text">{b.driver}</span>
-                  ) : (
-                    <button onClick={onOpenBookings} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
-                      <UserPlus size={14} /> Assign driver
-                    </button>
-                  )}
-                  <span className="text-right text-sm sm:w-24 font-semibold tabular-nums text-heading">{money(b.amount, b.currency)}</span>
-                </div>
-              </li>
-            ))}
-            {sorted.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No bookings yet.</li>}
-          </ol>
-        </section>
-
-        <div className="grid content-start gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-1">
-          <section className="rounded-xl border border-line bg-bg p-5">
-            <h2 className="font-display text-base font-bold text-heading">Bookings totals</h2>
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-medium text-muted">USD</p>
-                <p className="font-display text-xl font-extrabold text-heading sm:text-2xl">${usdTotal.toLocaleString('en-US')}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted">ISK</p>
-                <p className="whitespace-nowrap font-display text-xl font-extrabold text-heading sm:text-2xl">ISK {iskTotal.toLocaleString('en-US')}</p>
-              </div>
-            </div>
-            <div className="mt-5 flex h-28 items-end gap-2" aria-label="USD revenue by day">
-              {WEEK.map((w) => (
-                <div key={w.d} className="flex flex-1 flex-col items-center gap-1.5">
-                  <div className="w-full rounded-t bg-link/80" style={{ height: `${(w.usd / max) * 88}px` }} />
-                  <span className="text-[11px] text-muted">{w.d}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-xs text-muted">Totals are never combined across currencies. Chart remains illustrative until settlement reports land.</p>
-          </section>
-
-          <section className="rounded-xl border border-line bg-bg">
-            <div className="flex items-center justify-between px-5 pt-5">
-              <h2 className="font-display text-base font-bold text-heading">Messages</h2>
-              <span className="rounded-full bg-primary px-2 text-xs font-bold text-on-primary">3 unread</span>
-            </div>
-            <ul className="mt-3 divide-y divide-line">
-              {CONVERSATIONS.map((c) => (
-                <li key={c.ref} className="px-5 py-3">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className={`text-sm ${c.unread ? 'font-bold text-heading' : 'font-medium text-text'}`}>{c.name}</p>
-                    <span className="text-xs text-muted">{c.time}</span>
-                  </div>
-                  <p className="mt-0.5 truncate text-sm text-muted">{c.last}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-xl border border-line bg-bg p-5">
-            <h2 className="font-display text-base font-bold text-heading">Drivers</h2>
-            <ul className="mt-3 space-y-2.5">
-              {DRIVERS.map((d) => (
-                <li key={d.name} className="flex items-center gap-3 text-sm">
-                  <span className={`h-2 w-2 rounded-full ${d.status === 'Available' ? 'bg-mint' : d.status === 'On trip' ? 'bg-cyan' : 'bg-muted'}`} />
-                  <span className="shrink-0 font-medium text-heading">{d.name}</span>
-                  <span className="hidden min-w-0 truncate text-muted sm:inline">{d.vehicle}</span>
-                  <span className="ml-auto whitespace-nowrap text-xs text-muted">{d.status}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-      </div>
-    </div>
-  )
+import { useCallback, useState } from 'react'
+import { useLivePolling } from '@/lib/polling/use-live-polling'
+import { money, type OpsBooking } from '@/lib/design/opsData'
+type OverviewData = { today: string; bookings: OpsBooking[]; total: number; awaiting: number; needDriver: number; totals: {currency:'EUR'|'ISK'|'USD';amount:number}[]; drivers:{id:string;displayName:string;status:string;active:boolean}[]; threads:{ref:string;customer:string;preview:string;unread:number}[] }
+export function Overview({onOpenBookings}:{onOpenBookings?:()=>void}) {
+  const [data,setData]=useState<OverviewData|null>(null),[error,setError]=useState('')
+  const load=useCallback(async(signal?:AbortSignal)=>{
+    try {
+      const response=await fetch('/api/admin/overview',{signal,cache:'no-store'}), body=await response.json()
+      if(!response.ok||!body.ok)throw new Error(body.message||'Could not load overview.')
+      if(!signal?.aborted){setData(body);setError('')}
+    }catch(error){if(!signal?.aborted)setError(error instanceof Error?error.message:'Could not load overview.');throw error}
+  },[])
+  useLivePolling(load,true,30000)
+  return <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+    {error&&<p role="alert" className="text-error">{error} <button onClick={()=>{void load().catch(()=>{})}} className="underline">Try again</button></p>}
+    {!data?<p className="text-muted">{error?'Overview unavailable.':'Loading overview…'}</p>:<>
+      <div className="grid gap-3 sm:grid-cols-3">{[[data.total,'Bookings'],[data.needDriver,'Confirmed bookings needing a driver'],[data.awaiting,'Awaiting payment']].map(([value,label])=><div key={label} className="rounded-xl border border-line bg-bg p-5"><p className="text-sm text-muted">{label}</p><p className="mt-2 text-2xl font-bold text-heading">{value}</p></div>)}</div>
+      <section className="rounded-xl border border-line bg-bg p-5"><h2 className="text-lg font-bold text-heading">Today’s journeys · {data.today}</h2><p className="text-xs text-muted">Iceland time · refreshes automatically</p><ul className="mt-4 divide-y divide-line">{data.bookings.map(b=><li key={b.ref} className="flex flex-wrap items-center gap-3 py-3"><span className="font-bold text-heading">{b.time}</span><div className="min-w-0 flex-1"><p className="break-words text-heading">{b.route}</p><p className="text-xs text-muted">{b.ref} · {b.customer} · {b.status} · {b.driver||'No driver assigned'}</p></div><button onClick={onOpenBookings} className="text-sm text-link">Open bookings</button></li>)}{!data.bookings.length&&<li className="py-8 text-center text-muted">No journeys scheduled today.</li>}</ul></section>
+      <div className="grid gap-6 lg:grid-cols-3"><section className="rounded-xl border border-line bg-bg p-5"><h2 className="font-bold text-heading">Booking values</h2><p className="mt-1 text-xs text-muted">Saved booking amounts, including unpaid trips. These are not settled revenue. Currencies are shown separately.</p>{data.totals.length?data.totals.map(t=><p key={t.currency} className="mt-3 font-semibold text-heading">{money(t.amount,t.currency)}</p>):<p className="mt-4 text-muted">No booking values yet.</p>}</section>
+      <section className="rounded-xl border border-line bg-bg p-5"><h2 className="font-bold text-heading">Recent conversations</h2><ul className="mt-3 space-y-3">{data.threads.map(t=><li key={t.ref}><p className="text-sm font-semibold text-heading">{t.customer} · {t.unread} unread</p><p className="text-xs text-muted">{t.ref}</p><p className="truncate text-sm text-muted">{t.preview}</p></li>)}{!data.threads.length&&<li className="text-sm text-muted">No booking conversations yet.</li>}</ul></section>
+      <section className="rounded-xl border border-line bg-bg p-5"><h2 className="font-bold text-heading">Drivers</h2><ul className="mt-3 space-y-3">{data.drivers.map(d=><li key={d.id} className="flex justify-between gap-3 text-sm"><span className="text-heading">{d.displayName}</span><span className="text-muted">{d.active?d.status:'Inactive'}</span></li>)}{!data.drivers.length&&<li className="text-sm text-muted">No drivers registered yet.</li>}</ul></section></div>
+    </>}
+  </div>
 }

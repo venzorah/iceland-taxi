@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { jsonError, jsonOk } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { geocodeAddress } from '@/lib/maps/google'
 
 const schema = z.object({ address: z.string().min(1) })
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
@@ -17,3 +17,5 @@ export async function POST(req: Request) {
   }
   return jsonOk(result)
 }
+
+export const POST = apiHandler(handlePOST)

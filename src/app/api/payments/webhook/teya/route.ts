@@ -1,4 +1,4 @@
-import { jsonError, jsonOk } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { verifyTeyaWebhookSignature } from '@/lib/payments'
 import { captureFromVerifiedWebhook } from '@/lib/payments/sync-teya'
 
@@ -8,7 +8,7 @@ import { captureFromVerifiedWebhook } from '@/lib/payments/sync-teya'
  * Unsigned events never mark a booking paid. Failures have no webhook;
  * the return URL looks the session up instead.
  */
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const rawBody = await req.text()
   const signature = req.headers.get('x-teya-signature')
   const verified = verifyTeyaWebhookSignature(rawBody, signature)
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
   }
 
+  if (!sessionId) return jsonError(400, 'INVALID_EVENT', 'A checkout session ID is required.')
   const applied = await captureFromVerifiedWebhook({
     sessionId,
     merchantRef,
@@ -44,5 +45,8 @@ export async function POST(req: Request) {
     raw: event,
   })
 
+  if (!applied.applied && applied.reason === 'No matching payment row' && merchantRef.startsWith('ITB-')) return jsonError(503, 'PAYMENT_NOT_READY', 'The payment record is not ready. Retry delivery.')
   return jsonOk({ ok: true, signatureVerified: true, ...applied })
 }
+
+export const POST = apiHandler(handlePOST)

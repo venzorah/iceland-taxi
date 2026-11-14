@@ -1,5 +1,8 @@
+import { getCurrentUser } from '@/lib/auth/session'
+import { ownsBooking } from '@/lib/customer/ownership'
+import { canAccessBooking } from '@/lib/customer/booking-access'
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { canEditPickup, formatPickupLabel, pickupParts } from '@/lib/booking/pickup'
 
 const bodySchema = z.object({
@@ -11,7 +14,7 @@ const bodySchema = z.object({
  * Guest booking lookup — requires both reference and checkout email.
  * Never returns a booking for a mismatched email.
  */
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
   }
@@ -31,7 +34,9 @@ export async function POST(req: Request) {
     where: { ref },
   })
 
-  if (!booking || !booking.guestEmail || booking.guestEmail.toLowerCase() !== email) {
+  const user = await getCurrentUser()
+  const matchingEmail = booking && (booking.guestEmail?.toLowerCase() === email || (ownsBooking(user, booking) && user?.email.toLowerCase() === email))
+  if (!booking || !await canAccessBooking(booking, user) || !matchingEmail) {
     return jsonError(404, 'NOT_FOUND', 'No booking matched that reference and email')
   }
 
@@ -66,3 +71,5 @@ export async function POST(req: Request) {
     },
   })
 }
+
+export const POST = apiHandler(handlePOST)

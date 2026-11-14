@@ -1,16 +1,15 @@
-import { jsonOk, prisma, withDb } from '@/lib/api'
-import { ensureOfficialWhatsApp } from '@/lib/company-whatsapp'
+import { apiHandler, jsonOk, prisma, withDb } from '@/lib/api'
 import { OFFICIAL_WHATSAPP_E164 } from '@/lib/whatsapp'
 
 /**
  * Company profile is CMS/admin-owned. Never invent contact, registration,
  * testimonials, or fleet ownership claims when fields are unset.
  */
-export async function GET() {
+async function handleGET() {
   const data = await withDb(
     async () => {
       const settings = await prisma.companySettings.findUnique({ where: { id: 'singleton' } })
-      const whatsappE164 = await ensureOfficialWhatsApp()
+      const whatsappE164 = settings?.whatsappE164 || OFFICIAL_WHATSAPP_E164
       return {
         source: 'database' as const,
         company: settings
@@ -46,3 +45,5 @@ export async function GET() {
 
   return jsonOk({ ok: true, ...data })
 }
+
+export const GET = apiHandler(handleGET)

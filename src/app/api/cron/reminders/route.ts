@@ -1,4 +1,4 @@
-import { jsonError, jsonOk } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { sendDueReminders } from '@/lib/email/reminders'
 
 function allowed(req: Request) {
@@ -14,10 +14,13 @@ async function run(req: Request) {
   return jsonOk({ ok: true, ...result })
 }
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   return run(req)
 }
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   return run(req)
 }
+
+export const GET = apiHandler(handleGET)
+export const POST = apiHandler(handlePOST)

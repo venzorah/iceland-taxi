@@ -22,12 +22,12 @@ export type SearchPayload = {
 export function BookingSearch({ language, onSearch }: { language: Lang; onSearch?: (p: SearchPayload) => void }) {
   const [form, setForm] = useState<SearchPayload>({
     category: 'airport',
-    pickup: 'Keflavík Airport (KEF)',
-    destination: 'Reykjavík city centre',
-    date: '2025-03-14',
-    time: '15:30',
-    passengers: 2,
-    luggage: 2,
+    pickup: '',
+    destination: '',
+    date: '',
+    time: '',
+    passengers: 1,
+    luggage: 0,
   })
   const set = <K extends keyof SearchPayload>(k: K, v: SearchPayload[K]) => setForm((f) => ({ ...f, [k]: v }))
 

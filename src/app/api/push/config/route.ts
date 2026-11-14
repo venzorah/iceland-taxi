@@ -1,8 +1,8 @@
-import { jsonOk } from '@/lib/api'
+import { apiHandler, jsonOk } from '@/lib/api'
 import { vapidConfig } from '@/lib/push/vapid'
 
 /** Public VAPID key only. Private key never leaves the server. */
-export async function GET() {
+async function handleGET() {
   const vapid = vapidConfig()
   return jsonOk({
     ok: true,
@@ -13,3 +13,5 @@ export async function GET() {
       : 'Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT for alerts when the app is closed. Sound and notifications still work while the site is open.',
   })
 }
+
+export const GET = apiHandler(handleGET)

@@ -43,6 +43,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
       const [driverRes, vehicleRes] = await Promise.all([fetch('/api/drivers'), fetch('/api/admin/vehicles')])
       const driverJson = await driverRes.json()
       const vehicleJson = await vehicleRes.json().catch(() => null)
+      if (!driverRes.ok || !driverJson.ok || !vehicleRes.ok || !vehicleJson?.ok) throw new Error('Could not load the fleet.')
       const vehicleRows: VehicleRow[] = (vehicleJson?.vehicles || []).map(
         (vehicle: { id: string; name: string; category: string; plate?: string | null; pax: number; bags: number; upgradeIsk: number; active: boolean; drivers?: { displayName: string }[] }) => ({
           id: vehicle.id,
@@ -142,7 +143,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
     <div className="mx-auto max-w-[1400px] p-3 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
-          {view === 'drivers' ? 'Drivers cannot be assigned to overlapping journeys. Availability includes a 30-minute buffer.' : 'Set an additional cost for each car. It is added to the published trip price. 0 means the car is included.'} · {msg}
+          {view === 'drivers' ? 'Add the driver profile first. The driver then creates a sign-in with the same email and verifies it. Assigned journeys appear in /driver.' : 'Set an additional cost for each car. It is added to the published trip price. 0 means the car is included.'} · {msg}
         </p>
         <button onClick={startCreate} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary">
           <Plus size={15} /> {view === 'drivers' ? 'Add driver' : 'Add vehicle'}

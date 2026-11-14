@@ -46,11 +46,13 @@ export function armMessageSound(opts?: { audible?: boolean }) {
         }
       })
       .catch(() => {})
+  } else {
+    void started?.catch(() => {})
   }
 }
 
 export function playMessageSound() {
-  if (!alertsArmed()) return
+  if (!alertsEnabled() || !alertsArmed()) return
   if (!audio) {
     audio = new Audio(SOUND_URL)
     audio.preload = 'auto'
@@ -60,9 +62,22 @@ export function playMessageSound() {
   void audio.play().catch(() => {})
 }
 
-export function markAlertsEnabled() {
-  localStorage.setItem(ENABLED_KEY, '1')
+export function markAlertsEnabled(enabled = true) {
+  localStorage.setItem(ENABLED_KEY, enabled ? '1' : '0')
+  window.dispatchEvent(new Event('itb-alert-preference'))
 }
+
+export async function disablePhoneAlerts() {
+  const reg = await navigator.serviceWorker?.getRegistration()
+  const sub = await reg?.pushManager?.getSubscription()
+  if (sub) {
+    const response = await fetch('/api/push/subscribe', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) })
+    if (!response.ok) throw new Error('Could not turn off background notifications. Please try again.')
+    await sub.unsubscribe()
+  }
+  markAlertsEnabled(false)
+}
+
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -75,7 +90,9 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export async function registerMessageWorker() {
   if (!('serviceWorker' in navigator)) return null
-  return navigator.serviceWorker.register('/sw.js', { scope: '/' })
+  const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+  await navigator.serviceWorker.ready
+  return registration
 }
 
 export async function subscribeToPush() {
@@ -107,7 +124,7 @@ export async function subscribeToPush() {
 }
 
 export async function showPhoneNotification(item: { id: string; title: string; body: string; url: string }) {
-  if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return
+  if (!alertsEnabled() || typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return
   const options = {
     body: item.body,
     icon: '/icons/icon-192.png',

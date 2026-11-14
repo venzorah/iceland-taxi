@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Menu, Moon, Plus, Search, Sun } from 'lucide-react'
+import { Menu, Moon, Plus, Sun } from 'lucide-react'
 
+import { useSiteSession } from '@/components/providers/SessionProvider'
+import { canViewAdminSection, initialAdminSection } from '@/lib/auth/admin-sections'
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { MobileNav, Sidebar } from './Sidebar'
 import { Overview } from './Overview'
@@ -44,9 +46,11 @@ type Props = Partial<typeof args> & {
 }
 
 export default function AdminDashboard(props: Props) {
-  const p = { ...args, ...props }
+  const { user } = useSiteSession()
+  const p = { ...args, ...props, role: user?.role.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) || 'Staff' }
   const [localSection, setLocalSection] = useState(p.section)
-  const section = props.onSectionChange ? p.section : localSection
+  const requestedSection = props.onSectionChange ? p.section : localSection
+  const section = user && canViewAdminSection(user.role, requestedSection) ? requestedSection : initialAdminSection(user?.role || '')
   const go = (s: string) => (props.onSectionChange ? props.onSectionChange(s) : setLocalSection(s))
   const th = p.theme as 'light' | 'dark'
   const [menuOpen, setMenuOpen] = useState(false)
@@ -105,27 +109,20 @@ export default function AdminDashboard(props: Props) {
               <Menu size={21} />
             </button>
             <h1 className="min-w-0 truncate font-display text-base font-bold text-heading sm:text-lg">{titles[section] ?? section.charAt(0).toUpperCase() + section.slice(1)}</h1>
-            <div className="ml-4 hidden max-w-md flex-1 items-center gap-2 rounded-lg border border-input-line bg-input px-3 py-2 md:flex">
-              <Search size={15} className="text-muted" />
-              <input placeholder="Search bookings, customers, references…" className="w-full bg-transparent text-sm text-heading outline-none placeholder:text-muted" />
-            </div>
             <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-              <button aria-label="Search" className="grid h-10 w-10 place-items-center rounded-lg text-heading active:bg-surface md:hidden">
-                <Search size={18} />
-              </button>
               <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="grid h-10 w-10 sm:h-9 sm:w-9 place-items-center rounded-lg text-heading transition-colors duration-150 hover:bg-surface">
                 {th === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
               </button>
-              <StaffNoticeBell
+              {user && canViewAdminSection(user.role, 'messages') && <StaffNoticeBell
                 onOpenChat={(ref) => {
                   setFocusRef(ref)
                   go('messages')
                 }}
                 onOpenSettings={() => go('settings')}
-              />
-              <a href="/book" className="hidden items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover sm:flex">
+              />}
+              {user && canViewAdminSection(user.role, 'bookings') && <a href="/book" className="hidden items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover sm:flex">
                 <Plus size={16} /> New booking
-              </a>
+              </a>}
             </div>
           </header>
 

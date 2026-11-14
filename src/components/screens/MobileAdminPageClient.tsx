@@ -1,21 +1,4 @@
 'use client'
-
-import { AdminAccessGate } from '@/components/screens/admin/AdminAccessGate'
-import MobileAdmin from '@/components/screens/mobile-admin/MobileAdmin'
-import { useAppPrefs } from '@/components/providers/AppProviders'
-
-export function MobileAdminPageClient() {
-  const prefs = useAppPrefs()
-  return (
-    <AdminAccessGate>
-    <MobileAdmin
-      theme={prefs.theme}
-      announcements={prefs.announcements}
-      onThemeChange={prefs.setTheme}
-      onAnnouncementsChange={prefs.setAnnouncements}
-      onOpenDesktop={() => prefs.go('/admin')}
-      onViewSite={() => prefs.go('/')}
-    />
-    </AdminAccessGate>
-  )
-}
+import { AdminPageClient } from './AdminPageClient'
+/** Both admin URLs share role checks and data flows, including on phones. */
+export function MobileAdminPageClient() { return <AdminPageClient /> }

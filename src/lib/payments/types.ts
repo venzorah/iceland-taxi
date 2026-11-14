@@ -1,6 +1,7 @@
 export type PaymentCurrency = 'USD' | 'ISK' | 'EUR'
 
 export type CreatePaymentInput = {
+  idempotencyKey?: string
   bookingRef: string
   bookingId?: string
   amount: number

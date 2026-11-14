@@ -1,4 +1,5 @@
-import { jsonOk, prisma, withDb } from '@/lib/api'
+import { rejectDriverOnly } from '@/lib/auth/admin-access'
+import { apiHandler, jsonOk, jsonError, prisma, withDb } from '@/lib/api'
 import { BLOG_POSTS, SEO_SLUG_PAGES, TRAVEL_GUIDES } from '@/lib/content/editorial'
 import { DESTINATIONS } from '@/lib/design/data'
 import { SEO_PUBLIC_PAGES } from '@/lib/design/routes'
@@ -73,7 +74,12 @@ function emptyCompany() {
   }
 }
 
-export async function GET() {
+async function handleGET(req: Request) {
+  const section = new URL(req.url).searchParams.get('section')
+  const modules: Record<string, string> = { customers: 'customers', reports: 'payments', reviews: 'company', languages: 'company', settings: 'company' }
+  if (section && !modules[section]) return jsonError(400, 'VALIDATION_ERROR', 'Choose a workspace section.')
+  const blocked = await rejectDriverOnly(section ? modules[section] : 'workspace')
+  if (blocked) return blocked
   const data = await withDb(
     async () => {
       const [destinations, users, bookings, bookingCount, grouped, company] = await Promise.all([
@@ -190,6 +196,11 @@ export async function GET() {
     cloudConfigured: whatsappCloudCredentials().configured,
   })
 
+  if (section === 'customers') return jsonOk({ ok: true, source: data.source, customers: data.customers })
+  if (section === 'reports') return jsonOk({ ok: true, source: data.source, reports: data.reports })
+  if (section === 'reviews') return jsonOk({ ok: true, source: data.source, reviews: data.reviews })
+  if (section === 'languages') return jsonOk({ ok: true, source: data.source, languages: [{ code: 'en', name: 'English', default: true }, { code: 'is', name: 'Íslenska', default: false }] })
+  if (section === 'settings') return jsonOk({ ok: true, source: data.source, settings: data.settings, integrations: integrations(), whatsapp })
   return jsonOk({
     ok: true,
     ...data,
@@ -202,3 +213,5 @@ export async function GET() {
     integrations: integrations(),
   })
 }
+
+export const GET = apiHandler(handleGET)

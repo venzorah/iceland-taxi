@@ -1,7 +1,8 @@
+import { apiHandler } from '@/lib/api'
 import { NextResponse } from 'next/server'
 import { integrationConfigured } from '@/lib/env'
 
-export async function GET() {
+async function handleGET() {
   return NextResponse.json({
     ok: true,
     service: 'iceland-taxi',
@@ -16,3 +17,5 @@ export async function GET() {
     },
   })
 }
+
+export const GET = apiHandler(handleGET)

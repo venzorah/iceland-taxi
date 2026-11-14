@@ -1,8 +1,11 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
+import Link from 'next/link'
+import { useSiteSession } from '@/components/providers/SessionProvider'
+import { pickupInstant } from '@/lib/booking/pickup'
 import { CustomEnquiryForm, type EnquiryPayload } from '@/components/booking/CustomEnquiryForm'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import Booking, { type BookingPayPayload, type BookingVehicle } from '@/components/screens/booking/Booking'
@@ -15,6 +18,20 @@ export function BookingPageClient() {
   const router = useRouter()
   const params = useSearchParams()
   const listings = usePublishedListings()
+  const { user } = useSiteSession()
+  const requestKey = useRef('')
+  const requestBody = useRef('')
+  const [savedRef, setSavedRef] = useState('')
+  const [savedStatus, setSavedStatus] = useState('')
+  const [canRetryPayment, setCanRetryPayment] = useState(true)
+  const [profile, setProfile] = useState<{ name?: string | null; email?: string; phone?: string | null }>()
+  useEffect(() => {
+    if (user?.role !== 'CUSTOMER') { setProfile(undefined); return }
+    setProfile({ name: user.name, email: user.email })
+    const controller = new AbortController()
+    fetch('/api/account/profile', { signal: controller.signal }).then(async r => { const d = await r.json(); if (r.ok && !controller.signal.aborted) setProfile(d.profile) }).catch(() => {})
+    return () => controller.abort()
+  }, [user?.id, user?.name, user?.email, user?.role])
   const [payState, setPayState] = useState<'default' | 'paying' | 'confirmed'>('default')
   const [confirmation, setConfirmation] = useState<{
     ref: string
@@ -25,6 +42,10 @@ export function BookingPageClient() {
   const [error, setError] = useState<string | null>(null)
   const [category, setCategory] = useState(prefs.customerCategory === 'resident' ? 'RESIDENT' : 'INTERNATIONAL')
   const [payCurrency, setPayCurrency] = useState<'EUR' | 'ISK'>(prefs.currency === 'ISK' ? 'ISK' : 'EUR')
+  const categoryTouched = useRef(false)
+  const currencyTouched = useRef(false)
+  useEffect(() => { if (!categoryTouched.current) setCategory(prefs.customerCategory === 'resident' ? 'RESIDENT' : 'INTERNATIONAL') }, [prefs.customerCategory])
+  useEffect(() => { if (!currencyTouched.current) setPayCurrency(prefs.currency === 'ISK' ? 'ISK' : 'EUR') }, [prefs.currency])
   const [chargedLabel, setChargedLabel] = useState<string | null>(null)
   const [quoteReady, setQuoteReady] = useState(false)
   const [vehicles, setVehicles] = useState<BookingVehicle[] | null>(null)
@@ -37,9 +58,10 @@ export function BookingPageClient() {
   const enquiryOnly = params.get('enquiry') === '1' && !listingId
   const pickup = params.get('pickup') || ''
   const destination = params.get('destination') || ''
-  const date = params.get('date') || new Date().toISOString().slice(0, 10)
-  const time = params.get('time') || '15:30'
-  const passengers = Number(params.get('passengers') || 2)
+  const date = params.get('date') || ''
+  const time = params.get('time') || ''
+  const passengers = Number(params.get('passengers') || 1)
+  const luggage = Math.max(0, Number(params.get('luggage') || 0))
   const quoteCurrency = category === 'RESIDENT' ? payCurrency : 'EUR'
 
   const listing = useMemo(() => {
@@ -47,13 +69,7 @@ export function BookingPageClient() {
     return matchListing(listings, { listingId, listingKind, pickup, destination })
   }, [listings, enquiryOnly, listingId, listingKind, pickup, destination])
 
-  const pickupAt = useMemo(() => {
-    try {
-      return new Date(`${date}T${time}:00`).toISOString()
-    } catch {
-      return undefined
-    }
-  }, [date, time])
+  const pickupAt = pickupInstant(date, time)?.toISOString()
 
   useEffect(() => {
     const ref = params.get('ref')
@@ -77,6 +93,9 @@ export function BookingPageClient() {
           setPayState('confirmed')
           return
         }
+        setSavedRef(ref)
+        setSavedStatus(data.statusLabel || 'Payment has not been confirmed.')
+        setCanRetryPayment(res.ok && ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'].includes(data.bookingStatus) && data.outcome !== 'refunded')
         setPayState('default')
         setError(data.message || 'Teya did not confirm this payment. It was not marked paid.')
       } catch {
@@ -98,6 +117,7 @@ export function BookingPageClient() {
         const res = await fetch('/api/vehicles')
         const data = await res.json()
         if (cancelled) return
+        if (!res.ok || !data.ok) throw new Error(data.message || 'Vehicles could not be loaded.')
         const rows = Array.isArray(data.vehicles) ? data.vehicles : []
         setVehicles(
           rows.map((vehicle: BookingVehicle) => ({
@@ -109,7 +129,7 @@ export function BookingPageClient() {
           })),
         )
       } catch {
-        if (!cancelled) setVehicles([])
+        if (!cancelled) { setVehicles([]); setError('Vehicles could not be loaded. Refresh to try again.') }
       }
     })()
     return () => {
@@ -118,7 +138,7 @@ export function BookingPageClient() {
   }, [])
 
   useEffect(() => {
-    if (!listing || vehicles === null) {
+    if (!listing || vehicles === null || vehicles.length === 0) {
       setQuoteReady(false)
       setChargedLabel(null)
       return
@@ -172,6 +192,9 @@ export function BookingPageClient() {
       setError(UNAVAILABLE_MESSAGE)
       return
     }
+    if (!pickupAt || new Date(pickupAt) <= new Date()) { setError('Choose a future pickup date and time in Iceland.'); return }
+    const fingerprint = JSON.stringify({ payload, pickupAt, passengers, luggage, listingId: listing.id })
+    if (requestBody.current !== fingerprint) { requestBody.current = fingerprint; requestKey.current = crypto.randomUUID() }
     setPayState('paying')
     setError(null)
     try {
@@ -180,6 +203,7 @@ export function BookingPageClient() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          requestKey: requestKey.current,
           create: {
             guestName: payload.guestName,
             guestEmail: payload.guestEmail,
@@ -188,7 +212,7 @@ export function BookingPageClient() {
             listingKind: listing.kind,
             pickupAt,
             passengers,
-            luggage: 0,
+            luggage,
             flightNumber: payload.flight,
             pickupAddress: payload.pickupAddress || undefined,
             vehicleId: payload.vehicleId,
@@ -203,6 +227,7 @@ export function BookingPageClient() {
       })
       const data = await res.json()
       if (!res.ok || !data.ok) {
+        if (data.bookingRef) setSavedRef(data.bookingRef)
         setPayState('default')
         setError(data.message || UNAVAILABLE_MESSAGE)
         return
@@ -235,7 +260,7 @@ export function BookingPageClient() {
     } catch (e) {
       console.error(e)
       setPayState('default')
-      setError('Payment request failed.')
+      setError('Could not confirm checkout. Retry the same details or check your trips before starting another booking.')
     }
   }
 
@@ -270,27 +295,18 @@ export function BookingPageClient() {
   const showEnquiry = enquiryOnly || (listings !== null && !listing && options.length === 0 && Boolean(listingId || pickup || destination))
   const showPicker = listings !== null && !listing && !showEnquiry
 
-  if (payState === 'confirmed' && confirmation) {
-    return (
-      <Booking
-        theme={prefs.theme}
-        language={prefs.language}
-        currency={quoteCurrency}
-        announcements={prefs.announcements}
-        listing={listing}
-        pickup={listing?.fromLabel || pickup}
-        destination={listing?.toLabel || destination}
-        date={date}
-        time={time}
-        passengers={passengers}
-        state="confirmed"
-        confirmation={confirmation}
-        onThemeChange={prefs.setTheme}
-        onLanguageChange={prefs.setLanguage}
-        onCurrencyChange={prefs.setCurrency}
-        onBack={() => prefs.go('/')}
-      />
-    )
+  async function retryPayment() {
+    setPayState('paying'); setError(null)
+    try {
+      const response = await fetch('/api/payments/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingRef: savedRef }) })
+      const data = await response.json()
+      if (!response.ok || !data.checkoutUrl) throw new Error(data.message || 'Payment could not start.')
+      window.location.assign(data.checkoutUrl)
+    } catch (error) { setError(error instanceof Error ? error.message : 'Payment could not start.'); setPayState('default') }
+  }
+  if (savedRef || (payState === 'confirmed' && confirmation)) {
+    const ref = confirmation?.ref || savedRef
+    return <main className="mx-auto max-w-xl px-5 py-16 text-heading"><h1 className="text-3xl font-bold">{confirmation ? 'Payment received' : 'Your booking is saved'}</h1><p className="mt-4 font-mono">{ref}</p><p className="mt-2">{confirmation?.statusLabel || savedStatus || 'Your booking remains unpaid until payment is verified.'}</p>{confirmation?.totalLabel && <p className="mt-2 font-bold">{confirmation.totalLabel}</p>}{error && <p role="alert" className="mt-4 text-sm text-error">{error}</p>}<div className="mt-6 flex flex-wrap gap-3">{!confirmation && canRetryPayment && <button disabled={payState === 'paying'} onClick={retryPayment} className="rounded-xl bg-primary px-4 py-3 font-bold text-on-primary">{payState === 'paying' ? 'Starting payment…' : 'Retry payment'}</button>}<Link href={user?.role === 'CUSTOMER' ? '/account' : '/manage-booking'} className="rounded-xl border border-line px-4 py-3">Manage booking</Link><a href="/book" className="rounded-xl border border-line px-4 py-3">Book another ride</a></div></main>
   }
 
   return (
@@ -305,6 +321,9 @@ export function BookingPageClient() {
           theme={prefs.theme}
           language={prefs.language}
           currency={quoteCurrency}
+          initialCustomer={profile}
+          luggage={luggage}
+          onJourneyChange={change => { const q = new URLSearchParams(params.toString()); for (const [key, value] of Object.entries(change)) q.set(key, String(value)); router.replace(`/book?${q.toString()}`, { scroll: false }) }}
           customerCategory={category === 'RESIDENT' ? 'resident' : 'international'}
           announcements={prefs.announcements}
           listing={listing}
@@ -323,10 +342,11 @@ export function BookingPageClient() {
           onThemeChange={prefs.setTheme}
           onLanguageChange={prefs.setLanguage}
           onCurrencyChange={(next) => {
+            currencyTouched.current = true
             setPayCurrency(next === 'ISK' ? 'ISK' : 'EUR')
             prefs.setCurrency(next === 'ISK' ? 'ISK' : 'EUR')
           }}
-          onCategoryChange={(next) => setCategory(next === 'resident' ? 'RESIDENT' : 'INTERNATIONAL')}
+          onCategoryChange={(next) => { categoryTouched.current = true; setCategory(next === 'resident' ? 'RESIDENT' : 'INTERNATIONAL') }}
           onBack={() => prefs.go('/')}
           onStartEnquiry={() => {
             const q = new URLSearchParams({
@@ -335,6 +355,7 @@ export function BookingPageClient() {
               destination: listing.toLabel,
               date,
               time,
+              luggage: String(luggage),
               passengers: String(passengers),
             })
             router.push(`/book?${q.toString()}`)
@@ -376,7 +397,8 @@ export function BookingPageClient() {
                               kind: item.kind,
                               date,
                               time,
-                              passengers: String(passengers),
+                              luggage: String(luggage),
+              passengers: String(passengers),
                             })
                             router.push(`/book?${q.toString()}`)
                           }}
@@ -392,7 +414,7 @@ export function BookingPageClient() {
                             </span>
                           </span>
                           <span className="shrink-0 text-right">
-                            <span className="block font-display text-lg font-bold text-heading">{formatPrice(item.fromIsk, prefs.currency === 'ISK' ? 'ISK' : 'EUR')}</span>
+                            <span className="block font-display text-lg font-bold text-heading">{formatPrice(item.fromIsk, prefs.currency === 'ISK' ? 'ISK' : 'EUR', item.iskPerEur)}</span>
                             <span className="block text-xs font-semibold text-link">Select</span>
                           </span>
                         </button>

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { jsonError, jsonOk } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { getDemoDriver, getDemoGuestEmail, getDemoStaff } from '@/lib/auth/demo'
 import { prisma } from '@/lib/prisma'
 import { vapidConfig } from '@/lib/push/vapid'
@@ -13,7 +13,7 @@ const schema = z.object({
 })
 
 /** Store a push subscription for each signed-in surface. No message content. */
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!vapidConfig().enabled) {
     return jsonError(503, 'PUSH_NOT_CONFIGURED', 'VAPID keys are not set. Open-tab alerts still work.')
   }
@@ -55,3 +55,23 @@ export async function POST(req: Request) {
 
   return jsonOk({ ok: true, audiences: audiences.map((a) => a.audience) })
 }
+
+/** Remove only the signed-in account's subscription before browser unsubscription. */
+async function handleDELETE(req: Request) {
+  const parsed = z.object({ endpoint: z.string().url() }).safeParse(await req.json().catch(() => null))
+  if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'A subscription endpoint is required.')
+  const [staff, guestEmail, driver] = await Promise.all([getDemoStaff(), getDemoGuestEmail(), getDemoDriver()])
+  const owners = [
+    ...(staff ? [{ audience: 'staff' }] : []),
+    ...(guestEmail ? [{ audience: 'customer', guestEmail }] : []),
+    ...(driver ? [{ audience: 'driver', driverId: driver.id }] : []),
+  ]
+  if (!owners.length) return jsonError(401, 'UNAUTHORIZED', 'Sign in first.')
+  try {
+    await prisma.pushSubscription.deleteMany({ where: { endpoint: parsed.data.endpoint, OR: owners } })
+    return jsonOk({ ok: true })
+  } catch { return jsonError(503, 'PUSH_STORE_FAILED', 'Could not turn off notifications. Please try again.') }
+}
+
+export const POST = apiHandler(handlePOST)
+export const DELETE = apiHandler(handleDELETE)

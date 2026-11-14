@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { ensureTripReminders, parseReminderInput, presentReminder } from '@/lib/email/reminder-settings'
 
@@ -9,8 +9,8 @@ const rowSchema = z.object({
   active: z.boolean(),
 })
 
-export async function GET() {
-  const blocked = await rejectDriverOnly()
+async function handleGET() {
+  const blocked = await rejectDriverOnly('reminders')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   try {
@@ -26,8 +26,8 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePUT(req: Request) {
+  const blocked = await rejectDriverOnly('reminders')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = z.object({ reminders: z.array(rowSchema).max(12) }).safeParse(await req.json().catch(() => null))
@@ -58,3 +58,6 @@ export async function PUT(req: Request) {
     return jsonError(503, 'DATABASE_ERROR', 'Could not save reminder times. Check DATABASE_URL.')
   }
 }
+
+export const GET = apiHandler(handleGET)
+export const PUT = apiHandler(handlePUT)

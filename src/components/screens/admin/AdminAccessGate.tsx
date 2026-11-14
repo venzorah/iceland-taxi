@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 
-import { adminScreenAccess } from '@/lib/auth/admin-screen'
 
 export function AdminAccessGate({ children }: { children: React.ReactNode }) {
   const [access, setAccess] = useState<'loading' | 'admin' | 'blocked'>('loading')
@@ -11,11 +10,11 @@ export function AdminAccessGate({ children }: { children: React.ReactNode }) {
     let cancelled = false
     ;(async () => {
       try {
-        const data = await fetch('/api/auth/demo').then((res) => res.json())
+        const data = await fetch('/api/auth/session').then((res) => res.json())
         if (cancelled) return
-        setAccess(adminScreenAccess({ staff: Boolean(data.staff), driver: Boolean(data.driver) }) === 'driver-blocked' ? 'blocked' : 'admin')
+        setAccess(data.staff ? 'admin' : 'blocked')
       } catch {
-        if (!cancelled) setAccess('admin')
+        if (!cancelled) setAccess('blocked')
       }
     })()
     return () => {
@@ -31,7 +30,7 @@ export function AdminAccessGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="grid min-h-screen place-items-center bg-surface p-6">
         <div className="max-w-md rounded-2xl border border-line bg-bg p-6 text-center">
-          <h1 className="font-display text-xl font-bold text-heading">Drivers cannot open admin</h1>
+          <h1 className="font-display text-xl font-bold text-heading">Staff access required</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted">
             This sign-in is the driver portal. Trips for the driver stay there. Bookings, payments, website pages and settings stay with staff.
           </p>

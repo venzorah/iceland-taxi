@@ -1,18 +1,12 @@
-import { cookies } from 'next/headers'
-
 import { jsonError } from '@/lib/api'
-import { DRIVER_COOKIE, STAFF_COOKIE } from '@/lib/auth/demo'
-import { adminScreenAccess } from '@/lib/auth/admin-screen'
+import { getStaffUser } from '@/lib/auth/session'
+import { canUseAdminModule } from './permissions'
+export { adminScreenAccess } from '@/lib/auth/admin-screen'
 
-export { adminScreenAccess }
-
-/** A signed-in driver without a staff session cannot change admin records. */
-export async function rejectDriverOnly() {
-  const jar = await cookies()
-  const access = adminScreenAccess({
-    staff: jar.get(STAFF_COOKIE)?.value === '1',
-    driver: Boolean(jar.get(DRIVER_COOKIE)?.value),
-  })
-  if (access === 'driver-blocked') return jsonError(403, 'FORBIDDEN', 'Drivers cannot use admin.')
+/** Compatibility name; requires verified active staff and checks module permission. */
+export async function rejectDriverOnly(module?: string) {
+  const user = await getStaffUser()
+  if (!user) return jsonError(403, 'FORBIDDEN', 'An active staff account is required.')
+  if (module && !canUseAdminModule(user.role, module)) return jsonError(403, 'FORBIDDEN', 'Your role does not have access to this module.')
   return null
 }

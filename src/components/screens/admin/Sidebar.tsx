@@ -1,6 +1,8 @@
 'use client'
 
 import React from 'react'
+import { useSiteSession } from '@/components/providers/SessionProvider'
+import { canViewAdminSection } from '@/lib/auth/admin-sections'
 import {
   BarChart3, Bus, Megaphone, CalendarCheck, Car, CreditCard, ExternalLink, FileText, Globe, Inbox, LayoutDashboard, MapPinned, MessageSquare,
   Palette, Route, Search, Settings, Shield, Star, Tag, Users, UserSquare2,
@@ -16,30 +18,24 @@ const GROUPS = [
   { title: 'System', items: [['staff', 'Staff & permissions', Shield], ['appearance', 'Appearance & theme', Palette], ['settings', 'System settings', Settings]] },
 ] as const
 
-const ACCESS: Record<string, string[] | 'all'> = {
-  'Super Admin': 'all',
-  'Booking Manager': ['overview', 'bookings', 'enquiries', 'messages', 'customers'],
-  'Finance Manager': ['overview', 'payments', 'reports', 'pricing'],
-  'Content Manager': ['announcements', 'pages', 'seo', 'languages', 'destinations', 'reviews', 'appearance'],
-}
-
 /** The same sections as the sidebar, as a tappable list for the phone and tablet menu sheet. */
 export function MobileNav({ active, role, onSelect, onViewSite }: { active: string; role: string; onSelect: (s: string) => void; onViewSite?: () => void }) {
-  const allowed = ACCESS[role] ?? 'all'
+  const { user } = useSiteSession()
+  const allowed = (section: string) => !!user && canViewAdminSection(user.role, section)
   return (
     <div>
       <div className="flex items-center gap-3 rounded-2xl bg-surface p-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-mint text-sm font-bold text-navy">SA</div>
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-mint text-sm font-bold text-navy">{(user?.name || user?.email || 'S').slice(0, 2).toUpperCase()}</div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-heading">Juliet</p>
-          <p className="truncate text-xs text-muted">admin@example.local · {role}</p>
+          <p className="truncate text-sm font-semibold text-heading">{user?.name || 'Staff'}</p>
+          <p className="truncate text-xs text-muted">{user?.email} · {role}</p>
         </div>
         <button onClick={onViewSite} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-link">
           <ExternalLink size={13} /> Public site
         </button>
       </div>
       {GROUPS.map((g) => {
-        const items = g.items.filter(([id]) => allowed === 'all' || allowed.includes(id))
+        const items = g.items.filter(([id]) => allowed(id))
         if (!items.length) return null
         return (
           <div key={g.title} className="mt-5">
@@ -67,6 +63,8 @@ export function MobileNav({ active, role, onSelect, onViewSite }: { active: stri
 }
 
 export function Sidebar({ active, role, onSelect, onViewSite }: { active: string; role: string; onSelect: (s: string) => void; onViewSite?: () => void }) {
+  const { user } = useSiteSession()
+  const allowed = (section: string) => !!user && canViewAdminSection(user.role, section)
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-navy text-white lg:flex">
       <div className="flex h-20 items-center border-b border-white/10 px-4">
@@ -74,8 +72,7 @@ export function Sidebar({ active, role, onSelect, onViewSite }: { active: string
       </div>
       <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
         {GROUPS.map((g) => {
-          const allowed = ACCESS[role] ?? 'all'
-          const items = g.items.filter(([id]) => allowed === 'all' || allowed.includes(id))
+          const items = g.items.filter(([id]) => allowed(id))
           if (!items.length) return null
           return (
           <div key={g.title} className="mb-5">
@@ -99,10 +96,10 @@ export function Sidebar({ active, role, onSelect, onViewSite }: { active: string
       </nav>
       <div className="border-t border-white/10 p-4">
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-mint text-sm font-bold text-navy">SA</div>
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-mint text-sm font-bold text-navy">{(user?.name || user?.email || 'S').slice(0, 2).toUpperCase()}</div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">Juliet</p>
-            <p className="truncate text-xs text-white/60">admin@example.local · {role}</p>
+            <p className="truncate text-sm font-semibold">{user?.name || 'Staff'}</p>
+            <p className="truncate text-xs text-white/60">{user?.email} · {role}</p>
           </div>
         </div>
         <button onClick={onViewSite} className="mt-3 flex items-center gap-1.5 text-xs font-medium text-cyan hover:underline">

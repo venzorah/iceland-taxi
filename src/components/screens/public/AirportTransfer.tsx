@@ -94,7 +94,7 @@ export default function AirportTransfer(props: Props) {
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted">Price</p>
-                <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur)}</p>
+                <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p>
               </div>
               <button onClick={() => router.push(`/book?listing=${encodeURIComponent(r.id)}&kind=route`)} className="hidden rounded-full border border-line px-4 py-2 text-sm font-semibold text-heading sm:inline">Book</button>
             </li>

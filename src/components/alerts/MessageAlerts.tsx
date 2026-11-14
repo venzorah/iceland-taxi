@@ -1,16 +1,19 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { startPolling } from '@/lib/polling/scheduler'
 import { useRouter } from 'next/navigation'
 import { Bell } from 'lucide-react'
 
+import { useSiteSession } from '@/components/providers/SessionProvider'
+
 import { messageAlertCopy } from '@/lib/alerts/copy'
 import {
-  alertAudience,
   alertsArmed,
   alertsEnabled,
   armMessageSound,
   markAlertsEnabled,
+  disablePhoneAlerts,
   playMessageSound,
   registerMessageWorker,
   showPhoneNotification,
@@ -24,63 +27,52 @@ const seen = new Set<string>()
 let baselinedViewer: string | null = null
 
 export function MessageAlertControl({ className = '' }: { className?: string }) {
-  const [label, setLabel] = useState('Turn on sound and phone alerts')
+  const [enabled, setEnabled] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [detail, setDetail] = useState<string | null>(null)
-
   useEffect(() => {
-    if (alertsEnabled() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      setLabel('Phone alerts are on')
-    }
+    const sync = () => setEnabled(alertsEnabled())
+    sync()
+    window.addEventListener('storage', sync)
+    window.addEventListener('itb-alert-preference', sync)
+    return () => { window.removeEventListener('storage', sync); window.removeEventListener('itb-alert-preference', sync) }
   }, [])
-
-  const enable = async () => {
-    armMessageSound({ audible: true })
-    markAlertsEnabled()
-    if (typeof Notification === 'undefined') {
-      setLabel('Sound is on')
-      setDetail('This browser cannot show phone notifications. Sound still plays while the site is open.')
-      return
-    }
-    const permission = await Notification.requestPermission()
-    if (permission !== 'granted') {
-      setLabel('Sound is on')
-      setDetail('Notifications are blocked, so nothing can appear at the top of the phone. Sound still plays while you are in the app.')
-      return
-    }
+  const toggle = async () => {
+    if (busy) return
+    setBusy(true); setDetail(null)
     try {
-      await registerMessageWorker()
+      if (enabled) { await disablePhoneAlerts(); setEnabled(false); return }
+      // Permission must be requested directly from the user's click.
+      const permissionRequest = typeof Notification === 'undefined' ? Promise.resolve(null) : Notification.requestPermission()
+      markAlertsEnabled(true); armMessageSound({ audible: true }); setEnabled(true)
+      const permission = await permissionRequest
+      if (permission !== 'granted') {
+        setDetail(permission === 'denied' ? 'Sound is enabled. Phone notifications are blocked; allow them in your browser settings.' : 'Sound is enabled while this page is open. Phone notifications need a supported browser and permission.')
+        return
+      }
       const push = await subscribeToPush()
-      setLabel('Phone alerts are on')
-      setDetail(
-        push.ok
-          ? 'You will get a sound in the app and a notification at the top of the phone.'
-          : `${push.reason} Sound and notifications still work while this site is open.`,
-      )
-    } catch {
-      setLabel('Sound is on')
-      setDetail('Could not register background alerts. Sound and notifications still work while this site is open.')
-    }
+      setDetail(push.ok ? 'Sound and background phone notifications are enabled.' : 'Sound and open-page alerts are enabled. Background phone notifications are not available yet.')
+    } catch (error) { setDetail(error instanceof Error ? error.message : 'Could not update alerts. Please try again.') }
+    finally { setBusy(false) }
   }
-
-  return (
-    <div className={className}>
-      <button
-        type="button"
-        onClick={enable}
-        className="inline-flex items-center gap-2 rounded-full border border-line bg-bg px-3 py-2 text-xs font-semibold text-heading"
-      >
-        <Bell size={14} /> {label}
-      </button>
-      {detail && <p className="mt-1 max-w-sm text-[11px] text-muted">{detail}</p>}
+  return <div className={className}>
+    <div className="inline-flex items-center gap-4 rounded-2xl border border-line bg-bg px-4 py-3">
+      <Bell size={18} className="text-heading" /><div><p id="message-alert-label" className="text-sm font-semibold text-heading">Sound & phone alerts</p><p className="text-xs text-muted">{enabled ? 'On · notification permissions apply' : 'Off'}</p></div>
+      <button type="button" role="switch" aria-label="Sound and phone alerts" aria-checked={enabled} disabled={busy} onClick={toggle} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 ${enabled ? 'bg-primary' : 'bg-line'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${enabled ? 'left-1 translate-x-5' : 'left-1'}`} /></button>
     </div>
-  )
+    {detail && <p role="status" className="mt-2 max-w-md text-xs text-muted">{detail}</p>}
+  </div>
 }
 
 export function MessageAlerts() {
   const router = useRouter()
+  const { user } = useSiteSession()
+  const userId = user?.id
+  const audience = user?.role === 'CUSTOMER' ? 'customer' : user?.role === 'DRIVER' ? 'driver' : 'staff'
   const [toasts, setToasts] = useState<Toast[]>([])
 
   useEffect(() => {
+    if (!userId) { seen.clear(); baselinedViewer = null; setToasts([]); return }
     if (alertsEnabled() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       sessionStorage.setItem('itb-alerts-armed', '1')
       void registerMessageWorker()
@@ -106,12 +98,11 @@ export function MessageAlerts() {
     }
     navigator.serviceWorker?.addEventListener('message', onSW)
 
-    let timer = 0
     const pending: AlertItem[] = []
 
     const announce = (item: AlertItem, hidden: boolean) => {
       const copy = messageAlertCopy(item.bookingRef, item.href)
-      if (hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      if (hidden && alertsEnabled() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         void showPhoneNotification({ id: item.id, title: copy.title, body: copy.body, url: copy.url })
         playMessageSound()
         return
@@ -130,12 +121,13 @@ export function MessageAlerts() {
       for (const item of queued) announce(item, false)
     }
 
-    const poll = async () => {
-      try {
-        const as = alertAudience()
-        const res = await fetch(as ? `/api/messages/alerts?as=${as}` : '/api/messages/alerts')
+    const poll = async (signal: AbortSignal) => {
+        const res = await fetch(`/api/messages/alerts?as=${audience}`, { signal, cache: 'no-store' })
+        if (res.status === 401 || res.status === 403) return { stop: true }
+        if (!res.ok) throw new Error('Alerts unavailable')
         const data = await res.json()
-        if (!res.ok || !data.ok) return
+        if (signal.aborted) return
+        if (!data.ok) throw new Error('Alerts unavailable')
         const viewer = String(data.viewer || 'none')
         if (viewer === 'none') return
         const items = (data.items || []) as AlertItem[]
@@ -149,21 +141,17 @@ export function MessageAlerts() {
           seen.add(item.id)
           announce(item, document.hidden)
         }
-      } catch {
-        /* keep polling */
-      }
     }
 
-    const onVisible = () => flush()
+    const poller = startPolling(poll, { intervalMs: 15000, active: () => !document.hidden })
+    const onVisible = () => { flush(); if (!document.hidden) poller.refresh() }
     document.addEventListener('visibilitychange', onVisible)
-    void poll()
-    timer = window.setInterval(poll, 5000)
     return () => {
-      window.clearInterval(timer)
+      poller.stop()
       document.removeEventListener('visibilitychange', onVisible)
       navigator.serviceWorker?.removeEventListener('message', onSW)
     }
-  }, [router])
+  }, [router, userId, audience])
 
   useEffect(() => {
     if (toasts.length === 0) return

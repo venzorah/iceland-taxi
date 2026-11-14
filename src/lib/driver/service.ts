@@ -1,4 +1,4 @@
-import { BookingStatus } from '@prisma/client'
+import { BookingStatus, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { checkAvailability } from '@/lib/booking/availability'
 
@@ -81,10 +81,10 @@ export function toDriverJob(b: {
     mapUrl: pickupAddress ? googleMapsUrl(pickupAddress) : googleMapsUrl(pickup),
     pickupAt: b.pickupAt?.toISOString() || null,
     time: b.pickupAt
-      ? b.pickupAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      ? b.pickupAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Reykjavik' })
       : '—',
     dateLabel: b.pickupAt
-      ? b.pickupAt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+      ? b.pickupAt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Atlantic/Reykjavik' })
       : '—',
     pax: b.passengers,
     bags: b.luggage,
@@ -116,61 +116,37 @@ function splitRoute(label: string) {
   return [label, '—'] as const
 }
 
-export async function advanceDriverBooking(driverId: string, ref: string) {
-  const booking = await prisma.booking.findUnique({ where: { ref } })
-  if (!booking) return { ok: false as const, code: 'NOT_FOUND' as const, message: 'Booking not found' }
-  if (booking.driverId !== driverId) {
-    return { ok: false as const, code: 'FORBIDDEN' as const, message: 'Not assigned to you' }
-  }
-  const next = nextDriverStatus(booking.status)
-  if (!next) {
-    return { ok: false as const, code: 'INVALID_STATE' as const, message: 'No further status step' }
-  }
-
-  if (booking.pickupAt && booking.endsAt && next !== BookingStatus.COMPLETED) {
-    const avail = await checkAvailability({
-      pickupAt: booking.pickupAt,
-      endsAt: booking.endsAt,
-      driverId,
-      vehicleId: booking.vehicleId,
-      excludeBookingId: booking.id,
-    })
-    if (!avail.available) {
-      return {
-        ok: false as const,
-        code: 'NOT_AVAILABLE' as const,
-        message: 'Conflict with another assigned journey',
-        conflicts: avail.conflicts,
+/** Expected state makes a repeated button request idempotent; no skipped journey steps. */
+export async function advanceDriverBooking(driverId: string, ref: string, expectedStatus: BookingStatus) {
+  try {
+    return await prisma.$transaction(async tx => {
+      const driver = await tx.driver.findFirst({ where: { id: driverId, active: true } })
+      const booking = await tx.booking.findFirst({ where: { ref, driverId } })
+      if (!driver || !booking) return { ok: false as const, code: 'NOT_FOUND' as const, message: 'Assigned journey not found.' }
+      const next = nextDriverStatus(expectedStatus)
+      if (!next) return { ok: false as const, code: 'INVALID_STATE' as const, message: 'This journey cannot advance.' }
+      if (booking.status === next) {
+        const current = await tx.booking.findUniqueOrThrow({ where: { id: booking.id }, include: { vehicle: true } })
+        return { ok: true as const, job: toDriverJob(current) }
       }
-    }
+      if (booking.status !== expectedStatus) return { ok: false as const, code: 'BOOKING_CHANGED' as const, message: 'This journey changed. Refresh before continuing.' }
+      if (booking.pickupAt && booking.endsAt && next !== BookingStatus.COMPLETED) {
+        const avail = await checkAvailability({ pickupAt: booking.pickupAt, endsAt: booking.endsAt, driverId, vehicleId: booking.vehicleId, excludeBookingId: booking.id }, tx)
+        if (!avail.available) return { ok: false as const, code: 'NOT_AVAILABLE' as const, message: 'Conflict with another assigned journey. Contact operations.' }
+      }
+      if (next === BookingStatus.DRIVER_EN_ROUTE || next === BookingStatus.IN_PROGRESS) {
+        const ongoing = await tx.booking.count({ where: { driverId, id: { not: booking.id }, status: { in: ['DRIVER_EN_ROUTE', 'IN_PROGRESS'] } } })
+        if (ongoing) return { ok: false as const, code: 'ON_ANOTHER_TRIP' as const, message: 'Finish your current journey before starting another.' }
+      }
+      const changed = await tx.booking.updateMany({ where: { id: booking.id, driverId, status: expectedStatus }, data: { status: next } })
+      if (!changed.count) return { ok: false as const, code: 'BOOKING_CHANGED' as const, message: 'This journey changed. Refresh before continuing.' }
+      const ongoing = await tx.booking.count({ where: { driverId, status: { in: ['DRIVER_EN_ROUTE', 'IN_PROGRESS'] } } })
+      await tx.driver.update({ where: { id: driverId }, data: { status: ongoing ? 'On trip' : driver.status === 'Unavailable' ? 'Unavailable' : 'Available' } })
+      const updated = await tx.booking.findUniqueOrThrow({ where: { id: booking.id }, include: { vehicle: true } })
+      return { ok: true as const, job: toDriverJob(updated) }
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 20000 })
+  } catch (error) {
+    if ((error as { code?: string }).code === 'P2034') return { ok: false as const, code: 'BOOKING_CHANGED' as const, message: 'This journey changed. Refresh before continuing.' }
+    throw error
   }
-
-  const updated = await prisma.booking.update({
-    where: { ref },
-    data: {
-      status: next,
-      ...(next === BookingStatus.DRIVER_EN_ROUTE || next === BookingStatus.IN_PROGRESS
-        ? {}
-        : {}),
-    },
-    include: { vehicle: true },
-  })
-
-  if (next === BookingStatus.DRIVER_EN_ROUTE || next === BookingStatus.IN_PROGRESS) {
-    await prisma.driver.update({ where: { id: driverId }, data: { status: 'On trip' } })
-  }
-  if (next === BookingStatus.COMPLETED) {
-    const active = await prisma.booking.count({
-      where: {
-        driverId,
-        status: { in: [BookingStatus.DRIVER_EN_ROUTE, BookingStatus.IN_PROGRESS] },
-        NOT: { id: updated.id },
-      },
-    })
-    if (active === 0) {
-      await prisma.driver.update({ where: { id: driverId }, data: { status: 'Available' } })
-    }
-  }
-
-  return { ok: true as const, booking: updated, job: toDriverJob(updated) }
 }

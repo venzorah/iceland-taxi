@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { jsonError, jsonOk } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { checkAvailability, computeEndsAt } from '@/lib/booking/availability'
 
 const schema = z.object({
@@ -11,7 +11,7 @@ const schema = z.object({
   excludeBookingId: z.string().optional(),
 })
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!process.env.DATABASE_URL) {
     return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required for availability checks')
   }
@@ -37,3 +37,5 @@ export async function POST(req: Request) {
 
   return jsonOk({ ok: true, durationMinutes, endsAt, ...result })
 }
+
+export const POST = apiHandler(handlePOST)

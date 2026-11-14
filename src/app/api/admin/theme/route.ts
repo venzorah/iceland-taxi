@@ -1,14 +1,16 @@
 import { z } from 'zod'
 
 import { appearanceFromJson, barFromJson, DEFAULT_APPEARANCE, type AppearanceConfig } from '@/lib/admin/content'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('theme')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) {
     return jsonOk({ ok: true, source: 'default', appearance: DEFAULT_APPEARANCE, announcementBar: null })
   }
-  const theme = await prisma.themeSettings.findUnique({ where: { id: 'singleton' } }).catch(() => null)
+  const theme = await prisma.themeSettings.findUnique({ where: { id: 'singleton' } })
   return jsonOk({
     ok: true,
     source: theme ? 'database' : 'default',
@@ -43,13 +45,13 @@ const patchSchema = z.object({
     .optional(),
 })
 
-export async function PATCH(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePATCH(req: Request) {
+  const blocked = await rejectDriverOnly('theme')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Invalid theme.')
-  const current = await prisma.themeSettings.findUnique({ where: { id: 'singleton' } }).catch(() => null)
+  const current = await prisma.themeSettings.findUnique({ where: { id: 'singleton' } })
   const appearance: AppearanceConfig = {
     ...appearanceFromJson(current?.appearance),
     ...parsed.data.appearance,
@@ -77,3 +79,6 @@ export async function PATCH(req: Request) {
   })
   return jsonOk({ ok: true, appearance: appearanceFromJson(theme.appearance), announcementBar: barFromJson(theme.announcementBar) })
 }
+
+export const GET = apiHandler(handleGET)
+export const PATCH = apiHandler(handlePATCH)

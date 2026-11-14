@@ -83,7 +83,7 @@ export default function PrivateTours(props: Props) {
                 <div className="mt-5 flex items-end justify-between">
                   <div>
                     <p className="text-xs text-muted">Price</p>
-                    <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur)}</p>
+                    <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
                   </div>
                   <button onClick={() => router.push(`/book?listing=${encodeURIComponent(tour.id)}&kind=service`)} className="text-sm font-bold text-link hover:underline">Book</button>
                 </div>

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -16,8 +16,8 @@ const patchSchema = z.object({
   override: z.boolean().optional(),
 })
 
-export async function PATCH(req: Request, ctx: Ctx) {
-  const blocked = await rejectDriverOnly()
+async function handlePATCH(req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly('routes')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const { id } = await ctx.params
@@ -32,8 +32,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 }
 
-export async function DELETE(_req: Request, ctx: Ctx) {
-  const blocked = await rejectDriverOnly()
+async function handleDELETE(_req: Request, ctx: Ctx) {
+  const blocked = await rejectDriverOnly('routes')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const { id } = await ctx.params
@@ -45,3 +45,6 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     return jsonError(404, 'NOT_FOUND', 'Route not found')
   }
 }
+
+export const PATCH = apiHandler(handlePATCH)
+export const DELETE = apiHandler(handleDELETE)

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { ImageUpload } from '@/components/admin/ImageUpload'
 import { TripReminders } from './TripReminders'
 
 type Workspace = {
@@ -32,7 +33,7 @@ type Workspace = {
   }
 }
 
-function useWorkspace() {
+function useWorkspace(section: string) {
   const [data, setData] = useState<Workspace | null>(null)
   const [message, setMessage] = useState('Loading…')
   const [tick, setTick] = useState(0)
@@ -41,7 +42,7 @@ function useWorkspace() {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/admin/workspace')
+        const res = await fetch(`/api/admin/workspace?section=${encodeURIComponent(section)}`)
         const body = await res.json()
         if (cancelled) return
         if (!res.ok || !body.ok) {
@@ -57,7 +58,7 @@ function useWorkspace() {
     return () => {
       cancelled = true
     }
-  }, [tick])
+  }, [tick, section])
 
   return { data, message, reload: () => setTick((value) => value + 1) }
 }
@@ -124,6 +125,7 @@ export function DestinationsSection() {
           <label className="text-xs font-semibold text-muted">Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Note<input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Image URL<input value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} placeholder="Optional" className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" /></label>
+          <ImageUpload key={draft.id || 'new-destination'} onUploaded={imageUrl => setDraft(current => current ? { ...current, imageUrl } : null)} />
           <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Shown on the public site</label>
           <div className="flex gap-2">
             <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
@@ -170,7 +172,7 @@ export function DestinationsSection() {
 }
 
 export function CustomersSection() {
-  const { data, message, reload } = useWorkspace()
+  const { data, message, reload } = useWorkspace('customers')
   const rows = data?.customers ?? []
   const [draft, setDraft] = useState<{ email: string; name: string; category: string; existing: boolean } | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -232,7 +234,7 @@ export function CustomersSection() {
 }
 
 export function ReportsSection() {
-  const { data, message } = useWorkspace()
+  const { data, message } = useWorkspace('reports')
   const reports = data?.reports
   return (
     <Shell message={message}>
@@ -264,7 +266,7 @@ export function ReportsSection() {
 }
 
 export function ReviewsSection() {
-  const { data, message, reload } = useWorkspace()
+  const { data, message, reload } = useWorkspace('reviews')
   const enabled = data?.reviews.testimonialsEnabled ?? false
   const [status, setStatus] = useState<string | null>(null)
 
@@ -397,7 +399,7 @@ export function PagesSection() {
 }
 
 export function LanguagesSection() {
-  const { data, message } = useWorkspace()
+  const { data, message } = useWorkspace('languages')
   const [defaultLang, setDefaultLang] = useState<'en' | 'is'>('en')
   const [status, setStatus] = useState<string | null>(null)
 
@@ -466,7 +468,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
 }
 
 export function SettingsSection() {
-  const { data, message } = useWorkspace()
+  const { data, message } = useWorkspace('settings')
   const company = data?.settings.company
   const [draft, setDraft] = useState(company?.whatsappE164 || '')
   const [status, setStatus] = useState<string | null>(null)

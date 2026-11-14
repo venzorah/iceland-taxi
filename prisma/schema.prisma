@@ -8,6 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -74,6 +75,7 @@ enum ThemeMode {
 }
 
 model User {
+  authId       String?          @unique @db.Uuid
   id           String           @id @default(cuid())
   email        String           @unique
   name         String?
@@ -202,6 +204,8 @@ model Faq {
 }
 
 model Booking {
+  requestKey      String?        @unique
+  requestHash     String?
   id              String         @id @default(cuid())
   ref             String         @unique
   customerId      String?
@@ -280,6 +284,7 @@ model Enquiry {
 }
 
 model Payment {
+  checkoutLeaseKey String?       @unique
   id              String        @id @default(cuid())
   bookingId       String
   booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)

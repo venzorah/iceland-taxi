@@ -1,3 +1,6 @@
+import { canAccessBooking } from '@/lib/customer/booking-access'
+import { prisma } from '@/lib/api'
+import { apiHandler } from '@/lib/api'
 import { NextResponse } from 'next/server'
 import { syncTeyaPayment } from '@/lib/payments/sync-teya'
 
@@ -5,7 +8,7 @@ import { syncTeyaPayment } from '@/lib/payments/sync-teya'
  * Browser return from Teya hosted checkout.
  * The query string is only a hint. Payment status comes from the session lookup.
  */
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   const url = new URL(req.url)
   const ref = url.searchParams.get('ref') || ''
   const result = url.searchParams.get('result')
@@ -19,9 +22,13 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${origin}/book?ref=${encodeURIComponent(ref)}&payment=pending`)
   }
 
+  const booking = await prisma.booking.findUnique({ where: { ref } })
+  if (!booking || !await canAccessBooking(booking)) return NextResponse.redirect(`${origin}/login?next=${encodeURIComponent(`/book?ref=${ref}&payment=pending`)}`)
   const synced = await syncTeyaPayment(ref, hint)
   const payment = synced.paid ? 'success' : synced.outcome
   return NextResponse.redirect(
     `${origin}/book?ref=${encodeURIComponent(ref)}&payment=${encodeURIComponent(payment)}`,
   )
 }
+
+export const GET = apiHandler(handleGET)

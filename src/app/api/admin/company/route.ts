@@ -1,9 +1,11 @@
 import { z } from 'zod'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { normalizeStoredE164 } from '@/lib/whatsapp'
 
-export async function GET() {
+async function handleGET() {
+  const blocked = await rejectDriverOnly('company')
+  if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const company = await prisma.companySettings.findUnique({ where: { id: 'singleton' } })
   return jsonOk({ ok: true, company })
@@ -26,8 +28,8 @@ const patchSchema = z.object({
 })
 
 /** Admin CMS company profile — never invent missing contacts. */
-export async function PATCH(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePATCH(req: Request) {
+  const blocked = await rejectDriverOnly('company')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = await req.json().catch(() => null)
@@ -52,3 +54,6 @@ export async function PATCH(req: Request) {
   })
   return jsonOk({ ok: true, company })
 }
+
+export const GET = apiHandler(handleGET)
+export const PATCH = apiHandler(handlePATCH)

@@ -2,7 +2,7 @@ import { Role } from '@prisma/client'
 import { z } from 'zod'
 
 import { STAFF_ROLES } from '@/lib/admin/content'
-import { jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 const ROLE_LABEL: Record<string, string> = {
@@ -31,14 +31,10 @@ function present(user: {
   }
 }
 
-export async function GET() {
-  if (!process.env.DATABASE_URL) {
-    return jsonOk({
-      ok: true,
-      source: 'seed',
-      staff: [{ id: 'demo-staff', email: 'admin@example.local', name: 'Juliet', role: 'SUPER_ADMIN', roleLabel: 'Super Admin', title: null, active: true }],
-    })
-  }
+async function handleGET() {
+  const blocked = await rejectDriverOnly('staff')
+  if (blocked) return blocked
+  if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'Database connection required.')
   const users = await prisma.user.findMany({
     where: { role: { in: [...STAFF_ROLES] } },
     include: { staffProfile: true },
@@ -53,8 +49,8 @@ const createSchema = z.object({
   role: z.enum(STAFF_ROLES),
 })
 
-export async function POST(req: Request) {
-  const blocked = await rejectDriverOnly()
+async function handlePOST(req: Request) {
+  const blocked = await rejectDriverOnly('staff')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
@@ -79,3 +75,6 @@ export async function POST(req: Request) {
   }
   return jsonOk({ ok: true, staff: present(user) }, { status: 201 })
 }
+
+export const GET = apiHandler(handleGET)
+export const POST = apiHandler(handlePOST)

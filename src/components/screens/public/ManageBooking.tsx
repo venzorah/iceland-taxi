@@ -50,10 +50,10 @@ export default function ManageBooking(props: Props) {
   const [found, setFound] = useState<FoundBooking | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
-  const [signingIn, setSigningIn] = useState(false)
+  const signingIn = false
 
   useEffect(() => {
-    fetch('/api/auth/demo')
+    fetch('/api/auth/session')
       .then((res) => res.json())
       .then((data) => {
         const guest = typeof data?.guestEmail === 'string' ? data.guestEmail : null
@@ -65,29 +65,7 @@ export default function ManageBooking(props: Props) {
 
   const signedInAsCustomer = Boolean(found && sessionEmail && sessionEmail.toLowerCase() === found.email)
 
-  const signInAsCustomer = async () => {
-    const guestEmail = (found?.email || email).trim().toLowerCase()
-    if (!guestEmail) return
-    setSigningIn(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/auth/demo', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ role: 'guest', email: guestEmail }),
-      })
-      const data = await res.json().catch(() => null)
-      if (!res.ok || !data?.ok) {
-        setError(data?.message || 'Sign in failed.')
-        return
-      }
-      setSessionEmail(data.email || guestEmail)
-    } catch {
-      setError('Sign in failed.')
-    } finally {
-      setSigningIn(false)
-    }
-  }
+  const signInAsCustomer = async () => { window.location.assign('/login?next=/account') }
 
   const applySaved = (saved: SavedPickup) => {
     setFound((current) =>
@@ -119,7 +97,7 @@ export default function ManageBooking(props: Props) {
     >
       <section className="mx-auto max-w-lg px-4 py-10 sm:px-6 sm:py-16">
         <h1 className="font-display text-3xl font-extrabold text-heading">Manage booking</h1>
-        <p className="mt-3 text-base text-muted">Look up a trip with the reference from your confirmation email. No account required.</p>
+        <p className="mt-3 text-base text-muted">Enter your booking reference and email. Guests can look up a booking in the browser used at checkout. On another device, sign in with a verified account using the booking email, or contact support.</p>
 
         <form
           className="mt-8 space-y-4 rounded-2xl border border-line bg-card p-5 sm:p-6"
@@ -208,7 +186,7 @@ export default function ManageBooking(props: Props) {
         )}
         {state === 'empty' && (
           <p className="mt-6 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-muted" role="alert">
-            {error || 'No booking matched that reference and email. Check the confirmation email or contact support.'}
+            {error || 'No accessible booking matched. Check the reference and email, use your checkout browser, or sign in with the booking email. Contact support if you still need help.'}
           </p>
         )}
 

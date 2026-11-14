@@ -1,10 +1,11 @@
 'use client'
+import { useSiteImages } from '@/components/providers/SiteContent'
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Baby, Check, CheckCircle2, Copy, Lock, MessageCircle, Plane, Repeat, Signpost } from 'lucide-react'
 
 import { SiteHeader } from '@/components/site/SiteHeader'
-import { IMG, formatPrice, type Currency } from '@/lib/design/data'
+import { formatPrice, type Currency } from '@/lib/design/data'
 import { OFFICIAL_WHATSAPP_E164, whatsappHref } from '@/lib/whatsapp'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
@@ -90,6 +91,7 @@ export type BookingPayPayload = {
 }
 
 export default function Booking(props: Props) {
+  const images = useSiteImages()
   const p = { ...args, ...props }
   const th = p.theme as 'light' | 'dark'
   const [category, setCategory] = useState(p.customerCategory)
@@ -291,7 +293,7 @@ export default function Booking(props: Props) {
 
               {/* Summary */}
               <aside className="rounded-2xl border border-line bg-card lg:sticky lg:top-40">
-                <img src={IMG.airport} alt="" className="hidden h-32 w-full rounded-t-2xl object-cover lg:block" />
+                <img src={images.airport} alt="" className="hidden h-32 w-full rounded-t-2xl object-cover lg:block" />
                 <div className="p-4 sm:p-6">
                   <p className="text-xs font-medium text-muted">Price breakdown</p>
                   <ul className="mt-3 space-y-2 text-sm">

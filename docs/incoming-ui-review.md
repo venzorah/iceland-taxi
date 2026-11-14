@@ -31,3 +31,7 @@ Reviewed fetched commits `f4854c1`, `2ddd680`, and `70f57aa` against local base 
 - Generate/review only the necessary additive migration. Verify TypeScript, lint, production build and affected ownership/role/session/payment/upload regressions; inspect the merged pages in the browser.
 
 This was a source review. The incoming version has not been merged, built or rendered, and no claim is made that its UI works with the current backend unchanged. Do not run a force reset, accept all incoming changes, or blindly stash/pull/pop.
+
+## Integration completed
+
+The user subsequently authorized integration. See [UI integration](ui-integration.md) for the resolved implementation, applied additive migration and verification. Findings above describe the incoming version before adaptation.

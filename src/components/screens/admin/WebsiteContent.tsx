@@ -1,0 +1,98 @@
+'use client'
+
+import React, { useEffect, useState } from 'react'
+import { ImageField, type LibraryImage } from '@/components/screens/admin/ImageField'
+
+type Block = { key: string; kind: 'image' | 'text'; group: string; label: string; value: string }
+
+export function WebsiteContent() {
+  const [blocks, setBlocks] = useState<Block[]>([])
+  const [images, setImages] = useState<LibraryImage[]>([])
+  const [message, setMessage] = useState('Loading public content…')
+  const [saving, setSaving] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      fetch('/api/admin/site-blocks').then((res) => res.json()),
+      fetch('/api/admin/library').then((res) => res.json()),
+    ]).then(([content, library]) => {
+      if (cancelled) return
+      if (!content?.ok) {
+        setMessage(content?.message || 'Could not load public content')
+        return
+      }
+      setBlocks(content.blocks || [])
+      setImages(library?.images || [])
+      setMessage('Public text and images')
+    }).catch(() => {
+      if (!cancelled) setMessage('Could not load public content')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const update = (key: string, value: string) => {
+    setBlocks((current) => current.map((block) => block.key === key ? { ...block, value } : block))
+  }
+
+  const save = async (block: Block) => {
+    setSaving(block.key)
+    try {
+    const res = await fetch('/api/admin/site-blocks', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ key: block.key, value: block.value }),
+    })
+    const body = await res.json().catch(() => null)
+    setSaving(null)
+    if (!res.ok || !body?.ok) {
+      setMessage(body?.message || 'Could not save')
+      return
+    }
+    update(block.key, body.value)
+    setMessage('Saved. The public site uses this value.')
+    window.dispatchEvent(new Event('itb-site-content-updated'))
+    } catch { setMessage('Could not confirm the save. Please try again.') } finally { setSaving(null) }
+  }
+
+  const groups = [...new Set(blocks.map((block) => block.group))]
+
+  return (
+    <div className="space-y-8 p-4 sm:p-6">
+      <div>
+        <h2 className="font-display text-base font-bold text-heading">Website content</h2>
+        <p className="mt-1 text-sm text-muted">Edit the public wording and photos. Upload a new picture or pick one from the library, then save. Clearing a text field and saving restores the original.</p>
+        <p className="mt-2 text-xs text-muted">{message}</p>
+      </div>
+      {groups.map((group) => (
+        <section key={group}>
+          <h3 className="font-display text-sm font-bold text-heading">{group}</h3>
+          <ul className="mt-3 space-y-3">
+            {blocks.filter((block) => block.group === group).map((block) => (
+              <li key={block.key} className="rounded-xl border border-line bg-bg p-4">
+                <div className="block text-xs font-semibold text-muted">
+                  {block.label}
+                  {block.kind === 'image' ? (
+                    <ImageField
+                      value={block.value}
+                      images={images}
+                      onUploaded={(image) => setImages((current) => [image, ...current.filter((item) => item.id !== image.id)])}
+                      onChange={(url) => update(block.key, url)}
+                    />
+                  ) : (
+                    <textarea aria-label={block.label} disabled={saving !== null} rows={block.value.length > 120 ? 4 : 2} value={block.value} onChange={(event) => update(block.key, event.target.value)} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
+                  )}
+                </div>
+                <button type="button" disabled={saving !== null} onClick={() => save(block)} className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary disabled:opacity-60">
+                  {saving === block.key ? 'Saving…' : 'Save'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}

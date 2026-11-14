@@ -22,6 +22,8 @@ import { Staff } from './Staff'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, type AnnouncementState } from '@/lib/design/announcements'
 import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from './Workspace'
+import { ImageLibrary } from './ImageLibrary'
+import { WebsiteContent } from './WebsiteContent'
 import { Enquiries } from './Enquiries'
 
 export const args = {
@@ -60,7 +62,7 @@ export default function AdminDashboard(props: Props) {
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
 
   const titles: Record<string, string> = {
-    overview: 'Today', bookings: 'Bookings', enquiries: 'Enquiries', messages: 'Messages', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
+    content: 'Website content', library: 'Image library', overview: 'Today', bookings: 'Bookings', enquiries: 'Enquiries', messages: 'Messages', services: 'Services', pricing: 'Pricing & currency', routes: 'Routes', payments: 'Payments & refunds', drivers: 'Drivers',
     vehicles: 'Vehicles', destinations: 'Destinations', customers: 'Customers', reports: 'Reports', reviews: 'Reviews', announcements: 'Announcements', pages: 'Pages & blog', seo: 'SEO & landing pages', languages: 'Languages', staff: 'Staff & permissions', appearance: 'Appearance & Theme', settings: 'System settings',
   }
   const body = (() => {
@@ -83,6 +85,8 @@ export default function AdminDashboard(props: Props) {
       case 'drivers': return <Fleet view="drivers" />
       case 'vehicles': return <Fleet view="vehicles" />
       case 'announcements': return <AnnouncementsManager value={announcements} onChange={setAnnouncements} />
+      case 'content': return <WebsiteContent />
+      case 'library': return <ImageLibrary />
       case 'seo': return <Seo />
       case 'staff': return <Staff />
       case 'appearance': return <Appearance />

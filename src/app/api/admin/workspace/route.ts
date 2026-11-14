@@ -29,25 +29,25 @@ function integrations() {
       key: 'teya',
       label: 'Teya payments',
       configured: integrationConfigured('teya'),
-      message: teya.configured && teya.sandboxOnly ? 'Sandbox credentials present' : 'Sandbox keys are not set',
+      message: teya.configured && teya.sandboxOnly ? 'Sandbox configured. Provider connectivity is not yet verified.' : 'Not connected. No card charges can be taken.',
     },
     {
       key: 'google_maps',
       label: 'Google Maps',
       configured: integrationConfigured('google_maps'),
-      message: integrationConfigured('google_maps') ? 'API key present' : 'GOOGLE_MAPS_API_KEY is not set',
+      message: integrationConfigured('google_maps') ? 'Configured' : 'Not configured',
     },
     {
       key: 'smtp',
       label: 'Email',
       configured: integrationConfigured('smtp'),
-      message: integrationConfigured('smtp') ? 'SMTP_URL present' : 'SMTP_URL is not set',
+      message: integrationConfigured('smtp') ? 'Configured' : 'Not configured',
     },
     {
       key: 'sms',
       label: 'SMS',
       configured: integrationConfigured('sms'),
-      message: integrationConfigured('sms') ? 'SMS_API_KEY present' : 'SMS_API_KEY is not set',
+      message: integrationConfigured('sms') ? 'Configured' : 'Not configured',
     },
     {
       key: 'whatsapp',
@@ -55,7 +55,7 @@ function integrations() {
       configured: integrationConfigured('whatsapp'),
       message: integrationConfigured('whatsapp')
         ? 'Cloud API credentials present. Outbound notices only. Inbound chats are not synced.'
-        : 'WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID are not set. Staff open a WhatsApp link.',
+        : 'Not connected. Staff open a WhatsApp link.',
     },
   ]
 }

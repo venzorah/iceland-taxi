@@ -17,6 +17,7 @@ const createSchema = z.object({
   pax: z.number().int().positive(),
   bags: z.number().int().nonnegative(),
   plate: z.string().nullable().optional(),
+  useCase: z.string().nullable().optional(),
   upgradeIsk: z.number().int().nonnegative().optional(),
   active: z.boolean().optional(),
 })
@@ -34,6 +35,7 @@ async function handlePOST(req: Request) {
       pax: parsed.data.pax,
       bags: parsed.data.bags,
       plate: parsed.data.plate?.trim() || null,
+      useCase: parsed.data.useCase?.trim() || null,
       upgradeIsk: parsed.data.upgradeIsk ?? 0,
       active: parsed.data.active ?? true,
     },

@@ -6,10 +6,12 @@ import { rejectDriverOnly } from '@/lib/auth/admin-access'
 const createSchema = z.object({
   displayName: z.string().min(1),
   email: z.string().email(),
+  phone: z.string().nullable().optional(),
   licenceNotes: z.string().nullable().optional(),
   vehicleId: z.string().nullable().optional(),
   status: z.string().optional(),
-})
+  active: z.boolean().optional(),
+}).strict()
 
 async function handlePOST(req: Request) {
   const blocked = await rejectDriverOnly('drivers')
@@ -24,14 +26,15 @@ async function handlePOST(req: Request) {
     data: {
       email,
       name: parsed.data.displayName.trim(),
+      phone: parsed.data.phone?.trim() || null,
       role: 'DRIVER',
       driver: {
         create: {
           displayName: parsed.data.displayName.trim(),
           licenceNotes: parsed.data.licenceNotes?.trim() || null,
           vehicleId: parsed.data.vehicleId || null,
-          status: parsed.data.status?.trim() || 'Available',
-          active: true,
+          status: parsed.data.active === false ? 'Suspended' : parsed.data.status?.trim() || 'Available',
+          active: parsed.data.active !== false && parsed.data.status?.trim() !== 'Suspended',
         },
       },
     },

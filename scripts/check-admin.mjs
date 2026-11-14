@@ -8,10 +8,10 @@ import assert from 'node:assert/strict'
 nextEnv.loadEnvConfig(process.cwd())
 const origin=process.argv[2]||'http://127.0.0.1:3106'
 if(!['127.0.0.1','localhost'].includes(new URL(origin).hostname))throw new Error('Local server required')
-const connection=new URL(process.env.DIRECT_URL||process.env.DATABASE_URL);connection.searchParams.set('connection_limit','1');connection.searchParams.set('connect_timeout','30')
+const connection=new URL(process.env.DIRECT_URL||process.env.DATABASE_URL);connection.searchParams.set('connection_limit','1');connection.searchParams.set('connect_timeout','30');connection.searchParams.set('pool_timeout','40')
 const db=new PrismaClient({datasourceUrl:connection.toString()})
 const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
-const run=randomUUID(),accounts=[],refs=[],bookingIds=[]
+const run=randomUUID(),accounts=[],refs=[],bookingIds=[],contentKeys=[]
 let vehicle,service,destination,driverUser,payment
 async function account(role){
  const email=`admin-check-${role.toLowerCase()}-${run}@example.invalid`,password=randomBytes(32).toString('base64url')
@@ -43,6 +43,19 @@ try{
  const reports=await request(finance,'/api/admin/workspace?section=reports');assert.equal('customers' in reports.body,false);assert.equal('settings' in reports.body,false)
  const overview=await request(superadmin,'/api/admin/overview');assert.equal(overview.status,200);assert.ok(Array.isArray(overview.body.drivers));assert.ok(Array.isArray(overview.body.totals))
  console.log('All five staff roles, private section projections and database overview: PASS')
+ const fields=await request(content,'/api/admin/site-blocks');assert.equal(fields.status,200)
+ const used=new Set((await db.siteBlock.findMany({select:{key:true}})).map(row=>row.key))
+ const spare=fields.body.blocks.find(b=>b.kind==='text'&&!used.has(b.key))
+ if(spare){
+  contentKeys.push(spare.key);const value=`Temporary website verification ${run}`
+  assert.equal((await request(finance,'/api/admin/site-blocks','PUT',{key:spare.key,value})).status,403)
+  assert.equal((await request(content,'/api/admin/site-blocks','PUT',{key:spare.key,value})).status,200)
+  assert.equal((await request(content,'/api/public/site')).body.blocks[spare.key],value)
+  assert.equal((await request(content,'/api/admin/site-blocks','PUT',{key:spare.key,value:''})).status,200)
+  assert.equal((await db.siteBlock.findUnique({where:{key:spare.key}})),null)
+  console.log('Website content saves, publishes, resets to defaults and rejects finance writes: PASS')
+ }
+
  const v=await request(manager,'/api/admin/vehicles','POST',{name:`Verification ${run}`,category:'Test',pax:3,bags:3,upgradeIsk:0});assert.equal(v.status,201);vehicle=v.body.vehicle
  const d=await request(manager,'/api/admin/drivers','POST',{displayName:`Verification ${run}`,email:`driver-${run}@example.invalid`});assert.equal(d.status,201)
  driverUser=await db.user.findUniqueOrThrow({where:{email:`driver-${run}@example.invalid`},include:{driver:true}})
@@ -71,6 +84,7 @@ try{
  if(process.env.CHROME_DEBUG_URL){const {verifyAdminBrowser}=await import('./admin-browser-check.mjs');await verifyAdminBrowser(superadmin.jar,finance.jar,origin)}
 }catch(error){console.error('Admin verification failed:',error.stack);process.exitCode=1}
 finally{
+ await db.siteBlock.deleteMany({where:{key:{in:contentKeys},value:{contains:run}}})
  await db.emailNotice.deleteMany({where:{OR:[{bookingId:{in:bookingIds}},{toEmail:{contains:run}},...(driverUser?[{dedupeKey:{contains:driverUser.id}}]:[])]}})
  await db.staffNotification.deleteMany({where:{bookingRef:{in:refs}}})
  await db.message.deleteMany({where:{bookingId:{in:bookingIds}}})

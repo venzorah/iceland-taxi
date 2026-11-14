@@ -6,7 +6,8 @@ import { ArrowRight, Clock, Users } from 'lucide-react'
 
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { IMG, formatPrice, type Currency } from '@/lib/design/data'
+import { useSiteImages } from '@/components/providers/SiteContent'
+import { formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -31,6 +32,7 @@ type Props = {
 export default function PrivateTours(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
+  const images = useSiteImages()
   const cur = p.currency as Currency
   const router = useRouter()
   const listings = usePublishedListings()
@@ -56,7 +58,7 @@ export default function PrivateTours(props: Props) {
       announcements={p.announcements}
     >
       <section className="relative overflow-hidden bg-navy text-white">
-        <img src={IMG.goldenCircle} alt="Golden Circle private tour landscape" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+        <img src={images.goldenCircle} alt="Golden Circle private tour landscape" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private sightseeing tours across Iceland</h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Your own vehicle and driver, your own schedule. Stop where you want, packages are starting points, not fixed bus itineraries.</p>
@@ -72,7 +74,7 @@ export default function PrivateTours(props: Props) {
           {listings !== null && tours.length === 0 && <p className="text-sm text-muted">No published tour price yet. This option is unavailable.</p>}
           {tours.map((tour) => (
             <article key={tour.id} className="overflow-hidden rounded-2xl border border-line bg-card">
-              <img src={tour.imageUrl || IMG.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover" />
+              <img src={tour.imageUrl || images.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover" />
               <div className="p-5">
                 <h2 className="font-display text-lg font-bold text-heading">{tour.title}</h2>
                 <p className="mt-2 text-sm text-muted">{tour.blurb}</p>

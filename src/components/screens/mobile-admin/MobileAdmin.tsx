@@ -3,8 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, MapPinned, MessageSquare, Moon, Palette, Plus, Route, Search,
-  Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft,
+  BarChart3, Car, ChevronRight, CreditCard, FileText, Globe, Home, LayoutGrid, LogOut, MapPinned, MessageSquare, Moon, Palette, Plus, Route, Search,
+  Settings, Shield, Star, Sun, Tag, UserSquare2, Users, CalendarCheck, X, Send, Megaphone, ChevronLeft, Images,
 } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
@@ -27,9 +27,12 @@ import { Pricing } from '@/components/screens/admin/Pricing'
 import { Routes } from '@/components/screens/admin/Routes'
 import { Seo } from '@/components/screens/admin/Seo'
 import { Staff } from '@/components/screens/admin/Staff'
+import { ImageLibrary } from '@/components/screens/admin/ImageLibrary'
+import { WebsiteContent } from '@/components/screens/admin/WebsiteContent'
 import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from '@/components/screens/admin/Workspace'
 import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
+import { signOutToHome } from '@/lib/auth/sign-out'
 
 export const viewport = 'mobile'
 
@@ -83,7 +86,7 @@ export default function MobileAdmin(props: Props) {
   const [editing, setEditing] = useState<ServiceRow | null>(null)
   const [chat, setChat] = useState<string | null>(null)
   const th = p.theme as 'light' | 'dark'
-  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries' | null>(null)
+  const [page, setPage] = useState<'announcements' | 'payments' | 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries' | 'content' | 'library' | null>(null)
   const [localAnn, setLocalAnn] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
   const announcements = props.onAnnouncementsChange ? props.announcements ?? ANNOUNCEMENTS_SEED : localAnn
   const setAnnouncements = props.onAnnouncementsChange ?? setLocalAnn
@@ -201,6 +204,9 @@ export default function MobileAdmin(props: Props) {
         <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-bg px-4">
           <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-12 w-auto" />
           <div className="ml-auto flex items-center gap-1">
+            <button type="button" onClick={signOutToHome} aria-label="Sign out" className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-semibold text-heading">
+              <LogOut size={18} /> Sign out
+            </button>
             <button aria-label="Search" className="grid h-10 w-10 place-items-center rounded-full text-heading"><Search size={19} /></button>
             <StaffNoticeBell
               onOpenChat={(ref) => { setPage(null); setTab('messages'); setChat(ref) }}
@@ -261,6 +267,8 @@ export default function MobileAdmin(props: Props) {
               {page === 'enquiries' && <Enquiries />}
               {page === 'routes' && <Routes />}
               {page === 'pricing' && <Pricing />}
+              {page === 'content' && <WebsiteContent />}
+              {page === 'library' && <ImageLibrary />}
             </div>
           </div>
         )}
@@ -703,6 +711,8 @@ const MORE_TITLES: Record<string, string> = {
   settings: 'Settings',
   routes: 'Routes',
   pricing: 'Pricing',
+  content: 'Website content',
+  library: 'Image library',
   enquiries: 'Custom enquiries',
 }
 
@@ -721,10 +731,12 @@ function MoreTab({
   liveAnnouncements: number
   onOpenAnnouncements: () => void
   onOpenPayments: () => void
-  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries') => void
+  onOpenPage: (page: 'drivers' | 'vehicles' | 'customers' | 'reports' | 'reviews' | 'pages' | 'seo' | 'languages' | 'staff' | 'appearance' | 'settings' | 'destinations' | 'routes' | 'pricing' | 'enquiries' | 'content' | 'library') => void
 }) {
   const items = [
     ['Custom enquiries', MessageSquare, () => onOpenPage('enquiries')],
+    ['Website content', FileText, () => onOpenPage('content')],
+    ['Image library', Images, () => onOpenPage('library')],
     ['Drivers', UserSquare2, () => onOpenPage('drivers')],
     ['Vehicles', Car, () => onOpenPage('vehicles')],
     ['Routes', Route, () => onOpenPage('routes')],
@@ -766,6 +778,9 @@ function MoreTab({
         ))}
       </ul>
       <button onClick={onOpenDesktop} className="mt-4 w-full text-center text-sm font-semibold text-link">Open desktop dashboard</button>
+      <button type="button" onClick={signOutToHome} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-line text-sm font-semibold text-heading">
+        <LogOut size={16} /> Sign out
+      </button>
       <p className="mt-2 text-center text-xs text-muted">Signed in as Juliet · admin@example.local</p>
     </div>
   )

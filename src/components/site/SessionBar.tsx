@@ -12,7 +12,7 @@ export function SessionBar({ email }: { email: string }) {
     } catch { setError('Could not sign out. Please try again.'); setBusy(false) }
   }
   return <div className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-bg px-4 py-2 text-xs text-heading">
-    <span>{email}</span><button disabled={busy} onClick={signOut} className="rounded-lg border border-line px-3 py-2 font-semibold disabled:opacity-60">{busy ? 'Signing out…' : 'Sign out'}</button>
+    <span className="min-w-0 max-w-full break-all">{email}</span><button disabled={busy} onClick={signOut} className="rounded-lg border border-line px-3 py-2 font-semibold disabled:opacity-60">{busy ? 'Signing out…' : 'Sign out'}</button>
     {error && <span role="alert">{error}</span>}
   </div>
 }

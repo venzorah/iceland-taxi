@@ -4,7 +4,8 @@ import React from 'react'
 import { ArrowRight, Car, MapPinned, ShieldCheck } from 'lucide-react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { IMG, type Currency } from '@/lib/design/data'
+import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
+import type { Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -26,15 +27,16 @@ type Props = {
   announcements?: AnnouncementState
 }
 
-const VALUES = [
-  { icon: Car, title: 'Private vehicles only', body: 'Every trip is a private booking, no shared shuttles, no open marketplace. You choose the vehicle class that fits your luggage and group.' },
-  { icon: MapPinned, title: 'Built around Iceland travel', body: 'Airport meets, sightseeing days and multi-day private drivers are priced and scheduled as distinct services, with waiting-time rules shown before you pay.' },
-  { icon: ShieldCheck, title: 'You stay in control', body: 'Book as a guest or with an account. Track status, message the team, request changes and keep receipts from one booking reference.' },
-]
-
 export default function About(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
+  const images = useSiteImages()
+  const text = useSiteBlock
   const th = p.theme as 'light' | 'dark'
+  const values = [
+    { icon: Car, title: text('about.value1.title'), body: text('about.value1.body') },
+    { icon: MapPinned, title: text('about.value2.title'), body: text('about.value2.body') },
+    { icon: ShieldCheck, title: text('about.value3.title'), body: text('about.value3.body') },
+  ]
 
   return (
     <PublicPageShell
@@ -56,12 +58,12 @@ export default function About(props: Props) {
       announcements={p.announcements}
     >
       <section className="relative overflow-hidden bg-navy text-white">
-        <img src={IMG.reykjavik} alt="Reykjavík harbour and city skyline" className="absolute inset-0 h-full w-full object-cover opacity-35" />
+        <img src={images.reykjavik} alt="Reykjavík harbour and city skyline" className="absolute inset-0 h-full w-full object-cover opacity-35" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-          <p className="text-sm font-semibold text-cyan">Iceland Taxi Booking</p>
-          <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Company-owned transport, booked around your trip</h1>
+          <p className="text-sm font-semibold text-cyan">{text('about.kicker')}</p>
+          <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">{text('about.title')}</h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg">
-            We design airport transfers, private taxis, sightseeing tours and vacation drivers as one booking experience, clear prices, flight-aware pickups and in-app messaging when plans change.
+            {text('about.lead')}
           </p>
         </div>
       </section>
@@ -69,19 +71,15 @@ export default function About(props: Props) {
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <h2 className="font-display text-2xl font-bold text-heading sm:text-3xl">What we are</h2>
-            <p className="mt-4 text-base leading-relaxed text-muted">
-              Iceland Taxi Booking is a company booking platform, not an open taxi marketplace. Services, vehicles, routes and prices are managed by the operations team and published to the site when ready.
-            </p>
-            <p className="mt-4 text-base leading-relaxed text-muted">
-              Company contact details, registrations and fleet facts live in the CMS so they stay accurate. This page describes how the product works; published company facts appear when administrators add them.
-            </p>
+            <h2 className="font-display text-2xl font-bold text-heading sm:text-3xl">{text('about.whatTitle')}</h2>
+            <p className="mt-4 text-base leading-relaxed text-muted">{text('about.what1')}</p>
+            <p className="mt-4 text-base leading-relaxed text-muted">{text('about.what2')}</p>
           </div>
-          <img src={IMG.privateDriver} alt="Private driver waiting beside a vehicle" className="aspect-[4/3] w-full rounded-2xl object-cover" />
+          <img src={images.privateDriver} alt="Private driver waiting beside a vehicle" className="aspect-[4/3] w-full rounded-2xl object-cover" />
         </div>
 
         <div className="mt-14 grid gap-4 sm:grid-cols-3">
-          {VALUES.map(({ icon: Icon, title, body }) => (
+          {values.map(({ icon: Icon, title, body }) => (
             <article key={title} className="rounded-2xl border border-line bg-card p-6">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-surface text-navy dark:text-cyan">
                 <Icon size={18} />

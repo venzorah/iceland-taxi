@@ -15,11 +15,20 @@ export async function verifyAdminBrowser(superJar,financeJar,origin){
    await call('Network.setCookies',{cookies:[...jar].map(([name,value])=>({name,value,url:origin,path:'/',sameSite:'Lax'}))})
    await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false})
    await call('Page.navigate',{url:origin+'/admin'})
-   await wait(role==='super'?"document.body.innerText.includes('Booking values')":"document.body.innerText.includes('Payments & refunds') && document.querySelector('aside')")
+   await wait(role==='super'?"document.body.innerText.includes('Booking values')":"document.body.innerText.includes('Payments & refunds') && !!document.querySelector('aside')")
    assert.equal(await evaluate("document.body.innerText.includes('admin@example.local') || document.body.innerText.includes('Chart remains illustrative')"),false)
    if(role==='super'){
     await evaluate("[...document.querySelectorAll('aside button')].find(b=>b.innerText==='Bookings').click()")
     await wait("!!document.querySelector('[aria-label=\"Search bookings\"]')")
+    await evaluate("[...document.querySelectorAll('aside button')].find(b=>b.innerText==='Drivers').click()")
+    await wait("document.body.innerText.includes('Add driver') && document.body.innerText.includes('Manage driver contact details')")
+    await evaluate("[...document.querySelectorAll('button')].find(b=>b.innerText==='Add driver').click()")
+    assert.equal(await evaluate("document.querySelector('input[type=password]') !== null"),false)
+    await evaluate("[...document.querySelectorAll('aside button')].find(b=>b.innerText==='Website content').click()")
+    await wait("document.body.innerText.includes('Hero title')")
+    await evaluate("[...document.querySelectorAll('aside button')].find(b=>b.innerText==='Image library').click()")
+    await wait("document.body.innerText.includes('Add image') && document.querySelectorAll('main img').length>0")
+
    }else{
     assert.equal(await evaluate("[...document.querySelectorAll('aside button')].some(b=>b.innerText==='Staff & permissions' || b.innerText==='Customers' || b.innerText==='Drivers')"),false)
    }

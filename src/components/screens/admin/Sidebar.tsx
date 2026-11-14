@@ -14,7 +14,7 @@ const GROUPS = [
   { title: 'Operations', items: [['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarCheck], ['enquiries', 'Enquiries', Inbox], ['messages', 'Messages', MessageSquare], ['drivers', 'Drivers', UserSquare2], ['vehicles', 'Vehicles', Car]] },
   { title: 'Catalogue', items: [['services', 'Services', Bus], ['routes', 'Routes', Route], ['pricing', 'Pricing', Tag], ['destinations', 'Destinations', MapPinned]] },
   { title: 'Business', items: [['customers', 'Customers', Users], ['payments', 'Payments & refunds', CreditCard], ['reports', 'Reports', BarChart3], ['reviews', 'Reviews', Star]] },
-  { title: 'Website', items: [['announcements', 'Announcements', Megaphone], ['pages', 'Pages & blog', FileText], ['seo', 'SEO & landing pages', Search], ['languages', 'Languages', Globe]] },
+  { title: 'Website', items: [['announcements', 'Announcements', Megaphone], ['content', 'Website content', FileText], ['library', 'Image library', FileText], ['pages', 'Pages & blog', FileText], ['seo', 'SEO & landing pages', Search], ['languages', 'Languages', Globe]] },
   { title: 'System', items: [['staff', 'Staff & permissions', Shield], ['appearance', 'Appearance & theme', Palette], ['settings', 'System settings', Settings]] },
 ] as const
 

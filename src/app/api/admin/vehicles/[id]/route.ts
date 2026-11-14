@@ -9,6 +9,7 @@ const patchSchema = z.object({
   pax: z.number().int().positive().optional(),
   bags: z.number().int().nonnegative().optional(),
   plate: z.string().nullable().optional(),
+  useCase: z.string().nullable().optional(),
   upgradeIsk: z.number().int().nonnegative().optional(),
   active: z.boolean().optional(),
 })
@@ -28,3 +29,11 @@ async function handlePATCH(req: Request, ctx: Ctx) {
 }
 
 export const PATCH = apiHandler(handlePATCH)
+
+export const DELETE=apiHandler(async(_req:Request,ctx:Ctx)=>{
+ const blocked=await rejectDriverOnly('vehicles');if(blocked)return blocked
+ const {id}=await ctx.params
+ if(!await prisma.vehicle.findUnique({where:{id}}))return jsonError(404,'NOT_FOUND','Vehicle not found.')
+ await prisma.vehicle.update({where:{id},data:{active:false}})
+ return jsonOk({ok:true,archived:true})
+})

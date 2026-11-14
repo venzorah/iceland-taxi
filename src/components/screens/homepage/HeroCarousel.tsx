@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, MessageCircle, Pause, Play } from 'lucide-react'
 
-import { IMG } from '@/lib/design/data'
+import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
 import { whatsappHref } from '@/lib/whatsapp'
 import { t, type Lang } from '@/lib/design/i18n'
 import type { SearchPayload } from './BookingSearch'
@@ -19,20 +19,23 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
   const [hovered, setHovered] = useState(false)
   const touchX = useRef<number | null>(null)
 
+  const images = useSiteImages()
+  const heroTitle = useSiteBlock('home.hero.title')
+  const heroBody = useSiteBlock('home.hero.body')
   const go = (category: string, pickup: string, destination: string) => () =>
     onSearch?.({ category, pickup, destination, date: '', time: '', passengers: 2, luggage: 2 })
 
   const slides = [
     {
-      img: IMG.hero,
+      img: images.hero,
       alt: 'Private car on a highland road beneath a glacier in Iceland',
-      title: t(language, 'heroTitle'),
-      body: t(language, 'heroBody'),
+      title: language === 'is' ? t(language, 'heroTitle') : heroTitle,
+      body: language === 'is' ? t(language, 'heroBody') : heroBody,
       cta: 'Book Your Ride',
       action: go('airport', 'Keflavík Airport (KEF)', 'Reykjavík city centre'),
     },
     {
-      img: IMG.airport,
+      img: images.airport,
       alt: 'Chauffeur loading luggage outside Keflavík Airport',
       title: 'Met at Keflavík arrivals.',
       body: 'Private airport transfers to Reykjavík, the Blue Lagoon or your hotel. Your driver tracks your flight and waits with your name sign.',
@@ -40,7 +43,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
       action: go('airport', 'Keflavík Airport (KEF)', 'Reykjavík city centre'),
     },
     {
-      img: IMG.goldenCircle,
+      img: images.goldenCircle,
       alt: 'Gullfoss waterfall on the Golden Circle',
       title: 'The Golden Circle, at your pace.',
       body: 'Þingvellir, Geysir and Gullfoss with your own driver and vehicle. Stop where you want, stay as long as you like.',
@@ -48,7 +51,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
       action: go('tour', 'Reykjavík hotel', 'Golden Circle Private Tour'),
     },
     {
-      img: IMG.northernLights,
+      img: images.northernLights,
       alt: 'Northern lights over snowy mountains with an SUV on the road',
       title: 'Chase the northern lights.',
       body: 'Your driver follows the aurora forecast and heads away from the city lights, so you can simply look up.',
@@ -56,7 +59,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
       action: go('tour', 'Reykjavík hotel', 'Northern Lights Experience'),
     },
     {
-      img: IMG.privateDriver,
+      img: images.privateDriver,
       alt: 'View from the back seat of a chauffeured car along an Icelandic fjord',
       title: 'Your Journey Across Iceland Starts Here.',
       body: 'Hire a private driver by the hour, the day or for your whole stay, or send us your itinerary for a custom quote.',

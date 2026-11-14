@@ -4,7 +4,8 @@ import React from 'react'
 import { Luggage, Users } from 'lucide-react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { FLEET, IMG, type Currency } from '@/lib/design/data'
+import { useSiteImages } from '@/components/providers/SiteContent'
+import { FLEET, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -29,6 +30,7 @@ type Props = {
 export default function Fleet(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
+  const images = useSiteImages()
 
   return (
     <PublicPageShell
@@ -57,7 +59,7 @@ export default function Fleet(props: Props) {
               Choose the vehicle that fits your group and luggage. Capacities are per vehicle and come from the live fleet catalogue, not hardcoded claims about ownership.
             </p>
           </div>
-          <img src={IMG.fleet} alt="Sedan, SUV and minivan parked together" className="aspect-[16/10] w-full rounded-2xl object-cover" />
+          <img src={images.fleet} alt="Sedan, SUV and minivan parked together" className="aspect-[16/10] w-full rounded-2xl object-cover" />
         </div>
 
         <div className="mt-10 overflow-hidden rounded-2xl border border-line bg-card">

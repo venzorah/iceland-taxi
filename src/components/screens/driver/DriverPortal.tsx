@@ -1,4 +1,5 @@
 'use client'
+import { useSiteImages } from '@/components/providers/SiteContent'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Briefcase, History, LogIn, Moon, Navigation, Phone, Plane, StickyNote, Sun, Users, CalendarDays } from 'lucide-react'
@@ -7,7 +8,6 @@ import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/a
 import { rememberAlertAudience } from '@/lib/alerts/client'
 import { CustomerMessages } from '@/components/customer/CustomerMessages'
 import { useLivePolling } from '@/lib/polling/use-live-polling'
-import { LOGO_DARK, LOGO_LIGHT } from '@/lib/design/data'
 
 export const viewport = 'mobile'
 
@@ -59,6 +59,7 @@ type DriverInfo = {
 const FLOW = ['Driver Assigned', 'Acknowledged', 'Driver En Route', 'In Progress', 'Completed'] as const
 
 export default function DriverPortal(props: Props) {
+  const images = useSiteImages()
   const p = { ...args, ...props }
   const [tab, setTab] = useState(p.tab)
   const th = p.theme as 'light' | 'dark'
@@ -125,7 +126,7 @@ export default function DriverPortal(props: Props) {
       <div className={th === 'dark' ? 'dark' : ''}>
         <div className="grid min-h-screen place-items-center bg-bg px-4 font-sans text-text">
           <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6">
-            <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="mx-auto h-14 w-auto" />
+            <img src={th === 'dark' ? images.logoDark : images.logoLight} alt="Iceland Taxi Booking" className="mx-auto h-14 w-auto" />
             <h1 className="mt-4 text-center font-display text-xl font-bold text-heading">Driver portal</h1>
             <p className="mt-1 text-center text-sm leading-relaxed text-muted">{loading ? 'Loading your driver account…' : loadError || 'Sign in with your registered driver account. Contact operations if your account is not active.'}</p>
             {msg && <p className="mt-2 text-sm text-error">{msg}</p>}
@@ -151,7 +152,7 @@ export default function DriverPortal(props: Props) {
       <div className="relative flex h-screen flex-col overflow-hidden bg-bg font-sans text-text">
         <header className="shrink-0 border-b border-line">
           <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6 lg:h-20">
-            <img src={th === 'dark' ? LOGO_DARK : LOGO_LIGHT} alt="Iceland Taxi Booking" className="h-12 w-auto lg:h-14" />
+            <img src={th === 'dark' ? images.logoDark : images.logoLight} alt="Iceland Taxi Booking" className="h-12 w-auto lg:h-14" />
             <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-muted">Driver</span>
             <div className="ml-6 hidden items-center rounded-full border border-line p-0.5 text-sm font-semibold lg:flex" role="tablist">
               {([['today', 'Today', CalendarDays], ['history', 'History', History]] as const).map(([id, label, Icon]) => (

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Copy, Plus, Trash2 } from 'lucide-react'
 
-import { ImageUpload } from '@/components/admin/ImageUpload'
+import { ImageField } from './ImageField'
 import { ISK_PER_USD } from '@/lib/design/data'
 
 type Svc = {
@@ -267,8 +267,7 @@ export function Services() {
                 <span className="text-xs font-semibold text-muted">Service name</span>
                 <input value={sel.name} onChange={(e) => update({ name: e.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
               </label>
-              <label className="mt-4 block text-xs font-semibold text-muted">Image URL<input value={sel.imageUrl} onChange={e=>update({imageUrl:e.target.value})} className="mt-1 block w-full rounded-lg border border-line bg-input p-2 text-heading" /></label>
-              <div className="mt-3"><ImageUpload key={sel.id} onUploaded={imageUrl=>update({imageUrl})} /></div>
+              <div className="mt-4 text-xs font-semibold text-muted">Image<ImageField key={sel.id} value={sel.imageUrl} allowClear onChange={imageUrl=>update({imageUrl})} /></div>
               <Select label="Category" value={sel.category} options={['Airport transfer', 'Private taxi', 'Private tour', 'Private driver', 'Hotel & port', 'Corporate', 'Special occasion']} />
               <Select label="Pricing model" value={sel.model} options={['Fixed route', 'Hourly', 'Half-day', 'Full-day', 'Per passenger', 'Vehicle-based', 'Package', 'Multi-day', 'Custom quotation']} />
               <label className="block min-w-0">

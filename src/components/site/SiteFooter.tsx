@@ -1,13 +1,14 @@
 'use client'
+import { useSiteImages } from '@/components/providers/SiteContent'
 
 import React, { useEffect, useState } from 'react'
 import { Mail, MessageCircle } from 'lucide-react'
 
-import { LOGO_DARK } from '@/lib/design/data'
 import { FOOTER_COLUMNS } from '@/lib/design/routes'
 import { whatsappHref } from '@/lib/whatsapp'
 
 export function SiteFooter(_props: { onStaff?: () => void; onStaffMobile?: () => void; onDriver?: () => void; onAccount?: () => void }) {
+  const images = useSiteImages()
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null } | null>(null)
   useEffect(() => {
     fetch('/api/company')
@@ -20,7 +21,7 @@ export function SiteFooter(_props: { onStaff?: () => void; onStaffMobile?: () =>
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1.3fr_2fr] lg:gap-12">
           <div>
-            <img src={LOGO_DARK} alt="Iceland Taxi Booking" className="h-16 w-auto sm:h-20 lg:h-24" />
+            <img src={images.logoDark} alt="Iceland Taxi Booking" className="h-16 w-auto sm:h-20 lg:h-24" />
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/75">
               Airport transfers, private taxis, sightseeing tours and private drivers across Iceland.
             </p>

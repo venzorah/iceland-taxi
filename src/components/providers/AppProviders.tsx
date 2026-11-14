@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { useRouter } from 'next/navigation'
 
 import { useSiteSession } from './SessionProvider'
+import { SiteContentProvider } from '@/components/providers/SiteContent'
 import { SessionProvider } from './SessionProvider'
 
 import { MessageAlerts } from '@/components/alerts/MessageAlerts'
@@ -98,11 +99,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={value}>
       <SessionProvider>
+      <SiteContentProvider>
       <CustomerPreferencesSync />
       <WelcomeSplash />
       <InstallPrompt />
       <MessageAlerts />
       {children}
+      </SiteContentProvider>
       </SessionProvider>
     </AppContext.Provider>
   )

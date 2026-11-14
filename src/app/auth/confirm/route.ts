@@ -10,5 +10,7 @@ export async function GET(req: Request) {
   const result = code ? await supabase.auth.exchangeCodeForSession(code)
     : token_hash && type ? await supabase.auth.verifyOtp({ token_hash, type }) : null
   const target = result && !result.error ? (type === 'recovery' ? '/login?mode=update' : '/login?complete=1') : '/login?error=confirmation'
-  return NextResponse.redirect(new URL(target, url.origin))
+  const destination = new URL(target, url.origin)
+  if (url.searchParams.get('portal') === 'driver') { destination.searchParams.set('portal','driver'); destination.searchParams.set('next','/driver') }
+  return NextResponse.redirect(destination)
 }

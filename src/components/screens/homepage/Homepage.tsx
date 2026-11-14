@@ -319,6 +319,13 @@ export default function Homepage(props: Props) {
           </div>
         </section>
 
+        <section aria-labelledby="driver-access-title" className="border-t border-line bg-bg">
+          <div className="mx-auto flex max-w-7xl flex-col items-start gap-5 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <div className="max-w-xl"><h2 id="driver-access-title" className="font-display text-xl font-bold text-heading">Drive with Iceland Taxi Booking</h2><p className="mt-2 text-sm leading-relaxed text-muted">Already part of our team? Sign in to view your assigned journeys. Interested in joining? Speak to operations about driver access.</p></div>
+            <div className="flex flex-wrap gap-3"><a href="/login?portal=driver&next=/driver" className="rounded-full bg-primary px-5 py-3 text-sm font-bold text-on-primary">Driver sign in</a><a href="/login?portal=driver&next=/driver#join-driver-team" className="rounded-full border border-line px-5 py-3 text-sm font-semibold text-heading">Join the team</a></div>
+          </div>
+        </section>
+
         <SiteFooter onStaff={onStaff} onStaffMobile={onStaffMobile} onDriver={onDriver} onAccount={onSignIn} />
         </div>
       </div>

@@ -3,12 +3,15 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
+import { DriverSupport } from '@/components/site/DriverSupport'
+import { loginDestination } from '@/lib/auth/login-destination'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 type Mode = 'login' | 'register' | 'reset' | 'update'
 export function LoginForm() {
   const search = useSearchParams()
-  const [mode, setMode] = useState<Mode>(search.get('mode') === 'update' ? 'update' : 'login')
+  const driverIntent = search.get('portal') === 'driver' || search.get('next') === '/driver'
+  const [mode, setMode] = useState<Mode>(['register', 'reset', 'update'].includes(search.get('mode') || '') ? search.get('mode') as Mode : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -25,11 +28,9 @@ export function LoginForm() {
     if (!res.ok) throw new Error('Could not load your account. Please try again.')
     const session = await res.json()
     if (!session.user) throw new Error('Confirm your email before signing in.')
-    const target = session.staff ? '/admin' : session.driver ? '/driver' : '/account'
-    const next = search.get('next')
-    const allowed = session.staff ? ['/admin', '/m'] : session.driver ? ['/driver'] : ['/account', '/messages', '/book', '/manage-booking']
-    const destination = next ? new URL(next, window.location.origin) : null
-    window.location.assign(destination?.origin === window.location.origin && allowed.some(p => destination.pathname === p || destination.pathname.startsWith(p + '/')) ? destination.href : target)
+    const destination = loginDestination(session, search.get('next'), window.location.origin, driverIntent)
+    if (!destination) throw new Error('This account does not have driver access. Use the email registered by operations, or contact our team. You can also switch to customer sign in.')
+    window.location.assign(destination)
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setMessage('')
@@ -41,12 +42,12 @@ export function LoginForm() {
         await goToPortal()
       } else if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({ email: email.trim(), password,
-          options: { data: { name: name.trim() }, emailRedirectTo: `${window.location.origin}/auth/confirm` } })
+          options: { data: { name: name.trim() }, emailRedirectTo: `${window.location.origin}/auth/confirm${driverIntent ? '?portal=driver' : ''}` } })
         if (error) throw error
         if (data.session) await goToPortal()
-        else setMessage('Check your email to confirm your account, then sign in.')
+        else setMessage(driverIntent ? 'Check your email to confirm your sign-in, then return to Driver sign in. Operations must approve driver access before you can open the driver portal.' : 'Check your email to confirm your account, then sign in.')
       } else if (mode === 'reset') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/auth/confirm?type=recovery` })
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/auth/confirm?type=recovery${driverIntent ? '&portal=driver' : ''}` })
         if (error) throw error
         setMessage('If an account exists, you will receive a password reset email.')
       } else {
@@ -61,8 +62,13 @@ export function LoginForm() {
   return <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-12 text-heading">
     <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-7">
       <Link href="/" className="text-sm text-muted">← Iceland Taxi</Link>
-      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
-      <p className="mt-2 text-sm text-muted">{mode === 'register' ? 'Customer registration. Driver and staff access is managed by the company.' : 'Secure access for customers, drivers and staff.'}</p>
+      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? (driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? (driverIntent ? 'Activate driver sign-in' : 'Create your account') : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
+      <p className="mt-2 text-sm text-muted">{driverIntent ? 'For approved drivers: use the same email registered by operations. Your assigned journeys open in the driver portal.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Customers, drivers and staff sign in securely here. We’ll open the right account for you.'}</p>
+      {mode !== 'update' && <nav aria-label="Sign-in options" className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-bg p-1">
+        <Link href="/login" onClick={() => changeMode('login')} aria-current={!driverIntent ? 'page' : undefined} className={`rounded-lg px-3 py-2.5 text-center text-sm font-semibold ${!driverIntent ? 'bg-primary text-on-primary' : 'text-muted'}`}>Customer sign in</Link>
+        <Link href="/login?portal=driver&next=/driver" onClick={() => changeMode('login')} aria-current={driverIntent ? 'page' : undefined} className={`rounded-lg px-3 py-2.5 text-center text-sm font-semibold ${driverIntent ? 'bg-primary text-on-primary' : 'text-muted'}`}>Driver sign in</Link>
+      </nav>}
+      {mode === 'register' && driverIntent && <p className="mt-4 rounded-xl border border-line bg-bg p-3 text-sm text-muted">Already registered by operations? Create your password here using that email. This activates sign-in; it does not approve a new driver application.</p>}
       <form onSubmit={submit} className="mt-6 space-y-4">
         {mode === 'register' && <label className="block">Name<input className={`${input} mt-2`} required value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" autoComplete="name" maxLength={100} /></label>}
         {mode !== 'update' && <label className="block">Email<input className={`${input} mt-2`} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></label>}
@@ -77,12 +83,13 @@ export function LoginForm() {
           {mode !== 'login' && <span id="auth-password-hint" className="text-xs text-muted">Use at least 12 characters.</span>}
         </div>}
         {message && <p role="status" className="text-sm">{message}</p>}
-        <button disabled={busy} className="w-full rounded-xl bg-primary px-4 py-3 font-bold text-on-primary disabled:opacity-60">{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : mode === 'reset' ? 'Send reset email' : 'Save password'}</button>
+        <button disabled={busy} className="w-full rounded-xl bg-primary px-4 py-3 font-bold text-on-primary disabled:opacity-60">{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? (driverIntent ? 'Create driver sign-in' : 'Create account') : mode === 'reset' ? 'Send reset email' : 'Save password'}</button>
       </form>
       <div className="mt-5 flex flex-wrap gap-4 text-sm">{search.get('complete') === '1' && <button onClick={() => { void goToPortal().catch(error => setMessage(error.message)) }}>Continue to your account</button>}
         {mode !== 'login' && <button onClick={() => changeMode('login')}>Sign in</button>}
-        {mode === 'login' && <><button onClick={() => changeMode('register')}>Create customer account</button><button onClick={() => changeMode('reset')}>Forgot password?</button></>}
+        {mode === 'login' && <><button onClick={() => changeMode('register')}>{driverIntent ? 'Activate driver account' : 'Create customer account'}</button><button onClick={() => changeMode('reset')}>Forgot password?</button></>}
       </div>
+      {driverIntent && <DriverSupport />}
       <button className="mt-5 text-sm text-muted" onClick={async () => { await createSupabaseBrowserClient().auth.signOut(); window.location.assign('/login') }}>Sign out of current account</button>
     </div>
   </main>

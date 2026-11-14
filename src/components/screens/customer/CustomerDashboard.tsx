@@ -48,8 +48,8 @@ export default function CustomerDashboard(props: Props) {
   return <div className={p.theme === 'dark' ? 'dark' : ''}><div className="min-h-screen bg-surface text-text">
     <SiteHeader theme={p.theme as 'light' | 'dark'} language={p.language as Lang} currency={p.currency as Currency} onThemeChange={p.onThemeChange} onLanguageChange={p.onLanguageChange} onCurrencyChange={p.onCurrencyChange} onHome={p.onHome} onBook={p.onBook} mobileTitle="My trips" onMobileBack={p.onHome} announcements={p.announcements} />
     <main className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pt-10">
-      <div className="flex flex-wrap items-start justify-between gap-5"><CustomerWelcome /><Link href="/book" className="rounded-full bg-primary px-5 py-3 text-sm font-bold text-on-primary">Book a ride</Link></div>
-      <MessageAlertControl className="mt-5" /><CustomerProfile />
+      <div className="flex flex-wrap items-start justify-between gap-5"><CustomerWelcome /><div className="flex flex-wrap items-center gap-3"><CustomerProfile /><Link href="/book" className="rounded-full bg-primary px-5 py-3 text-sm font-bold text-on-primary">Book a ride</Link></div></div>
+      <MessageAlertControl className="mt-5" />
       <div className="mt-7 grid items-start gap-6 lg:grid-cols-[1fr_380px]"><section>
         <div role="tablist" aria-label="Trips" className="flex gap-1 rounded-2xl bg-line/60 p-1">{tabs.map(name => <button key={name} role="tab" aria-selected={tab === name} onClick={() => setTab(name)} className={`min-h-12 flex-1 rounded-xl px-2 text-sm font-semibold capitalize ${tab === name ? 'bg-bg text-heading shadow-sm' : 'text-muted'}`}>{name} ({group(name).length})</button>)}</div>
         {error && <div role="alert" className="mt-4 rounded-2xl border border-line bg-bg p-4 text-sm text-error">{error}<button onClick={() => { setLoading(true); void load().catch(() => {}) }} className="ml-3 font-semibold underline">Try again</button></div>}

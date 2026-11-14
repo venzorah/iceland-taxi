@@ -1,7 +1,7 @@
 import { BookingStatus, PaymentStatus, Prisma, type Booking, type Payment } from '@prisma/client'
 import { prisma } from '@/lib/api'
 import { formatChargedAmount } from '@/lib/design/data'
-import { teyaProvider } from './teya'
+import { teyaProvider, paymentEnvironmentMatches, teyaSessionSnapshot } from './teya'
 
 export type TeyaSyncOutcome = 'success' | 'failed' | 'cancelled' | 'expired' | 'pending' | 'not_started' | 'not_found' | 'refunded'
 
@@ -70,6 +70,7 @@ export async function syncTeyaPayment(ref: string, hint?: 'success' | 'cancel' |
     }
   }
 
+  if (!paymentEnvironmentMatches(payment.raw)) return {...base, ok:false, outcome:'pending', paid:false, gatewayCalled:false, statusLabel:'Payment review required', message:'This checkout belongs to another payment environment. Contact support.'}
   if (payment.status === PaymentStatus.REFUNDED) return { ...base, ok: true, outcome: 'refunded', paid: false, gatewayCalled: false, statusLabel: 'Payment refunded', message: 'This payment record is marked refunded.' }
   if (payment.status === PaymentStatus.CAPTURED) {
     return {
@@ -111,7 +112,7 @@ export async function syncTeyaPayment(ref: string, hint?: 'success' | 'cancel' |
       bookingStatus: updated?.status || booking.status,
       paymentStatus: PaymentStatus.CAPTURED,
       statusLabel: `Payment received · ${(updated?.status || booking.status).replaceAll('_', ' ').toLowerCase()}`,
-      message: 'Teya sandbox confirmed this payment.',
+      message: 'Teya confirmed this payment.',
     }
   }
 
@@ -148,7 +149,7 @@ export async function syncTeyaPayment(ref: string, hint?: 'success' | 'cancel' |
       where: { id: payment.id },
       data: {
         failureReason: hint === 'cancel' ? 'Customer cancelled checkout' : 'Teya returned a terminal failure',
-        raw: looked.raw as Prisma.InputJsonValue,
+        raw: teyaSessionSnapshot(payment.raw, looked.raw) as Prisma.InputJsonValue,
       },
     })
     return {
@@ -188,7 +189,7 @@ async function markCaptured(payment: Payment, bookingId: string, raw: unknown, t
     return result.count > 0
   })
   if (confirmed) {
-    try { const { notifyBookingConfirmed } = await import('@/lib/email/notices'); await notifyBookingConfirmed(bookingId) } catch (error) { console.error(error) }
+    try { const { notifyBookingConfirmed } = await import('@/lib/email/notices'); await notifyBookingConfirmed(bookingId) } catch { console.error('[operation] Failed; private error details suppressed.') }
   }
 }
 
@@ -200,7 +201,7 @@ async function markFailed(payment: Payment, reason: string, raw: unknown) {
       status: PaymentStatus.FAILED,
       checkoutLeaseKey: null,
       failureReason: reason,
-      raw: raw as Prisma.InputJsonValue,
+      raw: teyaSessionSnapshot(payment.raw, raw) as Prisma.InputJsonValue,
     },
   })
 }
@@ -216,6 +217,7 @@ export async function captureFromVerifiedWebhook(input: {
   const payment = await prisma.payment.findFirst({ where: { provider: 'teya', providerRef: input.sessionId, ...(input.merchantRef ? { booking: { ref: input.merchantRef } } : {}) } })
 
   if (!payment) return { applied: false as const, reason: 'No matching payment row' }
+  if (!paymentEnvironmentMatches(payment.raw)) return {applied:false as const,reason:'Payment environment mismatch'}
   if (payment.status === PaymentStatus.REFUNDED) return { applied: false as const, reason: 'Payment was already refunded' }
   if (payment.status === PaymentStatus.CAPTURED) {
     return { applied: true as const, paymentId: payment.id, status: payment.status, duplicate: true }

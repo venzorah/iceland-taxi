@@ -4,5 +4,5 @@ export async function POST(req:Request){
  const response=await upload(req)
  if(!response.ok)return response
  const data=await response.json()
- return Response.json({...data,url:data.image.url},{status:201})
+ return Response.json({...data,url:data.image.url},{status:201,headers:{'Cache-Control':'private, no-store'}})
 }

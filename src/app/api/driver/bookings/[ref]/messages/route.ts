@@ -8,10 +8,7 @@ export const GET = apiHandler(async (_req: Request, ctx: Ctx) => {
   const { ref } = await ctx.params
   const access = await driverConversationAccess(ref)
   if (!access) return jsonError(404, 'NOT_FOUND', 'Assigned conversation not found.')
-  const incoming = access.role === 'driver' ? 'staff' : 'driver'
   const messages = await prisma.message.findMany({ where: { bookingId: access.booking.id, channel: 'driver_ops' }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], include: { author: { select: { name: true } } } })
-  // Only mark messages included in this response, never a concurrent incoming message.
-  await prisma.message.updateMany({ where: { id: { in: messages.filter(m => m.authorRole === incoming).map(m => m.id) }, unread: true }, data: { unread: false } })
   return jsonOk({ ok: true, messages: messages.map(m => ({ id: m.id, body: m.body, authorRole: m.authorRole, authorName: m.author?.name || (m.authorRole === 'driver' ? 'Driver' : 'Operations'), time: m.createdAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Reykjavik' }) })) }, { headers: { 'Cache-Control': 'private, no-store' } })
 })
 export const POST = apiHandler(async (req: Request, ctx: Ctx) => {
@@ -32,4 +29,13 @@ export const POST = apiHandler(async (req: Request, ctx: Ctx) => {
   if (!message) return jsonError(409, 'ASSIGNMENT_CHANGED', 'The assignment changed. Refresh your journeys.')
   void pushMessageAlert({ bookingRef: ref, messageId: message.id, authorRole: access.role, guestEmail: null, driverId: access.booking.driverId, channel: 'driver_ops' }).catch(() => {})
   return jsonOk({ ok: true, message: { id: message.id } }, { status: 201 })
+})
+
+export const PATCH=apiHandler(async(req:Request,ctx:Ctx)=>{
+ const {ref}=await ctx.params,access=await driverConversationAccess(ref)
+ if(!access)return jsonError(404,'NOT_FOUND','Assigned conversation not found.')
+ const parsed=z.object({messageIds:z.array(z.string().min(1).max(100)).max(1000)}).strict().safeParse(await req.json().catch(()=>null))
+ if(!parsed.success)return jsonError(400,'VALIDATION_ERROR','Choose the displayed messages to mark read.')
+ await prisma.message.updateMany({where:{bookingId:access.booking.id,channel:'driver_ops',id:{in:parsed.data.messageIds},unread:true,authorRole:access.role==='driver'?'staff':'driver'},data:{unread:false}})
+ return jsonOk({ok:true})
 })

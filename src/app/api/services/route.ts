@@ -9,7 +9,7 @@ async function handleGET() {
         prisma.route.findMany({ where: { active: true } }),
         prisma.destination.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
         prisma.faq.findMany({ where: { published: true }, orderBy: { sortOrder: 'asc' } }),
-        prisma.vehicle.findMany({ where: { active: true } }),
+        prisma.vehicle.findMany({ where: { active: true }, select: { id: true, name: true, category: true, pax: true, bags: true, useCase: true, upgradeIsk: true } }),
       ])
       return {
         source: 'database' as const,

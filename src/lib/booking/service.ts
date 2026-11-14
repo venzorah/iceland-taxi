@@ -243,8 +243,8 @@ export async function createBooking(input: CreateBookingInput) {
   try {
     const { notifyBookingCreated } = await import('@/lib/email/notices')
     await notifyBookingCreated(booking.id)
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
   }
 
   return { ok: true as const, booking, quote: quoted }

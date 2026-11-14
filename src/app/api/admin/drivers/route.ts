@@ -43,8 +43,8 @@ async function handlePOST(req: Request) {
   try {
     const { notifyAccountCreated } = await import('@/lib/email/notices')
     await notifyAccountCreated(user)
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
   }
   return jsonOk({ ok: true, driver: user.driver }, { status: 201 })
 }

@@ -54,7 +54,7 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
       const response = await fetch(`/api/messages/${encodeURIComponent(ref)}?as=staff`, { signal, cache: 'no-store' })
       const data = await response.json()
       if (!response.ok || !data.ok) throw new Error(data.message || 'Could not load messages.')
-      if (!signal?.aborted) { setMessages(data.messages); setErr(null) }
+      if (!signal?.aborted) { setMessages(data.messages); setErr(null); const readResponse = await fetch(`/api/messages/${encodeURIComponent(ref)}?as=staff`, { method: 'PATCH', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({messageIds:data.messages.map((m:Msg)=>m.id)}) }); if (!readResponse.ok) throw new Error('Messages loaded, but the read status could not be saved. Please retry.') }
     } catch (error) { if (!signal?.aborted) setErr(error instanceof Error ? error.message : 'Could not load messages.'); throw error }
   }, [])
   useEffect(() => { rememberAlertAudience('staff') }, [])

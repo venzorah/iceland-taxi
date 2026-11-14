@@ -20,8 +20,8 @@ async function handleGET() {
       take: 100,
     })
     return jsonOk({ ok: true, payments: rows })
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
     return jsonError(503, 'DATABASE_ERROR', 'Could not load payments. Check DATABASE_URL.')
   }
 }

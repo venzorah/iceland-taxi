@@ -1,0 +1,60 @@
+# cPanel deployment
+
+The app is ready to upload for hosted verification. Public customer launch still needs stable database/Auth connectivity, signed Teya webhook delivery and a controlled live checkout, email configuration and the checks below. Local end-to-end tests previously encountered intermittent database/Auth outages and expired transactions; a successful build does not resolve that.
+
+## Prepared upload
+
+Use `deployment-artifacts/iceland-taxi-cpanel.zip` from the local workspace. Regenerate it with `python3 scripts/package-cpanel.py` after any further code changes. The adjacent .sha256 file verifies the archive. The archive contains source and migrations; no build output, node_modules, .git or private .env is included.
+
+## Application setup
+
+1. Keep the current site/hosting files backed up. Upload the prepared source ZIP to a private application folder such as `/home/CPANEL_USER/iceland-taxi` and extract it there, outside public_html. Do not upload local node_modules, .next, .git or .env. The ZIP intentionally excludes them. Build on Linux rather than copying macOS native modules.
+2. In Setup Node.js App, select Node.js 22 LTS, Production mode, the application root above, the intended domain at `/`, and startup file `app.js`. cPanel Application Manager/Passenger also uses app.js by default. If the account has a different manager, use its documented startup setting. This is a server application, not a static export.
+3. Follow the panel's displayed command to activate its Node environment in Terminal. Enter the application root and verify `node --version` is 22.x before installing.
+4. Add the server environment variables privately in the panel or a `.env` in the private application root. Use restrictive permissions (`chmod 600 .env` if using a file). Never place secrets under public_html. Environment changes require restart; NEXT_PUBLIC changes also require rebuilding.
+5. Run:
+
+```sh
+npm ci
+npm run build
+npx prisma migrate deploy
+```
+
+Do not run db:push, migrate reset or db:seed against the live database. Existing security migrations were already applied to the connected database and should be reported as applied. If migration connectivity still fails, resolve the migration connection or ask the host for assistance; do not reset data. The narrowly scoped security migration fallback script is documented separately.
+6. Start/restart using the application panel. Passenger manages the process; do not leave a second `npm start` process running. Under ordinary Node hosting, `npm run start:cpanel` starts the same app.js entry point and uses PORT (default 3000). The internal port is not part of the public HTTPS URL. For cPanel Application Manager, `mkdir -p tmp` then `touch tmp/restart.txt` requests a Passenger restart.
+
+## Required configuration
+
+Use the existing credentials, without changing database or media providers:
+
+- DATABASE_URL, DATABASE_TRANSACTION_URL (preferred runtime pooler when supplied), DIRECT_URL (migration connection). Keep the Supabase connection options and URL-encoded password intact.
+- NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY; server-only SUPABASE_SECRET_KEY where administrative provisioning is needed.
+- BOOKING_ACCESS_SECRET; Cloudinary cloud name, API key and API secret; existing VAPID keys and contact subject.
+- NEXT_PUBLIC_APP_URL: exact intended HTTPS origin, for example `https://icelandtaxibooking.is` if this application is served there. Use the verification hostname instead if deploying on a subdomain; do not include a trailing slash or app subpath.
+- PAYMENT_PROVIDER=teya, TEYA_ENVIRONMENT=production, TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, TEYA_STORE_ID, TEYA_WEBHOOK_PUBLIC_KEY from the **live** merchant integration. Do not use production credentials with sandbox mode. Production checkout requires HTTPS return URLs on NEXT_PUBLIC_APP_URL. Credentials stay on the server; users enter card details on Teya.
+- SMTP_URL, MAIL_FROM for booking mail; independently configure Supabase Auth SMTP and exact redirect allow-list entries for confirmation, driver activation and password recovery.
+- CRON_SECRET and an authenticated hourly request to `/api/cron/reminders` for reminders/counter cleanup. Use the host's scheduler and `Authorization: Bearer ...`; keep the secret out of public commands/logs.
+- RATE_LIMIT_PROXY_HEADER only after the host confirms it overwrites the selected header and direct origin bypass is blocked. Otherwise leave empty and retain the shared anonymous request budget.
+
+## Live Teya destination
+
+Register the URL for the actual deployed HTTPS origin:
+
+```text
+https://icelandtaxibooking.is/api/payments/webhook/teya
+```
+
+That is correct only if the app is served on exactly that domain. A www domain or subdomain requires its own matching URL. Register the payment.succeeded.v1 event and use the corresponding production webhook public key. Keep the existing raw-body RSA signature verification enabled. Return URLs are generated by the app; a browser success query alone never marks a booking paid.
+
+Teya production uses `https://api.teya.com` and `https://id.teya.com/oauth/v2/oauth-token`. Sandbox and production token caches/payment sessions are kept separate. Old sandbox checkout attempts cannot be resumed as live payments. Refund requests still require review; automatic refunds are not implemented.
+
+## Hosted verification before public launch
+
+- Verify HTTPS certificate, domain routing and `/api/health`; confirm app.js serves pages/API routes and starts after restart. Ensure source files, .env and logs cannot be downloaded publicly.
+- Run `node scripts/check-database-security.mjs` from the application root; verify database/Auth connectivity repeatedly from the host, not just locally. Review logs for 503/transaction expiry and resolve those before accepting bookings.
+- Verify customer/driver/admin login and role separation, customer booking/rescheduling/cancellation/receipt access, assignment/progression, and message typing/sending/replies on desktop/mobile. Without a booking, the composer is visible but disabled and offers Contact support.
+- Verify Supabase confirmation/reset/driver activation links and booking email delivery; verify phone push on HTTPS devices.
+- Confirm live merchant/store configuration and signed webhook arrival. Only after hosting is configured, perform a controlled client-approved real payment and reconcile session ID, currency/amount and paid booking status, including duplicate webhook delivery. Do not use test card numbers on the live account. No real Teya requests were made during local verification.
+- Establish backups, restore/rollback steps and error monitoring; keep public traffic directed to the existing site or a maintenance page until these checks pass.
+
+References: [cPanel Node application setup](https://docs.cpanel.net/knowledge-base/web-services/how-to-install-a-node.js-application/), [Passenger restart](https://support.cpanel.net/hc/en-us/articles/1500002443862-How-to-restart-an-application-that-s-using-cPanel-s-Application-Manager), [Next.js custom server](https://nextjs.org/docs/app/guides/custom-server), [Teya hosted checkout endpoints](https://docs.teya.com/online-payments/hosted-checkout/get-started).

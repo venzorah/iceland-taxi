@@ -2,7 +2,7 @@
 import { useSiteImages } from '@/components/providers/SiteContent'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Briefcase, History, LogIn, Moon, Navigation, Phone, Plane, StickyNote, Sun, Users, CalendarDays } from 'lucide-react'
+import { Briefcase, History, MessageCircle, LogIn, Moon, Navigation, Phone, Plane, StickyNote, Sun, Users, CalendarDays } from 'lucide-react'
 
 import { MessageAlertControl, useArmMessageSoundOnPointer } from '@/components/alerts/MessageAlerts'
 import { rememberAlertAudience } from '@/lib/alerts/client'
@@ -17,7 +17,7 @@ export const args = {
 }
 
 export const argTypes = {
-  tab: { control: 'radio', options: ['today', 'history'] },
+  tab: { control: 'radio', options: ['today', 'messages', 'history'] },
   theme: { control: 'radio', options: ['light', 'dark'] },
 }
 
@@ -155,7 +155,7 @@ export default function DriverPortal(props: Props) {
             <img src={th === 'dark' ? images.logoDark : images.logoLight} alt="Iceland Taxi Booking" className="h-12 w-auto lg:h-14" />
             <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-muted">Driver</span>
             <div className="ml-6 hidden items-center rounded-full border border-line p-0.5 text-sm font-semibold lg:flex" role="tablist">
-              {([['today', 'Today', CalendarDays], ['history', 'History', History]] as const).map(([id, label, Icon]) => (
+              {([['today', 'Today', CalendarDays], ['messages', 'Messages', MessageCircle], ['history', 'History', History]] as const).map(([id, label, Icon]) => (
                 <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 transition-colors duration-150 ${tab === id ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted hover:text-heading'}`}>
                   <Icon size={15} /> {label}
                 </button>
@@ -295,9 +295,11 @@ export default function DriverPortal(props: Props) {
                   ))}
                   {later.length === 0 && <li className="py-6 text-center text-sm text-muted">No other assigned journeys.</li>}
                 </ul>
-                <div className="mt-6"><CustomerMessages trips={[...jobs, ...history].map(j => ({ ref: j.ref, routeLabel: j.route }))} audience="driver" driverConversation /></div>
+                <button onClick={() => setTab('messages')} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-on-primary"><MessageCircle size={18} />Message operations</button>
               </div>
             </div>
+          ) : tab === 'messages' ? (
+            <div className="mx-auto max-w-3xl p-4 sm:p-6"><h1 className="mb-4 font-display text-2xl font-bold text-heading">Messages</h1>{loadError && <p role="alert" className="mb-3 text-sm text-error">{loadError}<button onClick={() => {void load().catch(()=>{})}} className="ml-2 underline">Retry</button></p>}<CustomerMessages initialRef={selected} trips={[...jobs,...history].map(j=>({ref:j.ref,routeLabel:j.route}))} audience="driver" driverConversation /></div>
           ) : (
             <div className="mx-auto max-w-xl p-4 sm:p-6 lg:max-w-3xl lg:p-8">
               <h1 className="font-display text-2xl font-bold text-heading">Journey history</h1>
@@ -326,8 +328,8 @@ export default function DriverPortal(props: Props) {
           </div>
         )}
 
-        <nav className="absolute inset-x-0 bottom-0 grid grid-cols-2 border-t border-line bg-bg pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
-          {([['today', 'Today', CalendarDays], ['history', 'History', History]] as const).map(([id, label, Icon]) => (
+        <nav className="absolute inset-x-0 bottom-0 grid grid-cols-3 border-t border-line bg-bg pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+          {([['today', 'Today', CalendarDays], ['messages', 'Messages', MessageCircle], ['history', 'History', History]] as const).map(([id, label, Icon]) => (
             <button key={id} onClick={() => setTab(id)} className="flex flex-col items-center gap-1 py-1">
               <Icon size={21} className={tab === id ? 'text-heading' : 'text-muted'} />
               <span className={`text-[11px] ${tab === id ? 'font-bold text-heading' : 'font-medium text-muted'}`}>{label}</span>

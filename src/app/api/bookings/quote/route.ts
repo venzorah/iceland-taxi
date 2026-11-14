@@ -36,8 +36,8 @@ async function handlePOST(req: Request) {
     const result = await quoteFromCatalogue(parsed.data)
     if (!result.available) return jsonError(409, 'UNAVAILABLE', result.message)
     return jsonOk({ ok: true, ...result })
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
     return jsonError(500, 'QUOTE_ERROR', 'Could not build quote')
   }
 }

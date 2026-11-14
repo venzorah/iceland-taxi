@@ -11,7 +11,7 @@ if(!['127.0.0.1','localhost'].includes(new URL(origin).hostname))throw new Error
 const connection=new URL(process.env.DIRECT_URL||process.env.DATABASE_URL);connection.searchParams.set('connection_limit','1');connection.searchParams.set('connect_timeout','30');connection.searchParams.set('pool_timeout','40')
 const db=new PrismaClient({datasourceUrl:connection.toString()})
 const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
-const run=randomUUID(),accounts=[],refs=[],bookingIds=[],contentKeys=[]
+const run=randomUUID(),accounts=[],refs=[],bookingIds=[],contentKeys=[],contactKeys=[]
 let vehicle,service,destination,driverUser,payment
 async function account(role){
  const email=`admin-check-${role.toLowerCase()}-${run}@example.invalid`,password=randomBytes(32).toString('base64url')
@@ -25,7 +25,7 @@ async function account(role){
 async function request(a,path,method='GET',body,attempt=0){
  const response=await fetch(origin+path,{method,headers:{'Content-Type':'application/json',Cookie:[...a.jar].map(([k,v])=>`${k}=${v}`).join('; ')},body:body?JSON.stringify(body):undefined})
  const data=await response.json()
- if(response.status===503&&method==='GET'&&attempt<2)return request(a,path,method,body,attempt+1)
+ if(response.status===503&&(method==='GET'||path==='/api/contact'||path.startsWith('/api/admin/contact/'))&&attempt<2){await new Promise(resolve=>setTimeout(resolve,1000));return request(a,path,method,body,attempt+1)}
  return {status:response.status,body:data}
 }
 async function booking(slot=0){
@@ -34,6 +34,20 @@ async function booking(slot=0){
 }
 try{
  const superadmin=await account('SUPER_ADMIN'),manager=await account('BOOKING_MANAGER'),finance=await account('FINANCE_MANAGER'),content=await account('CONTENT_MANAGER'),staff=await account('STAFF')
+ const contactKey=randomUUID();contactKeys.push(contactKey)
+ const contactBody={requestKey:contactKey,name:'Security verification',email:`contact-${run}@example.invalid`,topic:'Other',body:'Temporary security verification message.'}
+ const received=await request({jar:new Map()},'/api/contact','POST',contactBody)
+ assert.equal(received.status,201)
+ assert.equal((await request({jar:new Map()},'/api/contact','POST',contactBody)).body.id,received.body.id)
+ assert.equal((await request({jar:new Map()},'/api/contact','POST',{...contactBody,body:'Changed message content.'})).status,409)
+ assert.equal((await request({jar:new Map()},'/api/admin/contact')).status,403)
+ assert.equal((await request(content,'/api/admin/contact')).status,403)
+ const inbox=await request(manager,'/api/admin/contact');assert.equal(inbox.status,200);assert(inbox.body.messages.some(m=>m.id===received.body.id))
+ assert.equal((await request(manager,`/api/admin/contact/${received.body.id}`,'PATCH',{status:'CLOSED'})).status,200)
+ const foreign=await fetch(origin+'/api/admin/contact/'+received.body.id,{method:'PATCH',headers:{'Content-Type':'application/json',Origin:'https://foreign.example',Cookie:[...manager.jar].map(([k,v])=>`${k}=${v}`).join('; ')},body:JSON.stringify({status:'NEW'})});assert.equal(foreign.status,403)
+ const oversized=await fetch(origin+'/api/contact',{method:'POST',body:'x'.repeat(65537)});assert.equal(oversized.status,413)
+ const privateHeaders=await fetch(origin+'/api/admin/contact',{headers:{Cookie:[...manager.jar].map(([k,v])=>`${k}=${v}`).join('; ')}});assert.match(privateHeaders.headers.get('cache-control'),/no-store/)
+ console.log('Contact persistence, idempotency, role isolation, cross-origin rejection, body limit and private cache checks passed.')
  const matrix=[
  [manager,'/api/bookings',200],[manager,'/api/drivers',200],[manager,'/api/admin/payments',403],[manager,'/api/admin/staff',403],[manager,'/api/admin/services',403],
  [finance,'/api/admin/payments',200],[finance,'/api/bookings',403],[finance,'/api/messages?as=staff',401],[finance,'/api/admin/workspace?section=reports',200],[finance,'/api/admin/workspace?section=customers',403],
@@ -86,6 +100,7 @@ try{
 finally{
  await db.siteBlock.deleteMany({where:{key:{in:contentKeys},value:{contains:run}}})
  await db.emailNotice.deleteMany({where:{OR:[{bookingId:{in:bookingIds}},{toEmail:{contains:run}},...(driverUser?[{dedupeKey:{contains:driverUser.id}}]:[])]}})
+ await db.contactMessage.deleteMany({where:{requestKey:{in:contactKeys}}})
  await db.staffNotification.deleteMany({where:{bookingRef:{in:refs}}})
  await db.message.deleteMany({where:{bookingId:{in:bookingIds}}})
  await db.payment.deleteMany({where:{bookingId:{in:bookingIds}}})

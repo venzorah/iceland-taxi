@@ -9,7 +9,7 @@ const serverSchema = z.object({
   TEYA_CLIENT_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
   TEYA_STORE_ID: z.preprocess(emptyToUndefined, z.string().optional()),
   TEYA_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
-  /** PEM public key from the staging Business Portal webhook. Verifies x-teya-signature (RSA). */
+  /** PEM public key from the selected Business Portal webhook. Verifies x-teya-signature (RSA). */
   TEYA_WEBHOOK_PUBLIC_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   TEYA_ENVIRONMENT: z.enum(['sandbox', 'production']).optional().default('sandbox'),
   // Legacy aliases (scaffold) — treated as client id / secret when modern vars unset
@@ -78,8 +78,8 @@ export function teyaCredentials() {
     clientSecret,
     storeId,
     environment,
-    /** Live hosts are refused. Checkout only calls api.teya.xyz. */
-    sandboxOnly: environment === 'sandbox',
+    apiUrl: environment === 'production' ? 'https://api.teya.com' : 'https://api.teya.xyz',
+    oauthUrl: environment === 'production' ? 'https://id.teya.com/oauth/v2/oauth-token' : 'https://id.teya.xyz/oauth/v2/oauth-token',
     webhookSecret: env.TEYA_WEBHOOK_SECRET,
     webhookPublicKey: normalizePem(env.TEYA_WEBHOOK_PUBLIC_KEY),
     configured: Boolean(clientId && clientSecret && storeId),
@@ -105,7 +105,7 @@ export function integrationConfigured(key: 'teya' | 'google_maps' | 'smtp' | 'sm
   switch (key) {
     case 'teya': {
       const teya = teyaCredentials()
-      return teya.configured && teya.sandboxOnly
+      return teya.configured && (teya.environment !== 'production' || Boolean(teya.webhookPublicKey))
     }
     case 'google_maps':
       return Boolean(env.GOOGLE_MAPS_API_KEY)

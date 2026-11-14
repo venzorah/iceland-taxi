@@ -48,12 +48,12 @@ async function handlePOST(req: Request) {
     try {
       const { notifyEnquiryReceived } = await import('@/lib/email/notices')
       await notifyEnquiryReceived(enquiry)
-    } catch (error) {
-      console.error(error)
+    } catch {
+      console.error('[operation] Failed; private error details suppressed.')
     }
     return jsonOk({ ok: true, enquiry }, { status: 201 })
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
     return jsonError(503, 'DATABASE_ERROR', 'Could not save the enquiry')
   }
 }

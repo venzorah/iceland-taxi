@@ -29,7 +29,7 @@ function integrations() {
       key: 'teya',
       label: 'Teya payments',
       configured: integrationConfigured('teya'),
-      message: teya.configured && teya.sandboxOnly ? 'Sandbox configured. Provider connectivity is not yet verified.' : 'Not connected. No card charges can be taken.',
+      message: integrationConfigured('teya') ? `${teya.environment === 'production' ? 'Live' : 'Sandbox'} credentials configured. Provider connectivity and webhook delivery still require verification.` : 'Not connected. No card charges can be taken.',
     },
     {
       key: 'google_maps',

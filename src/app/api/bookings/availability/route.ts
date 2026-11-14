@@ -35,7 +35,7 @@ async function handlePOST(req: Request) {
     excludeBookingId: parsed.data.excludeBookingId,
   })
 
-  return jsonOk({ ok: true, durationMinutes, endsAt, ...result })
+  return jsonOk({ ok: true, durationMinutes, endsAt, available: result.available })
 }
 
 export const POST = apiHandler(handlePOST)

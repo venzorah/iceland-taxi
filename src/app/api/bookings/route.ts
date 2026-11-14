@@ -71,7 +71,7 @@ async function handleGET(req: Request) {
           ...(email ? { guestEmail: email } : {}),
           ...(ref ? { ref } : {}),
         },
-        include: { driver: true, vehicle: true, payments: true },
+        include: { driver: true, vehicle: true, payments: { select: { id: true, status: true, amount: true, currency: true } } },
         orderBy: { createdAt: 'desc' },
         take: 100,
       })
@@ -115,21 +115,21 @@ async function handlePOST(req: Request) {
       quote: { ...parsed.data.quote, baseIsk: parsed.data.quote.baseIsk ?? 0 },
     })
     if (!result.ok) {
-      return jsonError(409, result.code, result.message, 'conflicts' in result ? { conflicts: result.conflicts } : undefined)
+      return jsonError(409, result.code, result.message, undefined)
     }
     if (!user) await grantGuestBookingAccess(result.booking.id)
     return jsonOk(
       {
         ok: true,
         source: 'database',
-        booking: result.booking,
+        booking: { ref: result.booking.ref, status: result.booking.status, pickupAt: result.booking.pickupAt, amountSnapshot: result.booking.amountSnapshot, currency: result.booking.currency },
         quote: result.quote,
         ops: toOpsBooking(result.booking),
       },
       { status: 201 },
     )
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
     return jsonError(503, 'DATABASE_ERROR', 'Could not create booking')
   }
 }

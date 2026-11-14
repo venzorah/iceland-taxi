@@ -21,6 +21,7 @@ async function handlePOST(req: Request) {
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return jsonError(409, 'CONFLICT', 'That email is already used.')
   const customer = await prisma.user.create({
+    select: { id: true, name: true, email: true, role: true, phone: true, category: true, preferredCurrency: true },
     data: {
       email,
       name: parsed.data.name.trim(),
@@ -32,8 +33,8 @@ async function handlePOST(req: Request) {
   try {
     const { notifyAccountCreated } = await import('@/lib/email/notices')
     await notifyAccountCreated(customer)
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
   }
   return jsonOk({ ok: true, customer }, { status: 201 })
 }
@@ -50,6 +51,7 @@ async function handlePATCH(req: Request) {
   const created = !existing
   const category = parsed.data.category || existing?.category || 'INTERNATIONAL'
   const customer = await prisma.user.upsert({
+    select: { id: true, name: true, email: true, role: true, phone: true, category: true, preferredCurrency: true },
     where: { email },
     create: {
       email,
@@ -68,8 +70,8 @@ async function handlePATCH(req: Request) {
     try {
       const { notifyAccountCreated } = await import('@/lib/email/notices')
       await notifyAccountCreated(customer)
-    } catch (error) {
-      console.error(error)
+    } catch {
+      console.error('[operation] Failed; private error details suppressed.')
     }
   }
   return jsonOk({ ok: true, customer })

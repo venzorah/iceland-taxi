@@ -6,9 +6,9 @@ import { MessageCircle, Send } from 'lucide-react'
 
 type Trip = { ref: string; routeLabel: string }
 type Message = { id: string; body: string; authorRole: string; authorName?: string; time: string }
-export function CustomerMessages({ trips, audience = 'customer', driverConversation = false }: { trips: Trip[]; audience?: 'customer' | 'staff' | 'driver'; driverConversation?: boolean }) {
+export function CustomerMessages({ trips, audience = 'customer', driverConversation = false, initialRef = '' }: { trips: Trip[]; audience?: 'customer' | 'staff' | 'driver'; driverConversation?: boolean; initialRef?: string }) {
   const [selected, setSelected] = useState('')
-  useEffect(() => { setSelected(new URLSearchParams(window.location.search).get('ref') || '') }, [])
+  useEffect(() => { setSelected(initialRef || new URLSearchParams(window.location.search).get('ref') || '') }, [initialRef])
   const ref = trips.some(t => t.ref === selected) ? selected : trips[0]?.ref || ''
   const [messages, setMessages] = useState<Message[]>([])
   const [draft, setDraft] = useState('')
@@ -24,7 +24,7 @@ export function CustomerMessages({ trips, audience = 'customer', driverConversat
       const response = await fetch(driverConversation ? `/api/driver/bookings/${encodeURIComponent(ref)}/messages` : `/api/messages/${encodeURIComponent(ref)}?as=${audience}`, { signal, cache: 'no-store' })
       const data = await response.json().catch(() => null)
       if (!response.ok || !data?.ok) throw new Error(data?.message || 'Could not load messages.')
-      if (!signal?.aborted) { setMessages(data.messages || []); setError('') }
+      if (!signal?.aborted) { setMessages(data.messages || []); setError(''); const readResponse = await fetch(driverConversation ? `/api/driver/bookings/${encodeURIComponent(ref)}/messages` : `/api/messages/${encodeURIComponent(ref)}?as=${audience}`, { method: 'PATCH', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({messageIds:(data.messages || []).map((m:Message)=>m.id)}) }); if (!readResponse.ok) throw new Error('Messages loaded, but the read status could not be saved. Please retry.') }
     } catch (error) { if (!signal?.aborted) setError(error instanceof Error ? error.message : 'Could not load messages.'); throw error }
     finally { fetching.current = false; if (!signal?.aborted) setLoading(false) }
   }, [ref, audience, driverConversation])
@@ -44,7 +44,7 @@ export function CustomerMessages({ trips, audience = 'customer', driverConversat
     } catch (error) { setError(error instanceof Error ? error.message : 'Message was not sent. Please try again.') }
     finally { setSending(false) }
   }
-  return <aside className="flex min-h-[400px] flex-col overflow-hidden rounded-2xl border border-line bg-bg">
+  return <aside className="flex min-h-[400px] min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-bg">
     <div className="border-b border-line p-4"><h2 className="flex items-center gap-2 font-display text-lg font-bold text-heading"><MessageCircle size={18} />{driverConversation ? 'Driver ↔ operations' : 'Messages'}</h2>
       {trips.length > 0 && <label className="mt-3 block text-xs text-muted">Booking<select disabled={sending} aria-label="Booking conversation" value={ref} onChange={e => setSelected(e.target.value)} className="mt-1 w-full rounded-xl border border-line bg-bg p-2 text-sm text-heading">{trips.map(t => <option key={t.ref} value={t.ref}>{t.ref} · {t.routeLabel}</option>)}</select></label>}
     </div>
@@ -55,6 +55,10 @@ export function CustomerMessages({ trips, audience = 'customer', driverConversat
         : messages.map(m => <div key={m.id} className={`max-w-[90%] rounded-2xl p-3 text-sm ${m.authorRole === audience ? 'ml-auto bg-navy text-white' : 'bg-bg text-heading'}`}><p className="whitespace-pre-wrap break-words">{m.body}</p><p className="mt-1 text-[10px] opacity-70">{m.authorRole === audience ? 'You' : m.authorName || 'Support'} · {m.time}</p></div>)}
     </div>
     {error && <p role="alert" className="px-4 py-2 text-sm text-error">{error}</p>}
-    {ref && <form onSubmit={send} className="flex items-center gap-2 border-t border-line p-3"><input aria-label="Message" value={draft} onChange={e => setDraft(e.target.value)} maxLength={4000} disabled={sending} placeholder="Write a message…" className="min-w-0 flex-1 rounded-xl border border-line bg-input px-3 py-3 text-base text-heading" /><button disabled={sending || !draft.trim() || loading} aria-label="Send message" className="rounded-full bg-primary p-3 text-on-primary disabled:opacity-50"><Send size={18} /></button></form>}
+    <form onSubmit={send} className="shrink-0 border-t border-line bg-bg p-3">
+      <label htmlFor={`message-${audience}`} className="mb-2 block text-sm font-semibold text-heading">Message operations</label>
+      <div className="flex items-end gap-2"><textarea id={`message-${audience}`} aria-label="Message" rows={2} value={draft} onChange={e => setDraft(e.target.value)} maxLength={4000} disabled={sending || !ref} placeholder={ref ? 'Type your message here…' : 'Choose a booking to start messaging'} className="min-w-0 flex-1 resize-y rounded-xl border border-input-line bg-input px-3 py-3 text-base text-heading outline-none focus:border-focus disabled:opacity-60" /><button disabled={!ref || sending || !draft.trim() || loading} aria-label="Send message" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-3 py-3 text-sm font-semibold text-on-primary disabled:opacity-50"><Send size={18} /><span>Send</span></button></div>
+      <p className="mt-2 text-xs text-muted">{ref ? 'Your message goes privately to the operations team.' : driverConversation ? 'Messaging becomes available when operations assigns you a journey.' : 'Your bookings appear above so you can start a conversation.'} {!ref && <Link href="/contact" className="font-semibold text-link underline">Contact support without a booking</Link>}</p>
+    </form>
   </aside>
 }

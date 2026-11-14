@@ -47,8 +47,8 @@ export async function notifyStaffWhatsApp(input: { bookingRef: string; messageId
         deliveryDetail: detail,
       },
     })
-  } catch (error) {
-    console.error('staff notification', error)
+  } catch {
+    console.error('[notification] Delivery preparation failed.')
   }
 
   return { enabled: true as const, delivery, whatsappUrl: plan.whatsappUrl, notice: plan.notice, detail }

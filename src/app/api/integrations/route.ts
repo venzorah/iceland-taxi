@@ -8,13 +8,9 @@ async function handleGET() {
   const teya = teyaCredentials()
   const live = {
     teya: {
-      configured: teya.configured && teya.sandboxOnly,
+      configured: integrationConfigured('teya'),
       environment: teya.environment,
-      message: !teya.sandboxOnly
-        ? 'Live charges are disabled.'
-        : teya.configured
-          ? 'Sandbox configured. Provider connectivity is not yet verified.'
-          : 'Not connected. No card charges can be taken.',
+      message: integrationConfigured('teya') ? `${teya.environment === 'production' ? 'Live' : 'Sandbox'} credentials configured. Hosted checkout and webhook delivery still require verification.` : 'Not connected. No card charges can be taken.',
     },
     googleMaps: {
       configured: integrationConfigured('google_maps'),
@@ -37,7 +33,7 @@ async function handleGET() {
   }
 
   const stored = await withDb(
-    async () => prisma.integrationStatus.findMany({ orderBy: { key: 'asc' } }),
+    async () => prisma.integrationStatus.findMany({ orderBy: { key: 'asc' }, select: { key: true, label: true, configured: true, updatedAt: true } }),
     () => [],
   )
 

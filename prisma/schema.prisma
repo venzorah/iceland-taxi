@@ -92,6 +92,7 @@ model User {
   driver       Driver?
   staffProfile StaffProfile?
   messages     Message[]
+  pushSubscriptions PushSubscription[]
 }
 
 model StaffProfile {
@@ -492,6 +493,8 @@ model EmailNotice {
 
 /// Browser Web Push subscription. Never stores message bodies.
 model PushSubscription {
+  userId       String?
+  user         User? @relation(fields: [userId], references: [id], onDelete: Cascade)
   id         String   @id @default(cuid())
   endpoint   String
   p256dh     String
@@ -506,4 +509,28 @@ model PushSubscription {
   @@unique([endpoint, audience])
   @@index([audience, guestEmail])
   @@index([audience, driverId])
+}
+
+/// Public contact requests, available only to authorized operations staff through the backend.
+model ContactMessage {
+  id         String @id @default(cuid())
+  requestKey String @unique
+  requestHash String
+  name       String
+  email      String
+  bookingRef String?
+  topic      String
+  body       String
+  status     String @default("NEW")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([status, createdAt])
+}
+
+/// Persistent fixed-window counters; identity keys are server-keyed hashes, never raw IP/email.
+model RateLimit {
+  key     String @id
+  hits    Int
+  resetAt DateTime
+  @@index([resetAt])
 }

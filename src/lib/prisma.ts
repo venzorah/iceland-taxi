@@ -3,7 +3,9 @@ import { PrismaClient } from '@prisma/client'
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
 
 // Keep concurrent polling within a small pool and allow time for remote TLS setup.
-const databaseUrl = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null
+// Prefer Supabase transaction pooling for short API queries; keep DIRECT_URL for migrations.
+const connectionUrl = process.env.DATABASE_TRANSACTION_URL || process.env.DATABASE_URL
+const databaseUrl = connectionUrl ? new URL(connectionUrl) : null
 if (databaseUrl) {
   for (const [key, value] of Object.entries({ connection_limit: '3', connect_timeout: '10', pool_timeout: '20', socket_timeout: '20', sslmode: 'require' })) {
     if (!databaseUrl.searchParams.has(key)) databaseUrl.searchParams.set(key, value)

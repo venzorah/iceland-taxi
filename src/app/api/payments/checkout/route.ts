@@ -1,3 +1,5 @@
+import {teyaCredentials} from '@/lib/env'
+import {paymentEnvironmentMatches} from '@/lib/payments/teya'
 import type { Prisma } from '@prisma/client'
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
@@ -62,6 +64,7 @@ export const POST = apiHandler(async (req: Request) => {
   if (!provider.isConfigured()) return jsonError(503, 'PAYMENT_NOT_CONFIGURED', 'Your booking is saved and remains unpaid. Online payment is not available yet.', { bookingRef: ref, paid: false })
   await prisma.payment.updateMany({ where: { checkoutLeaseKey: booking.id, status: { notIn: ['PENDING', 'AUTHORIZED'] } }, data: { checkoutLeaseKey: null } })
   let payment = booking.payments.find(p => p.status === 'PENDING')
+  if (payment && (payment.providerRef || payment.checkoutUrl) && !paymentEnvironmentMatches(payment.raw)) return jsonError(409, 'PAYMENT_ENVIRONMENT_MISMATCH', 'This checkout belongs to another payment environment. Contact support before starting another payment.', {bookingRef:ref})
   if (payment?.providerRef && payment.checkoutUrl && Date.now() - payment.createdAt.getTime() > 30 * 60000) {
     await syncTeyaPayment(ref)
     payment = (await prisma.payment.findUnique({ where: { id: payment.id } })) || undefined
@@ -71,7 +74,7 @@ export const POST = apiHandler(async (req: Request) => {
   let created = false
   if (!payment) {
     try {
-      payment = await prisma.payment.create({ data: { bookingId: booking.id, provider: provider.id, status: 'PENDING', currency: booking.currency, amount: booking.amountSnapshot, checkoutLeaseKey: booking.id } }); created = true
+      payment = await prisma.payment.create({ data: { bookingId: booking.id, provider: provider.id, status: 'PENDING', currency: booking.currency, amount: booking.amountSnapshot, checkoutLeaseKey: booking.id, raw: {environment:teyaCredentials().environment} } }); created = true
     } catch (error) {
       if ((error as { code?: string }).code !== 'P2002') throw error
       return jsonError(409, 'CHECKOUT_STARTING', 'Checkout is starting. Wait a moment and retry your saved booking.', { bookingRef: ref })
@@ -81,6 +84,7 @@ export const POST = apiHandler(async (req: Request) => {
     const claimed = await prisma.payment.updateMany({ where: { id: payment.id, status: 'PENDING', updatedAt: payment.updatedAt, OR: [{ failureReason: { not: null } }, { updatedAt: { lt: new Date(Date.now() - 60000) } }] }, data: { updatedAt: new Date(), failureReason: null, checkoutLeaseKey: booking.id } })
     if (!claimed.count) return jsonError(409, 'CHECKOUT_STARTING', 'Checkout is starting. Wait a moment and retry your saved booking.', { bookingRef: ref })
   }
+  await prisma.payment.update({where:{id:payment.id},data:{raw:{environment:teyaCredentials().environment}}})
   const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
   const returnBase = `${origin}/api/payments/teya/return?ref=${encodeURIComponent(ref)}`
   const result = await provider.createCheckout({ bookingRef: ref, bookingId: booking.id, idempotencyKey: `itb-${payment.id}`, amount: booking.amountSnapshot, currency: booking.currency, description: `Iceland Taxi Booking · ${booking.serviceLabel}`, returnUrl: `${returnBase}&result=success`, cancelUrl: `${returnBase}&result=cancel`, failureUrl: `${returnBase}&result=failure`, customer: { name: booking.guestName || undefined, email: booking.customer?.email || booking.guestEmail || undefined, phone: booking.guestPhone || undefined } })

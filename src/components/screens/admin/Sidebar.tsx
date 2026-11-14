@@ -11,7 +11,7 @@ import {
 import { LOGO_DARK } from '@/lib/design/data'
 
 const GROUPS = [
-  { title: 'Operations', items: [['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarCheck], ['enquiries', 'Enquiries', Inbox], ['messages', 'Messages', MessageSquare], ['drivers', 'Drivers', UserSquare2], ['vehicles', 'Vehicles', Car]] },
+  { title: 'Operations', items: [['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarCheck], ['enquiries', 'Enquiries', Inbox], ['contacts', 'Contact messages', Inbox], ['messages', 'Messages', MessageSquare], ['drivers', 'Drivers', UserSquare2], ['vehicles', 'Vehicles', Car]] },
   { title: 'Catalogue', items: [['services', 'Services', Bus], ['routes', 'Routes', Route], ['pricing', 'Pricing', Tag], ['destinations', 'Destinations', MapPinned]] },
   { title: 'Business', items: [['customers', 'Customers', Users], ['payments', 'Payments & refunds', CreditCard], ['reports', 'Reports', BarChart3], ['reviews', 'Reviews', Star]] },
   { title: 'Website', items: [['announcements', 'Announcements', Megaphone], ['content', 'Website content', FileText], ['library', 'Image library', FileText], ['pages', 'Pages & blog', FileText], ['seo', 'SEO & landing pages', Search], ['languages', 'Languages', Globe]] },

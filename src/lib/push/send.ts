@@ -1,4 +1,5 @@
 import webpush from 'web-push'
+import {safePushEndpoint} from './endpoint'
 import { prisma } from '@/lib/prisma'
 import { messageAlertCopy } from '@/lib/alerts/copy'
 import { vapidConfig } from './vapid'
@@ -33,12 +34,12 @@ export async function pushMessageAlert(input: {
   webpush.setVapidDetails(subject, vapid.publicKey, vapid.privateKey)
 
   const or: Array<Record<string, unknown>> = []
-  if (input.authorRole === 'customer' || input.authorRole === 'driver') or.push({ audience: 'staff' })
-  if (input.authorRole === 'staff' && input.guestEmail) {
-    or.push({ audience: 'customer', guestEmail: input.guestEmail.toLowerCase() })
+  if (input.authorRole === 'customer' || input.authorRole === 'driver') or.push({ audience: 'staff', user: { role: { in: ['SUPER_ADMIN','BOOKING_MANAGER','STAFF'] }, OR: [{ staffProfile: null }, { staffProfile: { active: true } }] } })
+  if (input.authorRole === 'staff' && input.channel !== 'driver_ops' && input.guestEmail) {
+    or.push({ audience: 'customer', guestEmail: input.guestEmail.toLowerCase(), user: { role: 'CUSTOMER', email: input.guestEmail.toLowerCase() } })
   }
   if (input.driverId && input.channel === 'driver_ops' && input.authorRole === 'staff') {
-    or.push({ audience: 'driver', driverId: input.driverId })
+    or.push({ audience: 'driver', driverId: input.driverId, user: { role: 'DRIVER', driver: { id: input.driverId, active: true } } })
   }
   if (or.length === 0) return { sent: 0, skipped: 'no recipients' }
 
@@ -54,6 +55,7 @@ export async function pushMessageAlert(input: {
 
   const byEndpoint = new Map<string, PushTarget & { href: string }>()
   for (const sub of subs) {
+    if(!safePushEndpoint(sub.endpoint))continue
     const href = sub.audience === 'driver' ? '/driver' : `/messages?ref=${encodeURIComponent(input.bookingRef)}`
     const existing = byEndpoint.get(sub.endpoint)
     if (!existing || existing.href === '/driver') byEndpoint.set(sub.endpoint, { ...sub, href })

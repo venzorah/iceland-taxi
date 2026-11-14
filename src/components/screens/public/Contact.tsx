@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, Mail, MessageCircle } from 'lucide-react'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import type { Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
+import {CONTACT_TOPICS} from '@/lib/contact/schema'
 import { whatsappHref } from '@/lib/whatsapp'
 
 type Props = {
@@ -31,7 +32,11 @@ type Props = {
 export default function Contact(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, state: 'default' as const, ...props }
   const th = p.theme as 'light' | 'dark'
-  const [sent, setSent] = useState(p.state === 'sent')
+  const [sent, setSent] = useState(false)
+  const [busy,setBusy]=useState(false)
+  const [error,setError]=useState('')
+  const requestKey=useRef('')
+  const previousBody=useRef('')
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null; phone?: string | null; addressLine1?: string | null } | null>(null)
 
   useEffect(() => {
@@ -64,23 +69,28 @@ export default function Contact(props: Props) {
         <div className="max-w-2xl">
           <h1 className="font-display text-3xl font-extrabold text-heading sm:text-4xl">Contact</h1>
           <p className="mt-3 text-base text-muted">
-            Send a message about a booking, quotation or partnership. Phone, email and address publish from Admin when set, this design never invents them.
+            Send our operations team a message about a booking, quotation, driver opportunity or partnership.
           </p>
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_340px]">
           <form
             className="rounded-2xl border border-line bg-card p-5 sm:p-8"
-            onSubmit={(e) => {
-              e.preventDefault()
-              setSent(true)
+            onSubmit={async(e) => {
+              e.preventDefault(); if(busy)return
+              const form=new FormData(e.currentTarget)
+              const input={name:String(form.get('name')||''),email:String(form.get('email')||''),bookingRef:String(form.get('bookingRef')||''),topic:String(form.get('topic')||'Other'),body:String(form.get('body')||''),website:String(form.get('website')||'')}
+              const serialized=JSON.stringify(input)
+              if(!requestKey.current||previousBody.current!==serialized){requestKey.current=crypto.randomUUID();previousBody.current=serialized}
+              setBusy(true);setError('')
+              try{const response=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...input,requestKey:requestKey.current})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.message||'Your message could not be saved.');setSent(true)}catch(error){setError(error instanceof Error?error.message:'Your message could not be saved. Please try again.')}finally{setBusy(false)}
             }}
           >
             {sent ? (
               <div className="flex flex-col items-start gap-3 py-8">
                 <CheckCircle2 className="text-mint" size={36} />
-                <h2 className="font-display text-xl font-bold text-heading">Message sent</h2>
-                <p className="text-sm text-muted">We will reply to the email you provided. For urgent trip-day changes, use WhatsApp or your booking messages.</p>
+                <h2 className="font-display text-xl font-bold text-heading">Message received</h2>
+                <p className="text-sm text-muted">Your message has been saved for our operations team to review. For urgent trip-day changes, use WhatsApp or your booking messages.</p>
                 <button type="button" onClick={() => setSent(false)} className="mt-2 text-sm font-semibold text-link hover:underline">
                   Send another message
                 </button>
@@ -90,33 +100,31 @@ export default function Contact(props: Props) {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block sm:col-span-1">
                     <span className="text-xs font-semibold text-muted">Full name</span>
-                    <input required className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
+                    <input name="name" placeholder="Enter your full name" maxLength={100} required className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
                   </label>
                   <label className="block">
                     <span className="text-xs font-semibold text-muted">Email</span>
-                    <input type="email" required className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
+                    <input name="email" placeholder="you@example.com" maxLength={254} type="email" required className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
                   </label>
                   <label className="block sm:col-span-2">
                     <span className="text-xs font-semibold text-muted">Booking reference (optional)</span>
-                    <input placeholder="ITB-…" className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
+                    <input name="bookingRef" maxLength={80} placeholder="ITB-…" className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
                   </label>
                   <label className="block sm:col-span-2">
                     <span className="text-xs font-semibold text-muted">Topic</span>
-                    <select className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus">
-                      <option>Existing booking</option>
-                      <option>New quotation</option>
-                      <option>Corporate travel</option>
-                      <option>Website / media</option>
-                      <option>Other</option>
+                    <select name="topic" className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus">
+                      {CONTACT_TOPICS.map(topic=><option key={topic}>{topic}</option>)}
                     </select>
                   </label>
                   <label className="block sm:col-span-2">
                     <span className="text-xs font-semibold text-muted">Message</span>
-                    <textarea required rows={5} className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
+                    <textarea name="body" placeholder="How can we help?" minLength={10} maxLength={4000} required rows={5} className="mt-1 w-full rounded-xl border border-input-line bg-input px-4 py-3 text-heading outline-none focus:border-focus" />
                   </label>
                 </div>
-                <button type="submit" className="mt-6 w-full rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary hover:bg-primary-hover sm:w-auto sm:px-8">
-                  Send message
+                <div aria-hidden="true" className="hidden"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
+                {error&&<p role="alert" className="mt-4 text-sm text-error">{error}</p>}
+                <button disabled={busy} type="submit" className="mt-6 w-full rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary hover:bg-primary-hover sm:w-auto sm:px-8">
+                  {busy?'Saving…':'Send message'}
                 </button>
               </>
             )}
@@ -144,7 +152,7 @@ export default function Contact(props: Props) {
                 </div>
               )}
               <p className="mt-4 text-xs leading-relaxed text-muted">
-                Published phone number, email and postal address appear here from CMS / Admin. Until then, use the form or WhatsApp deep link.
+                For urgent requests, contact the team directly using the published contact details above.
               </p>
             </div>
             <div className="rounded-2xl border border-line bg-card p-5">

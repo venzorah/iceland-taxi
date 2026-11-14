@@ -1,4 +1,4 @@
-import { apiHandler, jsonError, jsonOk } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { sendDueReminders } from '@/lib/email/reminders'
 
 function allowed(req: Request) {
@@ -10,6 +10,7 @@ function allowed(req: Request) {
 async function run(req: Request) {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
   if (!allowed(req)) return jsonError(401, 'UNAUTHORIZED', 'CRON_SECRET is missing or does not match')
+  await prisma.rateLimit.deleteMany({ where: { resetAt: { lt: new Date(Date.now() - 86400000) } } })
   const result = await sendDueReminders()
   return jsonOk({ ok: true, ...result })
 }

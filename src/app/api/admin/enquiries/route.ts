@@ -21,8 +21,8 @@ async function handleGET() {
       return { ...row, followUp }
     })
     return jsonOk({ ok: true, enquiries })
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
     return jsonError(503, 'DATABASE_ERROR', 'Could not load enquiries')
   }
 }

@@ -15,7 +15,7 @@ async function handleGET(_req: Request, ctx: Ctx) {
   const { ref } = await ctx.params
   const booking = await prisma.booking.findUnique({
     where: { ref },
-    include: { driver: true, vehicle: true, payments: true, service: true, route: true },
+    include: { driver: true, vehicle: true, payments: { select: { id: true, status: true, amount: true, currency: true } }, service: true, route: true },
   })
   if (!booking) return jsonError(404, 'NOT_FOUND', 'Booking not found')
   return jsonOk({ ok: true, booking, ops: toOpsBooking(booking) })
@@ -51,7 +51,7 @@ async function handlePATCH(req: Request, ctx: Ctx) {
       conflicts: 'conflicts' in result ? result.conflicts : undefined,
     })
   }
-  return jsonOk({ ok: true, booking: result.booking, ops: toOpsBooking(result.booking) })
+  return jsonOk({ ok: true, booking: { ...result.booking, payments: result.booking.payments.map(({ id, status, amount, currency }) => ({ id, status, amount, currency })) }, ops: toOpsBooking(result.booking) })
 }
 
 async function handleDELETE(_req: Request, ctx: Ctx) {

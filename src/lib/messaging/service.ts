@@ -166,8 +166,8 @@ export async function postMessage(opts: {
   if (opts.actor.kind === 'customer') {
     try {
       whatsapp = await notifyStaffWhatsApp({ bookingRef: booking.ref, messageId: message.id })
-    } catch (error) {
-      console.error(error)
+    } catch {
+      console.error('[operation] Failed; private error details suppressed.')
     }
   }
 
@@ -232,7 +232,7 @@ export async function listMessageAlerts(viewer: {
   return { viewer: roles.join('+') || 'none', items: [...items.values()] }
 }
 
-export async function markThreadRead(bookingRef: string, reader: 'staff' | 'customer') {
+export async function markThreadRead(bookingRef: string, reader: 'staff' | 'customer', messageIds: string[]) {
   const booking = await prisma.booking.findUnique({ where: { ref: bookingRef } })
   if (!booking) return { ok: false as const }
   await prisma.message.updateMany({
@@ -241,12 +241,13 @@ export async function markThreadRead(bookingRef: string, reader: 'staff' | 'cust
       unread: true,
       channel: { not: 'driver_ops' },
       authorRole: reader === 'staff' ? 'customer' : 'staff',
+      id: { in: messageIds },
     },
     data: { unread: false },
   })
   if (reader === 'staff') {
     await prisma.staffNotification.updateMany({
-      where: { bookingRef, read: false },
+      where: { bookingRef, read: false, messageId: { in: messageIds } },
       data: { read: true },
     }).catch(() => {})
   }

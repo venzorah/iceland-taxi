@@ -20,8 +20,8 @@ async function handleGET() {
       ok: true,
       reminders: rows.map((row) => presentReminder(row.offsetMinutes, row.active, row.id)),
     })
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
     return jsonError(503, 'DATABASE_ERROR', 'Could not load reminder times. Check DATABASE_URL.')
   }
 }
@@ -53,8 +53,8 @@ async function handlePUT(req: Request) {
       ok: true,
       reminders: rows.map((row) => presentReminder(row.offsetMinutes, row.active, row.id)),
     })
-  } catch (error) {
-    console.error(error)
+  } catch {
+    console.error('[operation] Failed; private error details suppressed.')
     return jsonError(503, 'DATABASE_ERROR', 'Could not save reminder times. Check DATABASE_URL.')
   }
 }

@@ -1,4 +1,4 @@
-import { createVerify } from 'crypto'
+import { createHash, createVerify } from 'crypto'
 import { teyaCredentials } from '@/lib/env'
 import { toTeyaMinorUnits } from '@/lib/booking/pricing'
 import type {
@@ -8,39 +8,49 @@ import type {
   PaymentStatusResult,
 } from './types'
 
-type TokenCache = { accessToken: string; expiresAt: number }
+type TokenCache = { context: string; accessToken: string; expiresAt: number }
 
 let tokenCache: TokenCache | null = null
 
-const SANDBOX_API = 'https://api.teya.xyz'
-const SANDBOX_OAUTH = 'https://id.teya.xyz/oauth/v2/oauth-token'
-
-/**
- * Teya Online Payments — Hosted Checkout, staging only.
- * Docs: https://developer.teya.com/online-payments/hosted-checkout/get-started
- *
- * Card data stays on Teya. This client never calls api.teya.com.
- * Merchant client id, secret, and store id are issued per store in the
- * staging Business Portal. Teya does not publish a shared test merchant.
+/** Hosted checkout uses fixed official hosts selected by TEYA_ENVIRONMENT.
+ * Production credentials and token caches must never cross into the sandbox.
+ * https://docs.teya.com/online-payments/hosted-checkout/get-started
  */
+function liveReturnUrlsValid(input: CreatePaymentInput) {
+  try {
+    const app = new URL(process.env.NEXT_PUBLIC_APP_URL || '')
+    if(app.protocol !== 'https:' || app.username || app.password || ['localhost','127.0.0.1','[::1]'].includes(app.hostname)) return false
+    return [input.returnUrl,input.cancelUrl,input.failureUrl || input.cancelUrl].every(value=>{
+      const url=new URL(value)
+      return url.origin===app.origin && !url.username && !url.password
+    })
+  } catch { return false }
+}
+/** Untagged historical sessions are sandbox-only; never reuse them as live payments. */
+export function paymentEnvironmentMatches(raw: unknown, environment = teyaCredentials().environment) {
+  const stored = raw && typeof raw === 'object' && 'environment' in raw ? raw.environment : undefined
+  return stored === environment || (stored === undefined && environment === 'sandbox')
+}
+/** Keep environment metadata when a failed/cancelled lookup replaces the provider snapshot. */
+export function teyaSessionSnapshot(previous: unknown, session: unknown) {
+  return { ...(previous && typeof previous === 'object' && !Array.isArray(previous) ? previous : {}), session }
+}
 export class TeyaPaymentProvider implements PaymentProvider {
   readonly id = 'teya'
   readonly label = 'Teya'
 
   isConfigured() {
     const creds = teyaCredentials()
-    return creds.configured && creds.sandboxOnly
+    return creds.configured && (creds.environment !== 'production' || Boolean(creds.webhookPublicKey))
   }
 
   private async getAccessToken(): Promise<string> {
     const creds = teyaCredentials()
-    if (!creds.sandboxOnly) {
-      throw new Error('Refusing Teya production OAuth')
-    }
     if (!creds.clientId || !creds.clientSecret) {
       throw new Error('Teya credentials missing')
     }
-    if (tokenCache && tokenCache.expiresAt > Date.now() + 30_000) {
+    const context = createHash('sha256').update(JSON.stringify([creds.environment,creds.clientId,creds.clientSecret,creds.storeId])).digest('hex')
+    if (tokenCache?.context === context && tokenCache.expiresAt > Date.now() + 30_000) {
       return tokenCache.accessToken
     }
 
@@ -51,7 +61,8 @@ export class TeyaPaymentProvider implements PaymentProvider {
       scope: 'checkout/sessions/create checkout/sessions/id/get refunds/create',
     })
 
-    const res = await fetch(SANDBOX_OAUTH, {
+    const res = await fetch(creds.oauthUrl, {
+      redirect: 'error', signal: AbortSignal.timeout(15000),
       method: 'POST',
       headers: {
         'content-type': 'application/x-www-form-urlencoded',
@@ -61,12 +72,13 @@ export class TeyaPaymentProvider implements PaymentProvider {
     })
 
     if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`Teya OAuth failed (${res.status}): ${text.slice(0, 300)}`)
+      throw new Error(`Teya authentication failed (${res.status}). Check the selected environment and merchant credentials.`)
     }
 
     const json = (await res.json()) as { access_token: string; expires_in?: number }
+    if (!json.access_token || typeof json.access_token !== 'string') throw new Error('Teya did not return an access token.')
     tokenCache = {
+      context,
       accessToken: json.access_token,
       expiresAt: Date.now() + (json.expires_in ?? 3600) * 1000,
     }
@@ -75,14 +87,8 @@ export class TeyaPaymentProvider implements PaymentProvider {
 
   async createCheckout(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     const creds = teyaCredentials()
-    if (!creds.sandboxOnly) {
-      return {
-        ok: false,
-        provider: this.id,
-        code: 'VALIDATION_ERROR',
-        message:
-          'Live Teya charges are disabled. Set TEYA_ENVIRONMENT=sandbox and use staging credentials from https://business.teya.xyz (Integrations).',
-      }
+    if (creds.environment === 'production' && (!creds.webhookPublicKey || !liveReturnUrlsValid(input))) {
+      return { ok: false, provider: this.id, code: 'VALIDATION_ERROR', message: 'Live checkout requires a webhook public key and HTTPS return URLs on the configured website origin. No payment was taken.' }
     }
     if (!creds.configured) {
       return {
@@ -90,7 +96,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
         provider: this.id,
         code: 'MISSING_CREDENTIALS',
         message:
-          'Teya sandbox is not configured. Set TEYA_CLIENT_ID, TEYA_CLIENT_SECRET, and TEYA_STORE_ID from the staging Business Portal. No payment was taken.',
+          'Teya is not configured. Set merchant credentials for the selected environment. No payment was taken.',
       }
     }
 
@@ -139,8 +145,9 @@ export class TeyaPaymentProvider implements PaymentProvider {
         payload.customer_success_email = input.customer.email
       }
 
-      const res = await fetch(`${SANDBOX_API}/v2/checkout/sessions`, {
+      const res = await fetch(`${creds.apiUrl}/v2/checkout/sessions`, {
         method: 'POST',
+        redirect: 'error', signal: AbortSignal.timeout(15000),
         headers: {
           authorization: `Bearer ${token}`,
           'content-type': 'application/json',
@@ -163,7 +170,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
           ok: false,
           provider: this.id,
           code: 'PROVIDER_ERROR',
-          message: `Teya checkout session failed (${res.status}): ${JSON.stringify(json).slice(0, 400)}`,
+          message: `Teya could not create checkout (${res.status}). Please contact support if this continues.`,
         }
       }
 
@@ -177,7 +184,9 @@ export class TeyaPaymentProvider implements PaymentProvider {
           message: 'Teya response missing session_url / session_id',
         }
       }
-      if (!sessionUrl.startsWith('https://')) {
+      let safeSessionUrl = false
+      try { const url = new URL(sessionUrl); safeSessionUrl = url.protocol === 'https:' && !url.username && !url.password && (!url.port || url.port === '443') && (creds.environment !== 'production' || url.hostname === 'checkout.teya.com') } catch { /* Reject malformed provider responses. */ }
+      if (!safeSessionUrl) {
         return {
           ok: false,
           provider: this.id,
@@ -192,12 +201,12 @@ export class TeyaPaymentProvider implements PaymentProvider {
         checkoutUrl: sessionUrl,
         providerRef: sessionId,
       }
-    } catch (error) {
+    } catch {
       return {
         ok: false,
         provider: this.id,
         code: 'PROVIDER_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown Teya error',
+        message: 'Teya is temporarily unavailable. Retry your saved booking shortly; do not start another booking.',
       }
     }
   }
@@ -215,17 +224,15 @@ export class TeyaPaymentProvider implements PaymentProvider {
 
   async lookupSession(providerRef: string): Promise<TeyaSessionLookup> {
     const creds = teyaCredentials()
-    if (!creds.sandboxOnly) {
-      return { ok: false, code: 'VALIDATION_ERROR', message: 'Live Teya lookups are disabled' }
-    }
     if (!creds.configured) {
-      return { ok: false, code: 'MISSING_CREDENTIALS', message: 'Teya sandbox is not configured' }
+      return { ok: false, code: 'MISSING_CREDENTIALS', message: 'Teya is not configured' }
     }
     try {
       const token = await this.getAccessToken()
       const res = await fetch(
-        `${SANDBOX_API}/v2/checkout/sessions/${encodeURIComponent(providerRef)}`,
+        `${creds.apiUrl}/v2/checkout/sessions/${encodeURIComponent(providerRef)}`,
         {
+          redirect: 'error', signal: AbortSignal.timeout(15000),
           headers: {
             authorization: `Bearer ${token}`,
             'user-agent': 'IcelandTaxiBooking/1.0',
@@ -248,11 +255,11 @@ export class TeyaPaymentProvider implements PaymentProvider {
         transactionId: json.transaction_id ? String(json.transaction_id) : undefined,
         raw: json,
       }
-    } catch (error) {
+    } catch {
       return {
         ok: false,
         code: 'PROVIDER_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown Teya error',
+        message: 'Teya is temporarily unavailable. Retry your saved booking shortly; do not start another booking.',
       }
     }
   }

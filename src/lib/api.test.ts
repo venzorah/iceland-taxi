@@ -19,3 +19,11 @@ test('database failures return 503 with Retry-After and never fall back to sampl
     assert.equal(JSON.stringify(body).includes('private connection details'), false)
   } finally { if (previous === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = previous }
 })
+
+test('expired database transactions return a retryable response without exposing transaction details', async () => {
+  const handler=apiHandler(async()=>{throw Object.assign(new Error('private transaction details'),{code:'P2028',meta:{error:'Transaction already closed: expired transaction after timeout'}})})
+  const response=await handler()
+  assert.equal(response.status,503)
+  assert.equal(response.headers.get('Retry-After'),'30')
+  assert.equal((await response.text()).includes('private transaction details'),false)
+})

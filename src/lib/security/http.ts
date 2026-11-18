@@ -1,3 +1,4 @@
+import { configuredAppUrl } from '@/lib/app-url'
 export class HttpError extends Error {
  constructor(public status:number,public code:string,message:string,public retryAfter?:number){super(message)}
 }
@@ -8,9 +9,9 @@ export function validateRequestOrigin(req:Request){
  if(req.headers.get('sec-fetch-site')==='cross-site')throw new HttpError(403,'INVALID_ORIGIN','This request is not allowed.')
  const origin=req.headers.get('origin')
  if(!origin)return
- const expected=process.env.NEXT_PUBLIC_APP_URL
+ const expected=configuredAppUrl()
  let allowed:string
- try{allowed=new URL(expected||req.url).origin}catch{throw new HttpError(503,'APP_URL_REQUIRED','Application URL configuration is required.')}
+ try{const url=new URL(expected||req.url);if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error('Invalid app origin');allowed=url.origin}catch{throw new HttpError(503,'APP_URL_REQUIRED','Application URL configuration is required.')}
  if(origin!==allowed)throw new HttpError(403,'INVALID_ORIGIN','This request is not allowed.')
 }
 /** JSON bodies are capped while streaming; Content-Length is not trusted. Multipart has its own upload cap. */

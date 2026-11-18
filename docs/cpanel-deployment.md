@@ -6,6 +6,10 @@ The app is ready to upload for hosted verification. Public customer launch still
 
 Use `deployment-artifacts/iceland-taxi-cpanel.zip` from the local workspace. Regenerate it with `python3 scripts/package-cpanel.py` after any further code changes. The adjacent .sha256 file verifies the archive. The archive contains source and migrations; no build output, node_modules, .git or private .env is included.
 
+## Low-memory hosting
+
+If cPanel cannot complete next build, use the prebuilt upload workflow in [hosting-troubleshooting.md](hosting-troubleshooting.md). Build on the PC, install dependencies and generate Prisma Client on the Linux host, then restart; no Next.js build runs on cPanel.
+
 ## Application setup
 
 1. Keep the current site/hosting files backed up. Upload the prepared source ZIP to a private application folder such as `/home/CPANEL_USER/iceland-taxi` and extract it there, outside public_html. Do not upload local node_modules, .next, .git or .env. The ZIP intentionally excludes them. Build on Linux rather than copying macOS native modules.

@@ -8,14 +8,14 @@ async function handleGET() {
   const data = await withDb(
     async () => {
       const drivers = await prisma.driver.findMany({
-        include: { vehicle: true, user: { select: { email: true, phone: true, authId: true } } },
+        include: { vehicle: true, user: { select: { email: true, phone: true, authIdentity: { select: { emailVerified: true, disabled: true } } } } },
         orderBy: { displayName: 'asc' },
       })
       return {
         source: 'database' as const,
         drivers: drivers.map(({ user, ...driver }) => ({
           ...driver,
-          hasAccount: Boolean(user.authId),
+          hasAccount: Boolean(user.authIdentity?.emailVerified && !user.authIdentity.disabled),
           user: { email: user.email, phone: user.phone },
         })),
       }

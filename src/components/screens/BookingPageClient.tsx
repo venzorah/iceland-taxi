@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useSiteSession } from '@/components/providers/SessionProvider'
 import { pickupInstant } from '@/lib/booking/pickup'
 import { CustomEnquiryForm, type EnquiryPayload } from '@/components/booking/CustomEnquiryForm'
+import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import Booking, { type BookingPayPayload, type BookingVehicle } from '@/components/screens/booking/Booking'
 import { useAppPrefs } from '@/components/providers/AppProviders'
@@ -17,7 +18,7 @@ export function BookingPageClient() {
   const prefs = useAppPrefs()
   const router = useRouter()
   const params = useSearchParams()
-  const listings = usePublishedListings()
+  const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
   const { user } = useSiteSession()
   const requestKey = useRef('')
   const requestBody = useRef('')
@@ -292,8 +293,8 @@ export function BookingPageClient() {
     if (!pickup && !destination) return listings
     return searchListings(listings, { pickup, destination, category: searchCategory })
   }, [listings, listing, pickup, destination, searchCategory])
-  const showEnquiry = enquiryOnly || (listings !== null && !listing && options.length === 0 && Boolean(listingId || pickup || destination))
-  const showPicker = listings !== null && !listing && !showEnquiry
+  const showEnquiry = enquiryOnly || (!listingsError && listings !== null && !listing && options.length === 0 && Boolean(listingId || pickup || destination))
+  const showPicker = !listingsError && listings !== null && !listing && !showEnquiry
 
   async function retryPayment() {
     setPayState('paying'); setError(null)
@@ -311,6 +312,7 @@ export function BookingPageClient() {
 
   return (
     <>
+      <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
       {error && (
         <div className="fixed inset-x-0 top-0 z-50 bg-error px-4 py-2 text-center text-sm font-semibold text-white">
           {error}

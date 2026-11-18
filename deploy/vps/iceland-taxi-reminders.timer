@@ -1,0 +1,9 @@
+# Enable only AFTER rehearsal and SMTP validation; never enable against a rehearsal clone.
+[Unit]
+Description=Hourly Iceland Taxi reminders
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=60
+[Install]
+WantedBy=timers.target

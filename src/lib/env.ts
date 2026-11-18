@@ -1,3 +1,4 @@
+import { configuredAppUrl } from '@/lib/app-url'
 import { z } from 'zod'
 
 const emptyToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v)
@@ -53,7 +54,7 @@ export function getServerEnv(): ServerEnv {
     WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID,
     WHATSAPP_NOTIFY_E164: process.env.WHATSAPP_NOTIFY_E164,
     WHATSAPP_API_VERSION: process.env.WHATSAPP_API_VERSION,
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_APP_URL: configuredAppUrl(),
     PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
     VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,

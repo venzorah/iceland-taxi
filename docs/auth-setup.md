@@ -1,45 +1,13 @@
-# Supabase authentication setup
+# Database-backed authentication setup
 
-The running app uses Supabase Auth for verified sessions and Prisma for application records and roles. Browser Data API access to application tables is blocked with RLS; no browser policies are configured. Prisma server connections must retain the required database permissions.
+Authentication now uses Better Auth and Prisma in the existing Next.js app. Follow [the password-preserving transition guide](auth-transition.md) for schema, account mapping, environment, importer commands and validation. The Supabase audit describes the pre-transition source, not the new runtime.
 
-## Environment
+The source database has not been changed or cut over. Prepare the private PostgreSQL 17 target, restore/verify application data, apply the additive migration and run the dry-run/import there before using migrated accounts. Keep the old provider intact until acceptance.
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env` and hosting settings. Keep `DATABASE_URL`, `DIRECT_URL`, and optional `SUPABASE_SECRET_KEY` server-only. Restart Next.js after changing environment variables.
+Required private server configuration: DATABASE_URL, DIRECT_URL, BETTER_AUTH_SECRET, BOOKING_ACCESS_SECRET; canonical origin NEXT_PUBLIC_APP_URL; SMTP_URL and MAIL_FROM for verification/recovery. Use the placeholders in `.env.example`. No Supabase SDK/public key/administrative key is required by the application.
 
-In Supabase Authentication → URL Configuration, set the Site URL to your application URL and allow the following redirect URLs for each development/production origin:
+Customers sign in on `/login` and register on `/signup`. Drivers use `/driver-login` and `/driver-signup` for account activation and must be provisioned/approved by operations. Staff sign in on `/admin-login`; roles remain company-provisioned and there is no public admin signup. Older driver/admin login links redirect to their dedicated screen. `/api/auth/session` returns the application user/role projection. Private operations verify server-side sessions and application ownership/role rules.
 
-- `http://localhost:3000/auth/confirm`
-- `http://localhost:3000/auth/confirm?type=recovery`
-- `http://localhost:3000/auth/confirm?portal=driver`
-- `http://localhost:3000/auth/confirm?type=recovery&portal=driver`
+Tabs in the same browser profile share one authenticated session. Visiting the public site retains the signed-in role: staff see Admin portal, drivers see Driver portal, and customers see My account and customer trip controls. Opening `/account` with an active staff/driver account redirects to that account's own portal; it never creates or converts a customer account. Opening another role's login/signup screen shows the existing account and requires signing out before switching accounts. For simultaneous testing with different accounts, use separate browser profiles (normal and incognito also work; multiple incognito windows share their incognito session).
 
-Replace the origin with the production domain for production. Enable email authentication and email confirmation. Configure SMTP before relying on customer email delivery; default Supabase mail delivery has restrictions.
-
-## Initial super admin
-
-Run `node scripts/bootstrap-admin.mjs EMAIL` with the approved admin email. This provisions the application role. If the matching Supabase Auth user exists, its identity is linked. If a server-only `SUPABASE_SECRET_KEY` is supplied, the script creates the Auth identity with an unprinted random password. Use the login screen's Forgot password action to set a private password.
-
-Alternatively, create the matching confirmed user manually in Supabase Authentication → Users using a private password. On its first verified login, it claims the pre-provisioned application role. No password from chat is saved or used by the script.
-
-Customer registration never accepts a role. Staff and driver roles must be provisioned by the company. Until the admin account onboarding UI is completed, create their matching Auth identities in the Supabase dashboard as well.
-
-## Verification
-
-- `npm run typecheck`
-- `node_modules/.bin/tsx --test src/lib/auth/permissions.test.ts`
-- `npm run build`
-- `node scripts/check-connection.mjs` checks Auth configuration and a rolled-back database write/read.
-
-Demo login endpoints return 410. Existing identity helper names remain temporarily for compatibility, but they resolve only verified Supabase sessions. Admin API access checks application role permissions. Customer messaging ignores caller-supplied email identity. Driver APIs restrict requests to the verified driver's active profile.
-
-## Remaining integration work
-
-Existing portal screens still contain sample presentation data and business flows to finish. Authentication does not make those screens fully live. Complete portal data binding, account provisioning UX, payment authorization, live notifications, and Cloudinary uploads in subsequent milestones.
-
-## Driver entry and activation
-
-The public sign-in screen now has Customer and Driver options. The homepage also has a driver section with links for existing drivers and prospective drivers. Driver intent is encoded in `/login?portal=driver&next=/driver`; it is not an authorization claim. The server's verified role remains authoritative. An existing driver reaches `/driver` from generic sign-in too. A customer attempting the driver-specific flow stays on the sign-in page with an explanation.
-
-Operations first adds an approved driver's email/profile. That driver can choose **Activate driver account**, register and confirm that same email, then use **Driver sign in**. Registration supplies name/email/password to Supabase; it does not accept or grant a driver role. Prospective drivers use the company's configured contact channels. There is no public self-approval or claim that a driver application has been submitted.
-
-Driver intent is retained on confirmation/recovery callbacks. Configure matching redirect allow-list entries and email templates before hosted email testing; [Supabase redirect documentation](https://supabase.com/docs/guides/auth/redirect-urls). SMTP and email-link delivery remain pending verification as previously agreed.
+The existing super admin is preserved by account import. For a separate explicit provisioning task, `node scripts/bootstrap-admin.mjs EMAIL` grants the role only to an already verified active identity. Do not bootstrap or seed to replace a missing migration.

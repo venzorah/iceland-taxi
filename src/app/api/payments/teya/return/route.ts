@@ -1,3 +1,4 @@
+import { configuredAppUrl } from '@/lib/app-url'
 import { canAccessBooking } from '@/lib/customer/booking-access'
 import { prisma } from '@/lib/api'
 import { apiHandler } from '@/lib/api'
@@ -13,7 +14,7 @@ async function handleGET(req: Request) {
   const ref = url.searchParams.get('ref') || ''
   const result = url.searchParams.get('result')
   const hint = result === 'cancel' || result === 'failure' || result === 'success' ? result : undefined
-  const origin = process.env.NEXT_PUBLIC_APP_URL || url.origin
+  const origin = configuredAppUrl() || url.origin
 
   if (!ref) {
     return NextResponse.redirect(`${origin}/book?payment=not_started`)

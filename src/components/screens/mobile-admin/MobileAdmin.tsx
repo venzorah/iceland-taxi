@@ -97,7 +97,7 @@ export default function MobileAdmin(props: Props) {
   const [source, setSource] = useState('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [compose, setCompose] = useState(false)
-  const listings = usePublishedListings()
+  const {listings} = usePublishedListings()
   const [bookingDraft, setBookingDraft] = useState({ guestName: '', guestEmail: '', listingId: '' })
   const selectedListing = (listings || []).find((listing) => listing.id === bookingDraft.listingId) || null
   const [driverId, setDriverId] = useState('')

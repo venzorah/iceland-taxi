@@ -1,0 +1,15 @@
+[Unit]
+Description=Iceland Taxi reminder email job
+After=iceland-taxi.service
+[Service]
+Type=oneshot
+User=iceland-taxi
+Group=iceland-taxi
+EnvironmentFile=/etc/iceland-taxi/app.env
+WorkingDirectory=/srv/iceland-taxi/current
+ExecStart=/usr/bin/node scripts/vps/run-reminders.mjs
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+TimeoutStartSec=120

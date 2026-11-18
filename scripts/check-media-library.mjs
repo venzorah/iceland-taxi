@@ -1,8 +1,7 @@
+import {createFixtureIdentity,deleteFixtureIdentity,fixtureSession,closeFixtureAuth} from './fixture-auth.mjs'
 // Real Cloudinary test with tiny generated images and temporary Auth/database fixtures only.
 import nextEnv from '@next/env'
 import {PrismaClient} from '@prisma/client'
-import {createClient} from '@supabase/supabase-js'
-import {createServerClient} from '@supabase/ssr'
 import {randomUUID,randomBytes,createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
 nextEnv.loadEnvConfig(process.cwd())
@@ -11,14 +10,13 @@ if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname))throw new Error
 const run=randomUUID(),ids=[],accounts=[],keys=[]
 const connection=new URL(process.env.DIRECT_URL||process.env.DATABASE_URL);connection.searchParams.set('connection_limit','1');connection.searchParams.set('connect_timeout','30')
 const db=new PrismaClient({datasourceUrl:connection.toString()})
-const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
 async function account(role){
  const email=`media-${role.toLowerCase()}-${run}@example.invalid`,password=randomBytes(32).toString('base64url')
- const result=await auth.auth.admin.createUser({email,password,email_confirm:true});if(result.error)throw new Error('Temporary identity creation failed')
+ const result=await createFixtureIdentity({email,password,email_confirm:true});if(result.error)throw new Error('Temporary identity creation failed')
  const a={identity:result.data.user.id,jar:new Map()};accounts.push(a)
  a.user=await db.user.create({data:{email,role,authId:a.identity,name:'Temporary media verification'}})
- const client=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{cookies:{getAll:()=>[...a.jar].map(([name,value])=>({name,value})),setAll:values=>values.forEach(({name,value})=>a.jar.set(name,value))}})
- if((await client.auth.signInWithPassword({email,password})).error)throw new Error('Temporary login failed')
+ const client=fixtureSession(origin, a.jar)
+ if((await client.signIn({email,password})).error)throw new Error('Temporary login failed')
  return a
 }
 async function request(a,path,method='GET',body){
@@ -63,6 +61,6 @@ finally{
   if(!removed.ok||!['ok','not found'].includes(data.result)){console.error('Own test image cleanup needs a retry');process.exitCode=1}
  }
  await db.mediaAsset.deleteMany({where:{id:{in:ids}}})
- for(const a of accounts){if(a.user)await db.user.delete({where:{id:a.user.id}});if((await auth.auth.admin.deleteUser(a.identity)).error){console.error('Temporary Auth cleanup needs retry');process.exitCode=1}}
- await db.$disconnect();console.log('Temporary media accounts, metadata, references and uploaded test images cleaned up.')
+ for(const a of accounts){if(a.user)await db.user.delete({where:{id:a.user.id}});if((await deleteFixtureIdentity(a.identity)).error){console.error('Temporary Auth cleanup needs retry');process.exitCode=1}}
+ await closeFixtureAuth();await db.$disconnect();console.log('Temporary media accounts, metadata, references and uploaded test images cleaned up.')
 }

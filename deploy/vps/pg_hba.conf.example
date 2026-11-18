@@ -1,0 +1,6 @@
+# Merge into the real pg_hba.conf; do not overwrite admin/replication rules blindly.
+# Place these BEFORE broad existing host rules. listen_addresses is loopback only.
+local   all           postgres                         peer
+host    iceland_taxi  iceland_app    127.0.0.1/32       scram-sha-256
+host    iceland_taxi  iceland_owner  127.0.0.1/32       scram-sha-256
+# Add explicit equivalents for a separately named rehearsal database if needed.

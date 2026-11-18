@@ -1,13 +1,13 @@
 'use client'
 import { useState } from 'react'
+import { endSession } from '@/lib/auth/sign-out'
 export function SessionBar({ email }: { email: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function signOut() {
     setBusy(true)
     try {
-      const res = await fetch('/api/auth/signout', { method: 'POST' })
-      if (!res.ok) throw new Error('Could not sign out. Please try again.')
+      await endSession()
       window.location.assign('/login')
     } catch { setError('Could not sign out. Please try again.'); setBusy(false) }
   }

@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { Pencil, X } from 'lucide-react'
-import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useSiteSession } from '@/components/providers/SessionProvider'
 type Profile = { name: string | null; email: string; phone: string | null; category: 'INTERNATIONAL' | 'RESIDENT'; preferredCurrency: 'EUR' | 'ISK'; preferredLang: 'en' | 'is' }
 export function CustomerProfile() {
@@ -52,7 +51,7 @@ function CustomerProfileForm() {
   }
   async function security(e: React.FormEvent) {
     e.preventDefault(); if (!user) return; setBusy(true); setMessage('')
-    try { const supabase = createSupabaseBrowserClient(); const verified = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword }); if (verified.error) throw new Error('Your current password could not be verified.'); const result = await supabase.auth.updateUser(email ? { email: email.trim() } : { password }, { emailRedirectTo: `${window.location.origin}/auth/confirm` }); if (result.error) throw result.error; setCurrentPassword(''); setPassword(''); setEmail(''); setMessage(email ? 'Check your current and new email inboxes to confirm the email change.' : 'Your password was updated.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not update account security.') } finally { setBusy(false) }
+    try { const response = await fetch('/api/account/security', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, ...(email ? { email: email.trim() } : { password }) }) }); const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Could not update account security.'); setCurrentPassword(''); setPassword(''); setEmail(''); setMessage(email ? 'Check your current and new email inboxes to confirm the email change.' : 'Your password was updated.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not update account security.') } finally { setBusy(false) }
   }
   return <div>
     {!profile && !message && <p className="py-4 text-sm text-muted" aria-busy="true">Loading your profile…</p>}

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants'
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -9,8 +10,6 @@ const nextConfig: NextConfig = {
     { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" },
     ...(process.env.NODE_ENV === 'production' ? [{ key: 'Strict-Transport-Security', value: 'max-age=15552000' }] : []),
   ] }] },
-  // Allow verification builds without disturbing a running development server.
-  distDir: process.env.NEXT_OUTPUT_DIR || '.next',
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'fonts.googleapis.com' },
@@ -18,10 +17,17 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
+    ...(process.env.VPS_BUILD_CPUS === '1' ? { cpus: 1 } : {}),
     serverActions: {
       bodySizeLimit: '2mb',
     },
   },
 }
 
-export default nextConfig
+export default function config(phase: string): NextConfig {
+  return {
+    ...nextConfig,
+    // Dev and production never share generated chunks. Explicit verification-build overrides still work.
+    distDir: process.env.NEXT_OUTPUT_DIR || (phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next'),
+  }
+}

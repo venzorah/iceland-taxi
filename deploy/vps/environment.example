@@ -1,0 +1,36 @@
+# TEMPLATE ONLY. Install privately as /etc/iceland-taxi/app.env (root:iceland-taxi 0640).
+# systemd EnvironmentFile syntax, not YAML. URL-encode database and SMTP passwords.
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://icelandtaxibooking.is
+# Local PostgreSQL has no TLS in this design; loopback only, SCRAM password authentication.
+# Runtime role has DML permissions only; a small pool for one Next.js process.
+DATABASE_URL=postgresql://iceland_app:REPLACE_URL_ENCODED_PASSWORD@127.0.0.1:5432/iceland_taxi?schema=public&sslmode=disable&connection_limit=5&connect_timeout=10&pool_timeout=10&socket_timeout=20
+# Prisma schema still requires DIRECT_URL; runtime can use its own unprivileged URL here.
+DIRECT_URL=postgresql://iceland_app:REPLACE_URL_ENCODED_PASSWORD@127.0.0.1:5432/iceland_taxi?schema=public&sslmode=disable
+BOOKING_ACCESS_SECRET=REPLACE_WITH_EXISTING_PRIVATE_SIGNING_KEY
+RATE_LIMIT_PROXY_HEADER=x-real-ip
+# Better Auth uses the canonical NEXT_PUBLIC_APP_URL above.
+# Generate at least 32 random bytes and keep the value private and stable.
+BETTER_AUTH_SECRET=REPLACE_WITH_PRIVATE_RANDOM_SIGNING_SECRET
+CLOUDINARY_CLOUD_NAME=REPLACE_EXISTING_CLOUD_NAME
+CLOUDINARY_API_KEY=REPLACE_EXISTING_API_KEY
+CLOUDINARY_API_SECRET=REPLACE_EXISTING_PRIVATE_API_SECRET
+TEYA_ENVIRONMENT=production
+PAYMENT_PROVIDER=teya
+TEYA_CLIENT_ID=REPLACE_EXISTING_LIVE_CLIENT_ID
+TEYA_CLIENT_SECRET=REPLACE_EXISTING_LIVE_CLIENT_SECRET
+TEYA_STORE_ID=REPLACE_EXISTING_LIVE_STORE_ID
+# Use quoted single-line PEM with literal backslash-n separators. Never use a real line break here.
+TEYA_WEBHOOK_PUBLIC_KEY="REPLACE_EXISTING_PEM_PUBLIC_KEY"
+SMTP_URL=REPLACE_PRIVATE_SMTP_URL
+MAIL_FROM=REPLACE_VERIFIED_SENDER
+CRON_SECRET=REPLACE_WITH_RANDOM_PRIVATE_SECRET
+GOOGLE_MAPS_API_KEY=
+VAPID_PUBLIC_KEY=REPLACE_EXISTING_PUBLIC_KEY
+VAPID_PRIVATE_KEY=REPLACE_EXISTING_PRIVATE_KEY
+VAPID_SUBJECT=https://icelandtaxibooking.is
+WHATSAPP_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_NOTIFY_E164=
+WHATSAPP_API_VERSION=v21.0
+SMS_API_KEY=

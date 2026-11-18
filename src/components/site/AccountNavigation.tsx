@@ -5,9 +5,11 @@ import Link from 'next/link'
 import { UserRound, X } from 'lucide-react'
 import { useSiteSession } from '@/components/providers/SessionProvider'
 import { t, type Lang } from '@/lib/design/i18n'
+import { portalNavigation } from '@/lib/auth/portal-navigation'
 
 export function AccountNavigation({ language, mobile = false }: { language: Lang; mobile?: boolean }) {
   const { user, loading, accountHref, signOut } = useSiteSession()
+  const account = portalNavigation(user?.role, language)
   const menu = useRef<HTMLDetailsElement>(null)
   const trigger = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -28,14 +30,16 @@ export function AccountNavigation({ language, mobile = false }: { language: Lang
   }
   if (mobile) return <div className="col-span-2 space-y-2">
     <p className="truncate text-sm text-muted">{user.name || user.email}</p>
-    <div className="grid grid-cols-2 gap-2"><Link href={accountHref} className={style}><UserRound size={17} />{language === 'is' ? 'Mín síða' : 'My account'}</Link><button onClick={logout} disabled={busy} className={style}>{busy ? '…' : t(language, 'logOut')}</button></div>
+    <p className="text-xs font-semibold text-muted">{account.roleLabel}</p>
+    <div className="grid grid-cols-2 gap-2"><Link href={accountHref} className={style}><UserRound size={17} />{account.label}</Link><button onClick={logout} disabled={busy} className={style}>{busy ? '…' : t(language, 'logOut')}</button></div>
     {error && <p role="alert" className="text-sm text-error">{error}</p>}
   </div>
   return <details ref={menu} className="group relative">
-    <summary ref={trigger} className={`${style} cursor-pointer list-none`}><UserRound size={17} />{language === 'is' ? 'Mín síða' : 'My account'}</summary>
+    <summary ref={trigger} className={`${style} cursor-pointer list-none`}><UserRound size={17} />{account.label}</summary>
     <div className="absolute right-0 top-full z-50 mt-3 w-64 rounded-2xl border border-line bg-bg p-3 shadow-lg">
       <div className="flex items-center gap-2"><p className="min-w-0 flex-1 truncate px-2 py-2 text-sm text-muted">{user.name || user.email}</p><button type="button" onClick={() => { if (menu.current) menu.current.open = false; trigger.current?.focus() }} aria-label="Close account menu" className="rounded-full p-2 text-heading hover:bg-surface"><X size={17} /></button></div>
-      <Link href={accountHref} onClick={() => { if (menu.current) menu.current.open = false }} className="block rounded-xl px-3 py-3 text-sm font-semibold text-heading hover:bg-surface">{language === 'is' ? 'Mín síða' : 'My account'}</Link>
+      <p className="px-2 pb-2 text-xs font-semibold text-muted">{account.roleLabel}</p>
+      <Link href={accountHref} onClick={() => { if (menu.current) menu.current.open = false }} className="block rounded-xl px-3 py-3 text-sm font-semibold text-heading hover:bg-surface">{account.label}</Link>
       <button disabled={busy} onClick={logout} className="w-full rounded-xl px-3 py-3 text-left text-sm font-semibold text-heading hover:bg-surface disabled:opacity-60">{busy ? '…' : t(language, 'logOut')}</button>
       {error && <p role="alert" className="px-3 text-sm text-error">{error}</p>}
     </div>

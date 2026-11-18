@@ -1,3 +1,4 @@
+import { configuredAppUrl } from '@/lib/app-url'
 import {teyaCredentials} from '@/lib/env'
 import {paymentEnvironmentMatches} from '@/lib/payments/teya'
 import type { Prisma } from '@prisma/client'
@@ -85,7 +86,7 @@ export const POST = apiHandler(async (req: Request) => {
     if (!claimed.count) return jsonError(409, 'CHECKOUT_STARTING', 'Checkout is starting. Wait a moment and retry your saved booking.', { bookingRef: ref })
   }
   await prisma.payment.update({where:{id:payment.id},data:{raw:{environment:teyaCredentials().environment}}})
-  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+  const origin = configuredAppUrl() || new URL(req.url).origin
   const returnBase = `${origin}/api/payments/teya/return?ref=${encodeURIComponent(ref)}`
   const result = await provider.createCheckout({ bookingRef: ref, bookingId: booking.id, idempotencyKey: `itb-${payment.id}`, amount: booking.amountSnapshot, currency: booking.currency, description: `Iceland Taxi Booking · ${booking.serviceLabel}`, returnUrl: `${returnBase}&result=success`, cancelUrl: `${returnBase}&result=cancel`, failureUrl: `${returnBase}&result=failure`, customer: { name: booking.guestName || undefined, email: booking.customer?.email || booking.guestEmail || undefined, phone: booking.guestPhone || undefined } })
   if (!result.ok) {

@@ -1,26 +1,17 @@
+// Explicit operator action only; existing users are migrated with import-accounts.ts instead.
 import nextEnv from '@next/env'
-import { PrismaClient } from '@prisma/client'
-import { createClient } from '@supabase/supabase-js'
-import { randomBytes } from 'node:crypto'
+import {PrismaClient} from '@prisma/client'
 nextEnv.loadEnvConfig(process.cwd())
-const email = process.argv[2]?.trim().toLowerCase()
-if (!email || !email.includes('@')) throw new Error('Usage: node scripts/bootstrap-admin.mjs EMAIL')
-const prisma = new PrismaClient()
-try {
-  const identities = await prisma.$queryRaw`SELECT id FROM auth.users WHERE lower(email) = ${email} LIMIT 1`
-  let authId = identities[0]?.id
-  if (!authId && process.env.SUPABASE_SECRET_KEY) {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-    // No password from chat is used, stored, or printed. Set a private password using recovery.
-    const { data, error } = await supabase.auth.admin.createUser({ email, email_confirm: true, password: randomBytes(48).toString('base64url') })
-    if (error) throw new Error('Supabase could not create the admin identity. Check the server secret key and Auth configuration.')
-    authId = data.user.id
-  }
-  await prisma.user.upsert({ where: { email },
-    create: { email, name: 'Super Admin', role: 'SUPER_ADMIN', authId: authId || null, staffProfile: { create: { title: 'Super Admin', active: true } } },
-    update: { role: 'SUPER_ADMIN', ...(authId ? { authId } : {}), staffProfile: { upsert: { create: { title: 'Super Admin', active: true }, update: { active: true } } } },
-  })
-  console.log(authId ? 'Super admin identity linked. Use Forgot password on /login to set a private password.' : 'Super admin role reserved. Create the matching confirmed user in Supabase Authentication, or add SUPABASE_SECRET_KEY and rerun this command.')
-} finally { await prisma.$disconnect() }
+const email=process.argv[2]?.trim().toLowerCase()
+if(!email||!email.includes('@'))throw new Error('Usage: node scripts/bootstrap-admin.mjs EMAIL')
+const prisma=new PrismaClient()
+try{
+ const identity=await prisma.authIdentity.findUnique({where:{email}})
+ if(!identity?.emailVerified||identity.disabled)throw new Error('An active verified identity is required; migrate or verify the account first')
+ await prisma.$transaction(async tx=>{
+  const user=await tx.user.upsert({where:{email},create:{email,name:identity.name,role:'SUPER_ADMIN',staffProfile:{create:{title:'Super Admin',active:true}}},update:{role:'SUPER_ADMIN',staffProfile:{upsert:{create:{title:'Super Admin',active:true},update:{active:true}}}}})
+  if(identity.appUserId&&identity.appUserId!==user.id)throw new Error('Identity mapping does not match')
+  await tx.authIdentity.update({where:{id:identity.id},data:{appUserId:user.id}})
+ })
+ console.log('Verified identity linked to the super admin role. No password was changed.')
+}finally{await prisma.$disconnect()}

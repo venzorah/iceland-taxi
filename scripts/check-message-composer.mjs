@@ -1,9 +1,8 @@
+import {createFixtureIdentity,deleteFixtureIdentity,fixtureSession,closeFixtureAuth} from './fixture-auth.mjs'
 // Local browser layout checks. Auth uses temporary accounts; all browser APIs are mocked.
 // No messages, bookings, payments or notifications are sent to real application APIs.
 import env from '@next/env'
 import {PrismaClient} from '@prisma/client'
-import {createClient} from '@supabase/supabase-js'
-import {createServerClient} from '@supabase/ssr'
 import {randomUUID,randomBytes} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {writeFile} from 'node:fs/promises'
@@ -11,16 +10,15 @@ env.loadEnvConfig(process.cwd())
 const origin=process.argv[2]||'http://127.0.0.1:3110',debug=process.env.CHROME_DEBUG_URL
 if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname)||!debug)throw new Error('Local isolated server and browser required')
 const connection=new URL(process.env.DATABASE_TRANSACTION_URL||process.env.DATABASE_URL)
-connection.searchParams.set('connect_timeout','30');connection.searchParams.set('connection_limit','1');connection.searchParams.set('sslmode','require')
+connection.searchParams.set('connect_timeout','30');connection.searchParams.set('connection_limit','1')
 const db=new PrismaClient({datasourceUrl:connection.toString()}),accounts=[]
-const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
 async function account(role){
  const email=`compose-${role.toLowerCase()}-${randomUUID()}@example.invalid`,password=randomBytes(32).toString('base64url')
- const result=await auth.auth.admin.createUser({email,password,email_confirm:true});if(result.error)throw new Error('Temporary identity creation failed')
+ const result=await createFixtureIdentity({email,password,email_confirm:true});if(result.error)throw new Error('Temporary identity creation failed')
  const a={identity:result.data.user.id,email,role,jar:new Map()};accounts.push(a)
  a.user=await db.user.create({data:{email,authId:a.identity,role,name:'Composer verification',...(role==='DRIVER'?{driver:{create:{displayName:'Composer verification'}}}:{})}})
- const client=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{cookies:{getAll:()=>[...a.jar].map(([name,value])=>({name,value})),setAll:values=>values.forEach(({name,value})=>a.jar.set(name,value))}})
- if((await client.auth.signInWithPassword({email,password})).error)throw new Error('Temporary sign-in failed')
+ const client=fixtureSession(origin, a.jar)
+ if((await client.signIn({email,password})).error)throw new Error('Temporary sign-in failed')
  return a
 }
 function browserMocks(role){
@@ -86,4 +84,4 @@ async function verify(a,path){
 }
 try{if(!process.argv.includes('--driver-only')){const customer=await account('CUSTOMER');await verify(customer,'/messages')}const driver=await account('DRIVER');await verify(driver,'/driver');await verify(driver,'/messages')}
 catch(e){console.error('Composer browser check failed:',e.name==='AssertionError'?e.stack:e.message);process.exitCode=1}
-finally{for(const a of accounts){if(a.user)await db.user.deleteMany({where:{id:a.user.id}});if((await auth.auth.admin.deleteUser(a.identity)).error){console.error('Temporary identity cleanup needs retry');process.exitCode=1}}await db.$disconnect();console.log('Temporary composer accounts removed.')}
+finally{for(const a of accounts){if(a.user)await db.user.deleteMany({where:{id:a.user.id}});if((await deleteFixtureIdentity(a.identity)).error){console.error('Temporary identity cleanup needs retry');process.exitCode=1}}await closeFixtureAuth();await db.$disconnect();console.log('Temporary composer accounts removed.')}

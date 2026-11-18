@@ -1,3 +1,4 @@
+import { configuredAppUrl } from '@/lib/app-url'
 import { createHash, createVerify } from 'crypto'
 import { teyaCredentials } from '@/lib/env'
 import { toTeyaMinorUnits } from '@/lib/booking/pricing'
@@ -18,7 +19,7 @@ let tokenCache: TokenCache | null = null
  */
 function liveReturnUrlsValid(input: CreatePaymentInput) {
   try {
-    const app = new URL(process.env.NEXT_PUBLIC_APP_URL || '')
+    const app = new URL(configuredAppUrl() || '')
     if(app.protocol !== 'https:' || app.username || app.password || ['localhost','127.0.0.1','[::1]'].includes(app.hostname)) return false
     return [input.returnUrl,input.cancelUrl,input.failureUrl || input.cancelUrl].every(value=>{
       const url=new URL(value)

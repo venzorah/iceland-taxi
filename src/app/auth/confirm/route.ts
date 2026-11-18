@@ -1,16 +1,11 @@
-import type { EmailOtpType } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 export async function GET(req: Request) {
   const url = new URL(req.url)
-  const supabase = await createSupabaseServerClient()
-  const token_hash = url.searchParams.get('token_hash')
-  const type = url.searchParams.get('type') as EmailOtpType | null
-  const code = url.searchParams.get('code')
-  const result = code ? await supabase.auth.exchangeCodeForSession(code)
-    : token_hash && type ? await supabase.auth.verifyOtp({ token_hash, type }) : null
-  const target = result && !result.error ? (type === 'recovery' ? '/login?mode=update' : '/login?complete=1') : '/login?error=confirmation'
-  const destination = new URL(target, url.origin)
-  if (url.searchParams.get('portal') === 'driver') { destination.searchParams.set('portal','driver'); destination.searchParams.set('next','/driver') }
-  return NextResponse.redirect(destination)
+  // Better Auth verifies its own one-time links before returning here. Old Supabase links expire.
+  const legacy = url.searchParams.has('token_hash') || url.searchParams.has('code')
+  const portal = url.searchParams.get('portal')
+  const loginPath = portal === 'driver' ? '/driver-login' : portal === 'admin' ? '/admin-login' : '/login'
+  const target = new URL(legacy || url.searchParams.has('error') ? `${loginPath}?error=confirmation` : `${loginPath}?complete=1`,url.origin)
+  if(url.searchParams.get('portal')==='driver'){target.searchParams.set('portal','driver');target.searchParams.set('next','/driver')}
+  return NextResponse.redirect(target)
 }

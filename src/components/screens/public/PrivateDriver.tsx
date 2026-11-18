@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, CalendarRange, Clock3, Map } from 'lucide-react'
 
+import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { formatPrice } from '@/lib/design/data'
 
@@ -43,7 +44,8 @@ export default function PrivateDriver(props: Props) {
   const th = p.theme as 'light' | 'dark'
   const images = useSiteImages()
   const router = useRouter()
-  const driverListings = (usePublishedListings() || []).filter((listing) => listing.category === 'driver')
+  const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
+  const driverListings = (listings || []).filter((listing) => listing.category === 'driver')
   const [whatsappE164, setWhatsappE164] = useState<string | null>(null)
 
   useEffect(() => {
@@ -72,6 +74,7 @@ export default function PrivateDriver(props: Props) {
       onHelp={p.onHelp}
       announcements={p.announcements}
     >
+      <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
       <section className="relative overflow-hidden bg-navy text-white">
         <img src={images.privateDriver} alt="Private chauffeur beside a vehicle" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">

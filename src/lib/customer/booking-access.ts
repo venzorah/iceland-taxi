@@ -1,3 +1,4 @@
+import { configuredAppUrl } from '@/lib/app-url'
 import { createHmac, createHash, timingSafeEqual } from 'node:crypto'
 import { cookies } from 'next/headers'
 import { getCurrentUser } from '@/lib/auth/session'
@@ -13,7 +14,7 @@ function sign(id: string, expiry: string) {
 export async function grantGuestBookingAccess(id: string) {
   const expiry = String(Date.now() + 30 * 86400000)
   const jar = await cookies()
-  jar.set(keyFor(id), `${expiry}.${sign(id, expiry)}`, { httpOnly: true, secure: process.env.NODE_ENV === 'production' && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(process.env.NEXT_PUBLIC_APP_URL || ''), sameSite: 'lax', path: '/', maxAge: 30 * 86400 })
+  jar.set(keyFor(id), `${expiry}.${sign(id, expiry)}`, { httpOnly: true, secure: process.env.NODE_ENV === 'production' && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(configuredAppUrl() || ''), sameSite: 'lax', path: '/', maxAge: 30 * 86400 })
 }
 export async function canAccessBooking(booking: { id: string; customerId: string | null; guestEmail: string | null }, actor?: Awaited<ReturnType<typeof getCurrentUser>>) {
   const user = actor === undefined ? await getCurrentUser() : actor

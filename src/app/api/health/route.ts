@@ -1,5 +1,5 @@
-import { apiHandler } from '@/lib/api'
 import { NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
 
 async function handleGET() {
   return NextResponse.json({
@@ -7,7 +7,8 @@ async function handleGET() {
     service: 'iceland-taxi',
     time: new Date().toISOString(),
 
-  })
+  }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
-export const GET = apiHandler(handleGET)
+// Liveness must remain independent of database/native-client initialization.
+export const GET = handleGET

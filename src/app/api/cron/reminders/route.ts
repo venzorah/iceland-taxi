@@ -11,6 +11,7 @@ async function run(req: Request) {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL is required')
   if (!allowed(req)) return jsonError(401, 'UNAUTHORIZED', 'CRON_SECRET is missing or does not match')
   await prisma.rateLimit.deleteMany({ where: { resetAt: { lt: new Date(Date.now() - 86400000) } } })
+  await prisma.authRateLimit.deleteMany({ where: { lastRequest: { lt: BigInt(Date.now() - 86400000) } } })
   const result = await sendDueReminders()
   return jsonOk({ ok: true, ...result })
 }

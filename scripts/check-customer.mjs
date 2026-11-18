@@ -1,9 +1,8 @@
+import {createFixtureIdentity,deleteFixtureIdentity,fixtureSession,closeFixtureAuth} from './fixture-auth.mjs'
 // Controlled customer API test: temporary records are removed in finally.
 // Run only against a local server with outbound notifications disabled.
 import nextEnv from '@next/env'
 import { PrismaClient } from '@prisma/client'
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
 import { randomUUID, randomBytes } from 'node:crypto'
 import assert from 'node:assert/strict'
 nextEnv.loadEnvConfig(process.cwd())
@@ -13,7 +12,6 @@ const databaseUrl = new URL(process.env.DIRECT_URL)
 databaseUrl.searchParams.set('connect_timeout', '20')
 databaseUrl.searchParams.set('connection_limit', '1')
 const db = new PrismaClient({ datasourceUrl: databaseUrl.toString() })
-const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
 const marker = randomUUID()
 const email = `customer-check-${marker}@example.invalid`
 const refs = [`CHECK-${marker}`, `OTHER-${marker}`]
@@ -27,12 +25,12 @@ async function request(path, options = {}, attempt = 0) {
 }
 try {
   const password = randomBytes(32).toString('base64url')
-  const result = await admin.auth.admin.createUser({ email, password, email_confirm: true })
+  const result = await createFixtureIdentity({ email, password, email_confirm: true })
   if (result.error) throw new Error('Temporary Auth user creation failed')
   identity = result.data.user
   await db.user.create({ data: { email, name: 'Temporary verification account', role: 'CUSTOMER', authId: identity.id } })
-  client = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, { cookies: { getAll: () => [...jar].map(([name, value]) => ({ name, value })), setAll: values => values.forEach(({ name, value }) => jar.set(name, value)) } })
-  const login = await client.auth.signInWithPassword({ email, password })
+  client = fixtureSession(origin, jar)
+  const login = await client.signIn({ email, password })
   if (login.error) throw new Error('Temporary customer sign-in failed')
   const empty = await request('/api/account/trips')
   assert.equal(empty.status, 200); assert.equal(empty.body.trips.length, 0)
@@ -57,7 +55,7 @@ try {
   const sent = await request('/api/messages', { method: 'POST', body: JSON.stringify({ bookingRef: refs[0], body: 'Temporary customer verification message', as: 'customer' }) })
   assert.equal(sent.status, 201)
   assert.equal(await db.message.count({ where: { bookingId: own.id, authorRole: 'customer' } }), 1)
-  console.log('Customer message saved to Supabase; blank message rejected: PASS')
+  console.log('Customer message saved to PostgreSQL; blank message rejected: PASS')
   await db.message.create({ data: { bookingId: own.id, authorRole: 'staff', body: 'Temporary verification reply', unread: true } })
   const alerts = await request('/api/messages/alerts?as=customer')
   assert.equal(alerts.status, 200); assert.equal(alerts.body.items.length, 1)
@@ -97,15 +95,17 @@ try {
   assert.equal(disabled.status, 200)
   assert.equal(await db.pushSubscription.count({ where: { endpoint } }), 0)
   console.log('Turning off alerts removes the customer background subscription: PASS')
+  if (process.env.SKIP_EXTERNAL_CHECKS !== '1') {
   const weather = await request('/api/account/weather?latitude=64.15&longitude=-21.94')
   assert.equal(weather.status, 200)
   assert.equal(typeof weather.body.temperature, 'number')
   console.log('Authenticated local weather returns live forecast data: PASS')
+  }
 } catch (error) {
   console.error('Customer verification failed:', error.message)
   process.exitCode = 1
 } finally {
-  await client?.auth.signOut({ scope: 'local' })
+  await client?.signOut({ scope: 'local' })
   await db.pushSubscription.deleteMany({ where: { guestEmail: email } })
   await db.emailNotice.deleteMany({ where: { bookingRef: { in: refs } } })
   await db.staffNotification.deleteMany({ where: { bookingRef: { in: refs } } })
@@ -113,7 +113,7 @@ try {
   await db.payment.deleteMany({ where: { booking: { ref: { in: refs } } } })
   await db.booking.deleteMany({ where: { ref: { in: refs } } })
   await db.user.deleteMany({ where: { email } })
-  if (identity) await admin.auth.admin.deleteUser(identity.id)
-  await db.$disconnect()
+  if (identity) await deleteFixtureIdentity(identity.id)
+  await closeFixtureAuth();await db.$disconnect()
   console.log('Temporary account, bookings, messages, and notices removed.')
 }

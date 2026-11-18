@@ -1,8 +1,7 @@
+import {createFixtureIdentity,deleteFixtureIdentity,fixtureSession,closeFixtureAuth} from './fixture-auth.mjs'
 // Local admin verification; outbound SMTP, WhatsApp, push and payment delivery must be disabled.
 import nextEnv from '@next/env'
 import { PrismaClient } from '@prisma/client'
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
 import { randomUUID,randomBytes } from 'node:crypto'
 import assert from 'node:assert/strict'
 nextEnv.loadEnvConfig(process.cwd())
@@ -10,16 +9,15 @@ const origin=process.argv[2]||'http://127.0.0.1:3106'
 if(!['127.0.0.1','localhost'].includes(new URL(origin).hostname))throw new Error('Local server required')
 const connection=new URL(process.env.DIRECT_URL||process.env.DATABASE_URL);connection.searchParams.set('connection_limit','1');connection.searchParams.set('connect_timeout','30');connection.searchParams.set('pool_timeout','40')
 const db=new PrismaClient({datasourceUrl:connection.toString()})
-const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
 const run=randomUUID(),accounts=[],refs=[],bookingIds=[],contentKeys=[],contactKeys=[]
 let vehicle,service,destination,driverUser,payment
 async function account(role){
  const email=`admin-check-${role.toLowerCase()}-${run}@example.invalid`,password=randomBytes(32).toString('base64url')
- const identity=await auth.auth.admin.createUser({email,password,email_confirm:true});if(identity.error)throw new Error('Temporary Auth creation failed')
+ const identity=await createFixtureIdentity({email,password,email_confirm:true});if(identity.error)throw new Error('Temporary Auth creation failed')
  const a={identity:identity.data.user.id,email,jar:new Map()};accounts.push(a)
  a.user=await db.user.create({data:{email,authId:a.identity,role,name:`Verification ${role}`}})
- const client=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{cookies:{getAll:()=>[...a.jar].map(([name,value])=>({name,value})),setAll:values=>values.forEach(({name,value})=>a.jar.set(name,value))}})
- if((await client.auth.signInWithPassword({email,password})).error)throw new Error('Temporary sign-in failed')
+ const client=fixtureSession(origin, a.jar)
+ if((await client.signIn({email,password})).error)throw new Error('Temporary sign-in failed')
  return a
 }
 async function request(a,path,method='GET',body,attempt=0){
@@ -109,6 +107,6 @@ finally{
  if(vehicle)await db.vehicle.delete({where:{id:vehicle.id}})
  if(service)await db.service.delete({where:{id:service.id}})
  if(destination)await db.destination.delete({where:{id:destination.id}})
- for(const a of accounts){if(a.user)await db.user.delete({where:{id:a.user.id}});if((await auth.auth.admin.deleteUser(a.identity)).error){console.error('Temporary Auth cleanup needs retry');process.exitCode=1}}
- await db.$disconnect();console.log('Temporary admin verification records removed.')
+ for(const a of accounts){if(a.user)await db.user.delete({where:{id:a.user.id}});if((await deleteFixtureIdentity(a.identity)).error){console.error('Temporary Auth cleanup needs retry');process.exitCode=1}}
+ await closeFixtureAuth();await db.$disconnect();console.log('Temporary admin verification records removed.')
 }

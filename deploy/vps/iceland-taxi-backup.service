@@ -1,0 +1,18 @@
+[Unit]
+Description=Iceland Taxi local PostgreSQL backup
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=postgres
+Group=postgres
+ExecStart=/usr/local/lib/iceland-taxi/backup.sh
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups/iceland-taxi
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=30min

@@ -9,7 +9,7 @@ async function handleGET() {
     return jsonOk({
       ok: true,
       authenticated: false,
-      signInUrl: '/login?next=/driver',
+      signInUrl: '/driver-login',
     })
   }
   return jsonOk({

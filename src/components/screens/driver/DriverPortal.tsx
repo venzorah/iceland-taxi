@@ -1,4 +1,5 @@
 'use client'
+import { endSession } from '@/lib/auth/sign-out'
 import { useSiteImages } from '@/components/providers/SiteContent'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -91,11 +92,11 @@ export default function DriverPortal(props: Props) {
   useLivePolling(load, true, 15000)
   useEffect(() => { if (driver) rememberAlertAudience('driver') }, [driver])
 
-  const login = async () => { window.location.assign('/login?next=/driver') }
+  const login = async () => { window.location.assign('/driver-login') }
 
   const logout = async () => {
-    await fetch('/api/auth/signout', { method: 'POST' })
-    window.location.assign('/login?next=/driver')
+    try { await endSession() } catch { setLoadError('Could not sign out. Please try again.'); return }
+    window.location.assign('/driver-login')
     setDriver(null)
     setJobs([])
     setHistory([])

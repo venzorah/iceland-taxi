@@ -1,8 +1,7 @@
+import {createFixtureIdentity,deleteFixtureIdentity,fixtureSession,closeFixtureAuth} from './fixture-auth.mjs'
 // Isolated browser checks; no signup emails, security updates, payments or outbound notifications.
 import nextEnv from '@next/env'
 import {PrismaClient} from '@prisma/client'
-import {createClient} from '@supabase/supabase-js'
-import {createServerClient} from '@supabase/ssr'
 import {randomUUID,randomBytes} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {verifyCustomerBrowser} from './customer-browser-check.mjs'
@@ -11,14 +10,13 @@ const origin=process.argv[2]||'http://127.0.0.1:3109',debug=process.env.CHROME_D
 if(!['localhost','127.0.0.1'].includes(new URL(origin).hostname)||!debug)throw new Error('An isolated local server and browser are required')
 const url=new URL(process.env.DIRECT_URL||process.env.DATABASE_URL);url.searchParams.set('connection_limit','1');url.searchParams.set('connect_timeout','30');url.searchParams.set('pool_timeout','40')
 const db=new PrismaClient({datasourceUrl:url.toString()}),accounts=[],run=randomUUID()
-const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
 async function account(role){
  const email=`ux-${role.toLowerCase()}-${run}@example.invalid`,password=randomBytes(32).toString('base64url')
- const result=await auth.auth.admin.createUser({email,password,email_confirm:true});if(result.error)throw new Error('Temporary identity creation failed')
+ const result=await createFixtureIdentity({email,password,email_confirm:true});if(result.error)throw new Error('Temporary identity creation failed')
  const a={identity:result.data.user.id,email,jar:new Map()};accounts.push(a)
  a.user=await db.user.create({data:{email,role,authId:a.identity,name:'Temporary verification account',...(role==='DRIVER'?{driver:{create:{displayName:'Temporary driver'}}}:{})}})
- const client=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{cookies:{getAll:()=>[...a.jar].map(([name,value])=>({name,value})),setAll:values=>values.forEach(({name,value})=>a.jar.set(name,value))}})
- if((await client.auth.signInWithPassword({email,password})).error)throw new Error('Temporary sign-in failed')
+ const client=fixtureSession(origin, a.jar)
+ if((await client.signIn({email,password})).error)throw new Error('Temporary sign-in failed')
  return a
 }
 async function loginBrowser(customer,driver){
@@ -62,4 +60,4 @@ async function loginBrowser(customer,driver){
 }
 try{const customer=await account('CUSTOMER'),driver=await account('DRIVER');await verifyCustomerBrowser(customer.jar,origin);await loginBrowser(customer,driver)}
 catch(error){console.error('Profile/driver UX verification failed:',error.stack);process.exitCode=1}
-finally{for(const a of accounts){if((await auth.auth.admin.deleteUser(a.identity)).error){console.error('Temporary Auth cleanup needs retry');process.exitCode=1}await db.user.deleteMany({where:{email:a.email}})}await db.$disconnect();console.log('Temporary UX verification accounts removed.')}
+finally{for(const a of accounts){if((await deleteFixtureIdentity(a.identity)).error){console.error('Temporary Auth cleanup needs retry');process.exitCode=1}await db.user.deleteMany({where:{email:a.email}})}await closeFixtureAuth();await db.$disconnect();console.log('Temporary UX verification accounts removed.')}

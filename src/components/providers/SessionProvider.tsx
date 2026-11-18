@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { authClient } from '@/lib/auth/client'
+import { endSession } from '@/lib/auth/sign-out'
+import { portalNavigation } from '@/lib/auth/portal-navigation'
 
 type User = { id: string; email: string; name: string | null; role: string }
 type Session = { user: User | null; loading: boolean; accountHref: string; signOut: () => Promise<void> }
@@ -15,6 +17,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const currentRequest = useRef<AbortController | null>(null)
   const lastSuccess = useRef(0)
   const pathname = usePathname()
+  const identitySession = authClient.useSession()
   const cancelPending = useCallback(() => { requestId.current++; currentRequest.current?.abort(); currentRequest.current = null }, [])
   const refresh = useCallback(async (force = false) => {
     if (!force && (currentRequest.current || Date.now() - lastSuccess.current < 15000)) return
@@ -42,34 +45,25 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [])
   useEffect(() => { void refresh() }, [pathname, refresh])
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient()
-    let timer: ReturnType<typeof setTimeout> | undefined
-    let authId: string | undefined
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const changed = authId !== session?.user.id
-      authId = session?.user.id
-      clearTimeout(timer)
-      if (event === 'SIGNED_OUT') {
-        cancelPending()
-        lastSuccess.current = 0; setUser(null); setLoading(false)
-        return
-      }
-      if (event === 'INITIAL_SESSION') return
-      timer = setTimeout(() => { void refresh(changed || event === 'USER_UPDATED') }, 0)
-    })
     const onFocus = () => { void refresh() }
     const onProfile = () => { void refresh(true) }
+    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('iceland-taxi-auth') : null
+    if(channel) channel.onmessage = event => { if(event.data==='signed-out'){cancelPending();lastSuccess.current=0;setUser(null);setLoading(false)} }
     window.addEventListener('itb-profile-updated', onProfile)
     window.addEventListener('focus', onFocus)
-    return () => { subscription.unsubscribe(); clearTimeout(timer); window.removeEventListener('focus', onFocus); window.removeEventListener('itb-profile-updated', onProfile); cancelPending() }
+    return () => { channel?.close(); window.removeEventListener('focus', onFocus); window.removeEventListener('itb-profile-updated', onProfile); cancelPending() }
   }, [refresh, cancelPending])
+  useEffect(() => {
+    if(identitySession.isPending || identitySession.error) return
+    if(!identitySession.data){ cancelPending(); lastSuccess.current=0; setUser(null); setLoading(false) }
+    else void refresh(true)
+  }, [identitySession.data, identitySession.isPending, identitySession.error, refresh, cancelPending])
   async function signOut() {
-    const response = await fetch('/api/auth/signout', { method: 'POST' })
-    if (!response.ok) throw new Error('Could not sign out. Please try again.')
+    await endSession()
     cancelPending(); setUser(null)
     window.location.assign('/')
   }
-  const accountHref = user?.role === 'DRIVER' ? '/driver' : user && user.role !== 'CUSTOMER' ? '/admin' : '/account'
+  const accountHref = portalNavigation(user?.role).href
   return <Context.Provider value={{ user, loading, accountHref, signOut }}>{children}</Context.Provider>
 }
 export function useSiteSession() {

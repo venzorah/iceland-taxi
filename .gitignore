@@ -44,3 +44,12 @@ next-env.d.ts
 
 # Local source release archives
 /deployment-artifacts/
+
+# User-created build archives
+/.next*.zip
+
+# Private database exports and migration manifests
+*.dump
+*.dump.*
+/backups/
+/migration-private/

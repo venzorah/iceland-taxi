@@ -3,9 +3,11 @@
 import Homepage from '@/components/screens/homepage/Homepage'
 import { useAppPrefs } from '@/components/providers/AppProviders'
 import type { SearchPayload } from '@/components/screens/homepage/BookingSearch'
+import { useSiteSession } from '@/components/providers/SessionProvider'
 
 export function HomePageClient() {
   const prefs = useAppPrefs()
+  const { accountHref } = useSiteSession()
 
   const onSearch = (s: SearchPayload) => {
     if (s.enquiry) {
@@ -54,7 +56,7 @@ export function HomePageClient() {
       onLanguageChange={prefs.setLanguage}
       onCurrencyChange={prefs.setCurrency}
       onSearch={onSearch}
-      onSignIn={() => prefs.go('/account')}
+      onSignIn={() => prefs.go(accountHref)}
       onStaff={() => prefs.go('/admin')}
       onStaffMobile={() => prefs.go('/m')}
       onDriver={() => prefs.go('/driver')}

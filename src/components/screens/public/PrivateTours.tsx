@@ -4,6 +4,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Clock, Users } from 'lucide-react'
 
+import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import { useSiteImages } from '@/components/providers/SiteContent'
@@ -35,7 +36,7 @@ export default function PrivateTours(props: Props) {
   const images = useSiteImages()
   const cur = p.currency as Currency
   const router = useRouter()
-  const listings = usePublishedListings()
+  const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
   const tours = (listings || []).filter((listing) => listing.category === 'tour')
 
   return (
@@ -57,6 +58,7 @@ export default function PrivateTours(props: Props) {
       onHelp={p.onHelp}
       announcements={p.announcements}
     >
+      <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
       <section className="relative overflow-hidden bg-navy text-white">
         <img src={images.goldenCircle} alt="Golden Circle private tour landscape" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
@@ -71,7 +73,7 @@ export default function PrivateTours(props: Props) {
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-6 md:grid-cols-3">
           {listings === null && <p className="text-sm text-muted">Loading published prices…</p>}
-          {listings !== null && tours.length === 0 && <p className="text-sm text-muted">No published tour price yet. This option is unavailable.</p>}
+          {!listingsError && listings !== null && tours.length === 0 && <p className="text-sm text-muted">No published tour price yet. This option is unavailable.</p>}
           {tours.map((tour) => (
             <article key={tour.id} className="overflow-hidden rounded-2xl border border-line bg-card">
               <img src={tour.imageUrl || images.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover" />

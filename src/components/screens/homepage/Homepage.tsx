@@ -6,6 +6,7 @@ import { ArrowRight, Clock, Luggage, MessageCircle, Plane, Users } from 'lucide-
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteFooter } from '@/components/site/SiteFooter'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
+import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { DESTINATIONS, FLEET, formatPrice, type Currency } from '@/lib/design/data'
 import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
@@ -53,7 +54,7 @@ export default function Homepage(props: Props) {
   const cur = currency as Currency
   const images = useSiteImages()
   const text = useSiteBlock
-  const listings = usePublishedListings()
+  const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
   const routes = (listings || []).filter((listing) => listing.kind === 'route')
   const tours = (listings || []).filter((listing) => listing.category === 'tour')
   const driverListing = (listings || []).find((listing) => listing.category === 'driver')
@@ -73,6 +74,7 @@ export default function Homepage(props: Props) {
           <BookingSearch language={lang} onSearch={onSearch} />
         </div>
 
+        <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
         {/* Airport transfers, the primary service */}
         <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
           <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
@@ -87,7 +89,7 @@ export default function Homepage(props: Props) {
               </p>
               <ul className="mt-8 divide-y divide-line border-y border-line">
                 {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
-                {listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet.</li>}
+                {!listingsError && listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet.</li>}
                 {routes.map((r) => (
                   <li key={r.id} onClick={() => onSearch?.({ category: 'airport', pickup: r.fromLabel, destination: r.toLabel, listingId: r.id, listingKind: 'route', date: '', time: '', passengers: 2, luggage: 0 })} className="flex cursor-pointer items-center gap-4 py-4 active:bg-surface">
                     <div className="min-w-0 flex-1">
@@ -120,7 +122,7 @@ export default function Homepage(props: Props) {
             </div>
             <div className="no-scrollbar mt-8 flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mt-10 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-6 lg:px-8">
               {listings === null && <p className="px-4 text-sm text-muted">Loading published prices…</p>}
-              {listings !== null && tours.length === 0 && <p className="px-4 text-sm text-muted">No published tour price yet.</p>}
+              {!listingsError && listings !== null && tours.length === 0 && <p className="px-4 text-sm text-muted">No published tour price yet.</p>}
               {tours.map((tour) => (
                 <article key={tour.id} className="group flex w-[min(82%,20rem)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card sm:w-[60%] md:w-auto md:shrink">
                   <div className="overflow-hidden">
@@ -322,7 +324,7 @@ export default function Homepage(props: Props) {
         <section aria-labelledby="driver-access-title" className="border-t border-line bg-bg">
           <div className="mx-auto flex max-w-7xl flex-col items-start gap-5 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
             <div className="max-w-xl"><h2 id="driver-access-title" className="font-display text-xl font-bold text-heading">Drive with Iceland Taxi Booking</h2><p className="mt-2 text-sm leading-relaxed text-muted">Already part of our team? Sign in to view your assigned journeys. Interested in joining? Speak to operations about driver access.</p></div>
-            <div className="flex flex-wrap gap-3"><a href="/login?portal=driver&next=/driver" className="rounded-full bg-primary px-5 py-3 text-sm font-bold text-on-primary">Driver sign in</a><a href="/login?portal=driver&next=/driver#join-driver-team" className="rounded-full border border-line px-5 py-3 text-sm font-semibold text-heading">Join the team</a></div>
+            <div className="flex flex-wrap gap-3"><a href="/driver-login" className="rounded-full bg-primary px-5 py-3 text-sm font-bold text-on-primary">Driver sign in</a><a href="/driver-signup#join-driver-team" className="rounded-full border border-line px-5 py-3 text-sm font-semibold text-heading">Join the team</a></div>
           </div>
         </section>
 

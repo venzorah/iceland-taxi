@@ -1,0 +1,6 @@
+# Bounded rotation checks more frequently than Ubuntu's default daily timer.
+[Unit]
+Description=Hourly log size and retention check
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/logrotate /etc/logrotate.conf

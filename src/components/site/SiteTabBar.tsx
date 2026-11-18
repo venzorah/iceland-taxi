@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { CalendarClock, Home, MessageCircle, Plus, UserRound } from 'lucide-react'
+import { CalendarClock, Home, MessageCircle, Plus, UserRound, LayoutDashboard } from 'lucide-react'
 
 import Link from 'next/link'
 import { useSiteSession } from '@/components/providers/SessionProvider'
@@ -9,6 +9,7 @@ import { useSiteSession } from '@/components/providers/SessionProvider'
 import { AppTabBar } from '@/components/site/AppTabBar'
 import { BottomSheet } from '@/components/site/BottomSheet'
 import { t, type Lang } from '@/lib/design/i18n'
+import { portalNavigation } from '@/lib/auth/portal-navigation'
 
 /** The customer site's bottom tab bar on phones. */
 export function SiteTabBar({
@@ -31,6 +32,8 @@ export function SiteTabBar({
 }) {
   const [open, setOpen] = useState(false)
   const { user: session, loading, accountHref, signOut: endSession } = useSiteSession()
+  const account = portalNavigation(session?.role, language)
+  const professional = account.kind === 'admin' || account.kind === 'driver'
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const signOut = async () => {
@@ -44,7 +47,12 @@ export function SiteTabBar({
       <AppTabBar
         hidden={hidden}
         active={open ? 'profile' : active}
-        tabs={[
+        tabs={professional ? [
+          { id: 'home', label: 'Home', icon: Home, onSelect: onHome },
+          { id: 'portal', label: account.label, icon: LayoutDashboard, href: accountHref },
+          ...(account.kind === 'driver' ? [{ id: 'help', label: 'Messages', icon: MessageCircle, href: '/messages' }] : []),
+          { id: 'profile', label: t(language, 'profile'), icon: UserRound, onSelect: () => setOpen(true), dot: true },
+        ] : [
           { id: 'home', label: 'Home', icon: Home, onSelect: onHome },
           { id: 'book', label: 'Book', icon: Plus, onSelect: onBook, primary: true },
           { id: 'trips', label: 'My trips', icon: CalendarClock, onSelect: onTrips },
@@ -66,6 +74,7 @@ export function SiteTabBar({
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t(language, 'signedIn')}</p>
               <p className="mt-1 font-display text-lg font-bold text-heading">{session.name || session.email}</p>
               {session.name && <p className="mt-0.5 truncate text-sm text-muted">{session.email}</p>}
+              <p className="mt-1 text-xs font-semibold text-muted">{account.roleLabel}</p>
             </div>
             <button
               type="button"
@@ -75,7 +84,7 @@ export function SiteTabBar({
               }}
               className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-navy text-sm font-bold text-white active:bg-navy-2 dark:bg-primary dark:text-on-primary"
             >
-              {session.role === 'CUSTOMER' ? 'My trips' : 'My account'}
+              {session.role === 'CUSTOMER' ? 'My trips' : account.label}
             </button>
             <button
               type="button"

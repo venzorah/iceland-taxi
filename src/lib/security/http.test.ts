@@ -26,3 +26,20 @@ test('untrusted forwarding headers cannot bypass the shared public request budge
  assert.equal(requestIdentity(new Request('https://taxi.example',{headers:{'x-real-ip':'malformed'}})),'shared-public-budget')
  }finally{if(previous===undefined)delete process.env.RATE_LIMIT_PROXY_HEADER;else process.env.RATE_LIMIT_PROXY_HEADER=previous}
 })
+
+
+test('invalid app URLs fail with APP_URL_REQUIRED; correcting the runtime origin permits same-origin signout',()=>{
+ const previous=process.env.NEXT_PUBLIC_APP_URL
+ const request=new Request('http://localhost:3000/api/auth/signout',{method:'POST',headers:{origin:'http://localhost:3000'}})
+ try{
+  for(const value of ['your-domain.example','localhost:3000','javascript:alert(1)']){
+   process.env.NEXT_PUBLIC_APP_URL=value
+   assert.throws(()=>validateRequestOrigin(request),(e:unknown)=>e instanceof HttpError&&e.status===503&&e.code==='APP_URL_REQUIRED')
+  }
+  process.env.NEXT_PUBLIC_APP_URL='http://localhost:3000'
+  validateRequestOrigin(request)
+  process.env.NEXT_PUBLIC_APP_URL='https://taxi.example'
+  assert.throws(()=>validateRequestOrigin(request),(e:unknown)=>e instanceof HttpError&&e.status===403)
+  validateRequestOrigin(new Request('http://internal-server/api/auth/signout',{method:'POST',headers:{origin:'https://taxi.example'}}))
+ }finally{if(previous===undefined)delete process.env.NEXT_PUBLIC_APP_URL;else process.env.NEXT_PUBLIC_APP_URL=previous}
+})

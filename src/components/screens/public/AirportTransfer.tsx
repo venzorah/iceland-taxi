@@ -4,6 +4,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Clock, Plane, Shield } from 'lucide-react'
 
+import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import { useSiteImages } from '@/components/providers/SiteContent'
@@ -35,7 +36,7 @@ export default function AirportTransfer(props: Props) {
   const images = useSiteImages()
   const cur = p.currency as Currency
   const router = useRouter()
-  const listings = usePublishedListings()
+  const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
   const routes = (listings || []).filter((listing) => listing.kind === 'route')
 
   return (
@@ -57,6 +58,7 @@ export default function AirportTransfer(props: Props) {
       onHelp={p.onHelp}
       announcements={p.announcements}
     >
+      <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
       <section className="relative overflow-hidden bg-navy text-white">
         <img src={images.airport} alt="Private transfer at Keflavík Airport" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
@@ -87,7 +89,7 @@ export default function AirportTransfer(props: Props) {
         <h2 className="mt-12 font-display text-2xl font-bold text-heading">Popular routes</h2>
         <ul className="mt-4 divide-y divide-line border-y border-line">
           {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
-          {listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet. This option is unavailable.</li>}
+          {!listingsError && listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet. This option is unavailable.</li>}
           {routes.map((r) => (
             <li key={r.id} className="flex items-center gap-4 py-4">
               <div className="min-w-0 flex-1">

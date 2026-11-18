@@ -1,8 +1,7 @@
+import {createFixtureIdentity,deleteFixtureIdentity,fixtureSession,closeFixtureAuth} from './fixture-auth.mjs'
 // Isolated local server only. Disable SMTP, WhatsApp and VAPID before running.
 import nextEnv from '@next/env'
 import { PrismaClient } from '@prisma/client'
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
 import { randomUUID, randomBytes } from 'node:crypto'
 import assert from 'node:assert/strict'
 nextEnv.loadEnvConfig(process.cwd())
@@ -11,18 +10,17 @@ if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw new Er
 const connection = new URL(process.env.DIRECT_URL || process.env.DATABASE_URL)
 connection.searchParams.set('connection_limit','1'); connection.searchParams.set('connect_timeout','30'); connection.searchParams.set('pool_timeout','30')
 const db = new PrismaClient({ datasourceUrl: connection.toString() })
-const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
 const run = randomUUID()
 const accounts = [], refs = [], ids = []
 async function account(label, role) {
   const email = `driver-check-${label}-${run}@example.invalid`, password = randomBytes(32).toString('base64url')
-  const result = await admin.auth.admin.createUser({ email, password, email_confirm: true })
+  const result = await createFixtureIdentity({ email, password, email_confirm: true })
   if (result.error) throw new Error(`Temporary ${label} identity creation failed`)
   const jar = new Map()
   const fixture = { identity: result.data.user.id, email, jar }; accounts.push(fixture)
   fixture.user = await db.user.create({ data: { email, authId: fixture.identity, name: `Verification ${label}`, role, ...(role === 'DRIVER' ? { driver: { create: { displayName: `Verification ${label}`, active: true } } } : {}) }, include: { driver: true } })
-  fixture.client = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, { cookies: { getAll: () => [...jar].map(([name,value]) => ({ name,value })), setAll: values => values.forEach(({ name,value }) => jar.set(name,value)) } })
-  if ((await fixture.client.auth.signInWithPassword({ email,password })).error) throw new Error(`Temporary ${label} login failed`)
+  fixture.client = fixtureSession(origin, jar)
+  if ((await fixture.client.signIn({ email,password })).error) throw new Error(`Temporary ${label} login failed`)
   return fixture
 }
 async function request(actor, path, method = 'GET', body, attempt = 0) {
@@ -99,6 +97,6 @@ finally {
   await db.message.deleteMany({where:{bookingId:{in:ids}}})
   await db.payment.deleteMany({where:{bookingId:{in:ids}}})
   await db.booking.deleteMany({where:{id:{in:ids}}})
-  for(const account of accounts) { if(account.user) await db.user.delete({where:{id:account.user.id}}); const removed=await admin.auth.admin.deleteUser(account.identity); if(removed.error) { console.error('Temporary Auth cleanup needs retry'); process.exitCode=1 } }
-  await db.$disconnect(); console.log('Temporary driver verification records removed.')
+  for(const account of accounts) { if(account.user) await db.user.delete({where:{id:account.user.id}}); const removed=await deleteFixtureIdentity(account.identity); if(removed.error) { console.error('Temporary Auth cleanup needs retry'); process.exitCode=1 } }
+  await closeFixtureAuth();await db.$disconnect(); console.log('Temporary driver verification records removed.')
 }

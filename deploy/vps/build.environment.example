@@ -1,0 +1,3 @@
+# /etc/iceland-taxi/build.env, root:deploy 0640. Public build identifiers ONLY.
+NEXT_PUBLIC_APP_URL=https://icelandtaxibooking.is
+# No database, authentication signing, SMTP, payment or Cloudinary secrets at build time.

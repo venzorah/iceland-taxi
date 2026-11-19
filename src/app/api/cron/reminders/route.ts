@@ -1,4 +1,6 @@
 import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
+
+export const dynamic = 'force-dynamic'
 import { sendDueReminders } from '@/lib/email/reminders'
 
 function allowed(req: Request) {

@@ -124,3 +124,38 @@ it('historical sandbox sessions cannot be reused as live payments',()=>{
  assert.equal(paymentEnvironmentMatches({environment:'production'},'production'),true)
  assert.equal(paymentEnvironmentMatches(null,'sandbox'),true)
 })
+
+it('retains safe checkout failure diagnostics without copying upstream secrets or customer data', async () => {
+  const original = globalThis.fetch
+  const cases = ['auth-rejected', 'session-rejected', 'timeout'] as const
+  try {
+    for (const scenario of cases) {
+      process.env.TEYA_CLIENT_ID = `diagnostic-${scenario}`
+      process.env.TEYA_CLIENT_SECRET = 'fixture-secret-never-include'
+      process.env.TEYA_STORE_ID = 'fixture-store'
+      process.env.TEYA_WEBHOOK_PUBLIC_KEY = 'fixture-public-key'
+      process.env.TEYA_ENVIRONMENT = 'production'
+      process.env.NEXT_PUBLIC_APP_URL = 'https://merchant.example'
+      const calls: string[] = []
+      globalThis.fetch = (async input => {
+        const url = String(input)
+        calls.push(url)
+        if (scenario === 'timeout') throw new DOMException('fixture-secret-never-include', 'TimeoutError')
+        if (url.includes('/oauth/')) {
+          if (scenario === 'auth-rejected') return Response.json({ error: 'fixture-secret-never-include' }, { status: 401 })
+          return Response.json({ access_token: 'fixture-token-never-include', expires_in: 3600 })
+        }
+        return Response.json({ description: 'fixture-token-never-include customer@example.test' }, { status: 400 })
+      }) as typeof fetch
+      const result = await teyaProvider.createCheckout(checkoutInput)
+      assert.equal(result.ok, false)
+      if (!result.ok) {
+        assert.equal(result.code, 'PROVIDER_ERROR')
+        assert.match(result.message, /production/)
+        assert.match(result.message, scenario === 'auth-rejected' ? /authentication failed \(HTTP 401/ : scenario === 'session-rejected' ? /create checkout \(HTTP 400/ : /authentication request timed out/)
+        assert.doesNotMatch(result.message, /fixture-secret|fixture-token|customer@example/)
+      }
+      assert.equal(calls.length, scenario === 'session-rejected' ? 2 : 1)
+    }
+  } finally { globalThis.fetch = original }
+})

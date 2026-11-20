@@ -13,6 +13,9 @@ type TokenCache = { context: string; accessToken: string; expiresAt: number }
 
 let tokenCache: TokenCache | null = null
 
+/** Only fixed, locally composed diagnostics; never wrap a provider body or access token. */
+class TeyaCheckoutError extends Error {}
+
 /** Hosted checkout uses fixed official hosts selected by TEYA_ENVIRONMENT.
  * Production credentials and token caches must never cross into the sandbox.
  * https://docs.teya.com/online-payments/hosted-checkout/get-started
@@ -73,11 +76,11 @@ export class TeyaPaymentProvider implements PaymentProvider {
     })
 
     if (!res.ok) {
-      throw new Error(`Teya authentication failed (${res.status}). Check the selected environment and merchant credentials.`)
+      throw new TeyaCheckoutError(`Teya authentication failed (HTTP ${res.status}; ${creds.environment}). Check the selected environment and merchant credentials.`)
     }
 
     const json = (await res.json()) as { access_token: string; expires_in?: number }
-    if (!json.access_token || typeof json.access_token !== 'string') throw new Error('Teya did not return an access token.')
+    if (!json.access_token || typeof json.access_token !== 'string') throw new TeyaCheckoutError(`Teya authentication response has no access token (${creds.environment}).`)
     tokenCache = {
       context,
       accessToken: json.access_token,
@@ -101,8 +104,10 @@ export class TeyaPaymentProvider implements PaymentProvider {
       }
     }
 
+    let stage = 'authentication'
     try {
       const token = await this.getAccessToken()
+      stage = 'checkout session'
       const chargeAmount =
         input.depositOnly && input.depositAmount && input.depositAmount > 0
           ? input.depositAmount
@@ -171,7 +176,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
           ok: false,
           provider: this.id,
           code: 'PROVIDER_ERROR',
-          message: `Teya could not create checkout (${res.status}). Please contact support if this continues.`,
+          message: `Teya could not create checkout (HTTP ${res.status}; ${creds.environment}). Please contact support if this continues.`,
         }
       }
 
@@ -202,12 +207,13 @@ export class TeyaPaymentProvider implements PaymentProvider {
         checkoutUrl: sessionUrl,
         providerRef: sessionId,
       }
-    } catch {
+    } catch (error) {
+      const timedOut = error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)
       return {
         ok: false,
         provider: this.id,
         code: 'PROVIDER_ERROR',
-        message: 'Teya is temporarily unavailable. Retry your saved booking shortly; do not start another booking.',
+        message: error instanceof TeyaCheckoutError ? error.message : `Teya ${stage} request ${timedOut ? 'timed out' : 'failed before a usable response'} (${creds.environment}). Check VPS connectivity and Teya availability; retry the saved booking.`,
       }
     }
   }

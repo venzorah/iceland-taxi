@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminButton, AdminToggle } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
 import { Monitor, RotateCcw, Smartphone } from 'lucide-react'
 
@@ -61,9 +62,7 @@ export function Appearance() {
             {(['light', 'dark'] as const).map((k) => (
               <label key={k} className="flex items-center justify-between py-3">
                 <span className="text-sm font-semibold capitalize text-heading">{k} mode</span>
-                <button role="switch" aria-checked={enabled[k]} onClick={() => toggle(k)} className={`relative h-6 w-11 rounded-full transition-colors duration-150 ${enabled[k] ? 'bg-mint' : 'bg-input-line'}`}>
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-150 ease-out ${enabled[k] ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                </button>
+                <AdminToggle label={`${k} mode`} checked={enabled[k]} disabled={enabled[k] && !enabled[k === 'light' ? 'dark' : 'light']} onChange={() => toggle(k)} />
               </label>
             ))}
           </div>
@@ -78,9 +77,9 @@ export function Appearance() {
                 <span className="text-sm font-medium text-heading">{s}</span>
                 <div className="inline-flex rounded-lg border border-line p-0.5 text-xs font-semibold">
                   {(['light', 'dark'] as const).map((m) => (
-                    <button key={m} disabled={!enabled[m]} onClick={() => setDefaults((d) => ({ ...d, [s]: m }))} className={`rounded-md px-3 py-1.5 capitalize transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-35 ${defaults[s] === m ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}>
+                    <AdminButton key={m} disabled={!enabled[m]} onClick={() => setDefaults((d) => ({ ...d, [s]: m }))} className={`rounded-md px-3 py-1.5 capitalize transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-35 ${defaults[s] === m ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}>
                       {m}
-                    </button>
+                    </AdminButton>
                   ))}
                 </div>
               </div>
@@ -91,7 +90,7 @@ export function Appearance() {
         <section className="rounded-xl border border-line bg-bg p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-base font-bold text-heading">Brand colours</h2>
-            <button disabled={!changed} onClick={() => setColors(OFFICIAL)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-link disabled:opacity-40"><RotateCcw size={14} /> Restore official defaults</button>
+            <AdminButton disabled={!changed} onClick={() => setColors(OFFICIAL)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-link disabled:opacity-40"><RotateCcw size={14} /> Restore official defaults</AdminButton>
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {([
@@ -113,7 +112,7 @@ export function Appearance() {
 
         <div className="flex flex-wrap items-center justify-end gap-2">
           {msg && <p className="mr-auto text-xs text-muted">{msg}</p>}
-          <button
+          <AdminButton
             onClick={() => {
               setColors(saved.colors)
               setEnabled(saved.enabled)
@@ -123,8 +122,10 @@ export function Appearance() {
             className="rounded-lg border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading"
           >
             Discard
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            pendingLabel="Publishing…"
+            disabled={!changed}
             onClick={async () => {
               setMsg('Saving…')
               const res = await fetch('/api/admin/theme', {
@@ -143,7 +144,7 @@ export function Appearance() {
             className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover"
           >
             Publish theme
-          </button>
+          </AdminButton>
         </div>
       </div>
 
@@ -154,12 +155,12 @@ export function Appearance() {
           <div className="flex gap-2">
             <div className="inline-flex rounded-lg border border-line p-0.5 text-xs font-semibold">
               {(['light', 'dark'] as const).map((m) => (
-                <button key={m} onClick={() => setPreview((p) => ({ ...p, mode: m }))} className={`rounded-md px-3 py-1.5 capitalize ${preview.mode === m ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}>{m}</button>
+                <AdminButton key={m} onClick={() => setPreview((p) => ({ ...p, mode: m }))} className={`rounded-md px-3 py-1.5 capitalize ${preview.mode === m ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}>{m}</AdminButton>
               ))}
             </div>
             <div className="inline-flex rounded-lg border border-line p-0.5">
-              <button aria-label="Desktop" onClick={() => setPreview((p) => ({ ...p, device: 'desktop' }))} className={`rounded-md px-2 py-1.5 ${preview.device === 'desktop' ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}><Monitor size={14} /></button>
-              <button aria-label="Mobile" onClick={() => setPreview((p) => ({ ...p, device: 'mobile' }))} className={`rounded-md px-2 py-1.5 ${preview.device === 'mobile' ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}><Smartphone size={14} /></button>
+              <AdminButton aria-label="Desktop" onClick={() => setPreview((p) => ({ ...p, device: 'desktop' }))} className={`rounded-md px-2 py-1.5 ${preview.device === 'desktop' ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}><Monitor size={14} /></AdminButton>
+              <AdminButton aria-label="Mobile" onClick={() => setPreview((p) => ({ ...p, device: 'mobile' }))} className={`rounded-md px-2 py-1.5 ${preview.device === 'mobile' ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted'}`}><Smartphone size={14} /></AdminButton>
             </div>
           </div>
         </div>

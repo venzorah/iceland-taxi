@@ -29,7 +29,8 @@ async function handlePATCH(req: Request, ctx: Ctx) {
   try {
     const service = await prisma.service.update({ where: { id }, data: parsed.data })
     return jsonOk({ ok: true, service })
-  } catch {
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'P2025') throw error
     return jsonError(404, 'NOT_FOUND', 'Service not found')
   }
 }
@@ -40,9 +41,14 @@ async function handleDELETE(_req: Request, ctx: Ctx) {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const { id } = await ctx.params
   try {
-    await prisma.service.update({ where: { id }, data: { active: false } })
-    return jsonOk({ ok: true, deactivated: true })
-  } catch {
+    await prisma.$transaction(async tx => {
+      await tx.route.updateMany({ where: { serviceId: id }, data: { serviceId: null } })
+      await tx.booking.updateMany({ where: { serviceId: id }, data: { serviceId: null } })
+      await tx.service.delete({ where: { id } })
+    })
+    return jsonOk({ ok: true, deleted: id })
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'P2025') throw error
     return jsonError(404, 'NOT_FOUND', 'Service not found')
   }
 }

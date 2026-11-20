@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminEmpty } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
 
 type PaymentRow = {
@@ -71,10 +72,10 @@ export function PaymentsList() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {rows.length === 0 && msg === '0 payments' && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
-                  No payments yet. A booking stays unpaid until the payment provider confirms it.
+                  <AdminEmpty title="No payments yet" description="Payment records appear here after checkout. A booking stays unpaid until the payment provider confirms it." />
                 </td>
               </tr>
             )}

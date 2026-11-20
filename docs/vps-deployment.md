@@ -16,6 +16,8 @@ Target: Ubuntu 24.04 x86-64, 8 GB RAM, 4 vCPU, about 96 GB disk. One Next.js app
 ## Environment and start configuration
 
 `deploy/vps/environment.example` is placeholders only; copy manually to the protected server environment and fill privately. Keep the existing booking signing key, Cloudinary and Teya production settings. Runtime now uses only `DATABASE_URL`; remove obsolete `DATABASE_TRANSACTION_URL` settings. New runtime starts with 5 database connections; migrations use a separate owner connection with limit 1. Local loopback PostgreSQL explicitly uses `sslmode=disable`; current Prisma defaults otherwise require TLS. Never disable TLS on a remote database.
+For public redirects, set `NEXT_PUBLIC_APP_URL=https://icelandtaxibooking.is` in both the protected runtime `/etc/iceland-taxi/app.env` and the public build environment. Protected-page login and email-confirmation redirects resolve this value at runtime, rather than using Next.js’s internal loopback address. Restart the systemd service after changing its environment. The Nginx upstream and private database should continue using loopback addresses.
+
 
 Keep owner credentials in a separate protected **migration.env**, not app.env or build.env. Both DATABASE_URL and DIRECT_URL there must point to the reviewed target owner connection. No migration secrets in the service environment. Set a stable private BETTER_AUTH_SECRET with at least 32 random bytes. No Supabase URL, public key or administrative secret is required by the new runtime. Complete the target-only migration/import before sign-in testing.
 

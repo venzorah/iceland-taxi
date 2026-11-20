@@ -1,6 +1,8 @@
 'use client'
 
+import { AdminButton, AdminForm } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
+import { AdminModal, AdminEmpty, AdminNotice, AdminToggle, useAdminConfirm } from '@/components/admin/AdminUI'
 import { ImageField } from './ImageField'
 import { TripReminders } from './TripReminders'
 
@@ -66,19 +68,20 @@ function useWorkspace(section: string) {
 function Shell({ message, children }: { message: string; children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-[1100px] p-3 sm:p-6">
-      <p className="text-sm text-muted">{message}</p>
+      <AdminNotice message={message} />
       <div className="mt-4">{children}</div>
     </div>
   )
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-xl border border-line bg-bg px-4 py-10 text-center text-sm leading-relaxed text-muted">{children}</p>
+  return <AdminEmpty title="Nothing here yet" description="Records will appear here as your team and customers use the app." action={<p className="max-w-md text-sm text-muted">{children}</p>} />
 }
 
 type DestinationRow = { id: string; name: string; note: string | null; imageUrl: string | null; active: boolean }
 
 export function DestinationsSection() {
+  const confirm = useAdminConfirm()
   const [rows, setRows] = useState<DestinationRow[]>([])
   const [message, setMessage] = useState('Loading…')
   const [draft, setDraft] = useState<{ id?: string; name: string; note: string; imageUrl: string; active: boolean } | null>(null)
@@ -95,7 +98,7 @@ export function DestinationsSection() {
   }
 
   useEffect(() => {
-    load()
+    void load().catch(() => setMessage('Could not load this section. Please try again.'))
   }, [])
 
   const save = async () => {
@@ -111,28 +114,28 @@ export function DestinationsSection() {
       return
     }
     setDraft(null)
-    setMessage('Saved')
     await load()
+    setMessage('Saved successfully.')
   }
 
   return (
     <Shell message={message}>
       <div className="mb-3 flex justify-end">
-        <button onClick={() => setDraft({ name: '', note: '', imageUrl: '', active: true })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add destination</button>
+        <AdminButton onClick={() => setDraft({ name: '', note: '', imageUrl: '', active: true })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add destination</AdminButton>
       </div>
       {draft && (
-        <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
+        <AdminModal title={draft.id ? 'Edit destination' : 'New destination'} onClose={() => setDraft(null)}><AdminNotice message={message} />        <AdminForm onSubmit={(event) => { event.preventDefault(); return save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
           <label className="text-xs font-semibold text-muted">Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Note<input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <div className="text-xs font-semibold text-muted">Image<ImageField key={draft.id || 'new-destination'} value={draft.imageUrl} allowClear onChange={imageUrl => setDraft(current => current ? { ...current, imageUrl } : null)} /></div>
-          <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Shown on the public site</label>
+          <AdminToggle label="Shown on the public site" checked={draft.active} onChange={active => setDraft({ ...draft, active })} />
           <div className="flex gap-2">
-            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
-            <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</button>
+            <AdminButton type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</AdminButton>
+            <AdminButton type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</AdminButton>
           </div>
-        </form>
+        </AdminForm></AdminModal>
       )}
-      {rows.length === 0 ? <Empty>No destinations are published yet.</Empty> : (
+      {message.includes('Loading') ? <p role="status" className="py-6 text-sm text-muted">Loading destinations…</p> : rows.length === 0 ? <Empty>No destinations yet. Use Add destination to create your first one.</Empty> : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {rows.map((item) => (
             <li key={item.id} className="flex gap-3 overflow-hidden rounded-xl border border-line bg-bg p-3">
@@ -143,22 +146,23 @@ export function DestinationsSection() {
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <p className={`text-xs font-semibold ${item.active ? 'text-success' : 'text-muted'}`}>{item.active ? 'Shown on the public site' : 'Hidden'}</p>
                   <span className="inline-flex gap-3">
-                    <button onClick={() => setDraft({ id: item.id, name: item.name, note: item.note || '', imageUrl: item.imageUrl || '', active: item.active })} className="text-xs font-semibold text-link">Edit</button>
-                    <button
+                    <AdminButton onClick={() => setDraft({ id: item.id, name: item.name, note: item.note || '', imageUrl: item.imageUrl || '', active: item.active })} className="text-xs font-semibold text-link">Edit</AdminButton>
+                    <AdminButton
                       onClick={async () => {
+                        if (!await confirm({ title: 'Delete destination?', description: `Remove “${item.name}” from the website?`, confirmLabel: 'Delete destination', danger: true })) return
                         const res = await fetch(`/api/admin/destinations/${item.id}`, { method: 'DELETE' })
                         const body = await res.json().catch(() => null)
                         if (!res.ok || !body?.ok) {
                           setMessage(body?.message || 'Could not delete the destination')
                           return
                         }
-                        setMessage('Deleted')
                         await load()
+                        setMessage('Destination deleted.')
                       }}
                       className="text-xs font-semibold text-error"
                     >
                       Delete
-                    </button>
+                    </AdminButton>
                   </span>
                 </div>
               </div>
@@ -196,10 +200,10 @@ export function CustomersSection() {
   return (
     <Shell message={status || message}>
       <div className="mb-3 flex justify-end">
-        <button onClick={() => setDraft({ email: '', name: '', category: 'INTERNATIONAL', existing: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add customer</button>
+        <AdminButton onClick={() => setDraft({ email: '', name: '', category: 'INTERNATIONAL', existing: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add customer</AdminButton>
       </div>
       {draft && (
-        <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4 sm:grid-cols-2">
+        <AdminModal title={draft.existing ? 'Edit customer' : 'New customer'} onClose={() => setDraft(null)}><AdminNotice message={status || message} />        <AdminForm onSubmit={(event) => { event.preventDefault(); return save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4 sm:grid-cols-2">
           <label className="text-xs font-semibold text-muted">Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Email<input required type="email" readOnly={draft.existing} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Category
@@ -209,18 +213,18 @@ export function CustomersSection() {
             </select>
           </label>
           <div className="flex items-end gap-2">
-            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
-            <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</button>
+            <AdminButton type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</AdminButton>
+            <AdminButton type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</AdminButton>
           </div>
-        </form>
+        </AdminForm></AdminModal>
       )}
-      {rows.length === 0 ? <Empty>No customer accounts or guest bookings yet.</Empty> : (
+      {!data && message.includes('Loading') ? <p role="status" className="py-6 text-sm text-muted">Loading customers…</p> : rows.length === 0 ? <Empty>No customer accounts or guest bookings yet.</Empty> : (
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
           {rows.map((row) => (
             <li key={row.email} className="px-4 py-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-semibold text-heading">{row.name}</p>
-                <button onClick={() => setDraft({ email: row.email, name: row.name, category: row.category, existing: true })} className="text-xs font-semibold text-link">Edit</button>
+                <AdminButton onClick={() => setDraft({ email: row.email, name: row.name, category: row.category, existing: true })} className="text-xs font-semibold text-link">Edit</AdminButton>
               </div>
               <p className="mt-0.5 break-all text-sm text-muted">{row.email}</p>
               <p className="mt-1 text-xs text-muted">{row.category === 'RESIDENT' ? 'Resident' : 'International'} · prefers {row.currency} · {row.bookings} booking{row.bookings === 1 ? '' : 's'}{row.phone ? ` · ${row.phone}` : ''}</p>
@@ -291,7 +295,7 @@ export function ReviewsSection() {
           <p className="text-sm font-semibold text-heading">Show testimonials</p>
           <p className="text-xs text-muted">Turns the public slot on or off. It does not create review text.</p>
         </div>
-        <button onClick={() => save(!enabled)} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">{enabled ? 'Turn off' : 'Turn on'}</button>
+        <AdminButton onClick={() => save(!enabled)} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">{enabled ? 'Turn off' : 'Turn on'}</AdminButton>
       </div>
       <Empty>
         No approved reviews yet. Reviews are collected only from customers with a completed booking. Testimonials stay {enabled ? 'enabled in settings, but none are published' : 'off'} until real reviews exist. Nothing here is invented.
@@ -312,6 +316,7 @@ type EditorialDraft = {
 }
 
 export function PagesSection() {
+  const [preview, setPreview] = useState<EditorialDraft | null>(null)
   const [rows, setRows] = useState<EditorialDraft[]>([])
   const [message, setMessage] = useState('Loading…')
   const [draft, setDraft] = useState<EditorialDraft | null>(null)
@@ -339,7 +344,7 @@ export function PagesSection() {
   }
 
   useEffect(() => {
-    load()
+    void load().catch(() => setMessage('Could not load this section. Please try again.'))
   }, [])
 
   const save = async () => {
@@ -356,29 +361,31 @@ export function PagesSection() {
       return
     }
     setDraft(null)
-    setMessage('Saved')
     await load()
+    setMessage('Saved successfully.')
   }
 
   return (
     <Shell message={message}>
       <div className="mb-3 flex justify-end gap-2">
-        <button onClick={() => setDraft({ id: null, kind: 'blog', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New blog post</button>
-        <button onClick={() => setDraft({ id: null, kind: 'guide', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm font-semibold text-heading">New guide</button>
+        <AdminButton onClick={() => setDraft({ id: null, kind: 'blog', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New blog post</AdminButton>
+        <AdminButton onClick={() => setDraft({ id: null, kind: 'guide', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm font-semibold text-heading">New guide</AdminButton>
       </div>
       {draft && (
-        <form onSubmit={(event) => { event.preventDefault(); save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
+        <AdminModal title={draft.id ? 'Edit page' : 'New page'} onClose={() => setDraft(null)}><AdminNotice message={message} />        <AdminForm onSubmit={(event) => { event.preventDefault(); return save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
           <p className="text-xs font-semibold text-muted">{draft.kind === 'blog' ? 'Blog' : 'Travel guide'}{draft.slug ? ` · /${draft.kind === 'blog' ? 'blog' : 'travel-guides'}/${draft.slug}` : ''}</p>
           <label className="text-xs font-semibold text-muted">Title<input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Excerpt<textarea rows={2} value={draft.excerpt} onChange={(event) => setDraft({ ...draft, excerpt: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Body<textarea rows={6} value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
-          <label className="flex items-center gap-2 text-sm text-heading"><input type="checkbox" checked={draft.published} onChange={(event) => setDraft({ ...draft, published: event.target.checked })} className="h-4 w-4 accent-[var(--mint)]" /> Published</label>
+          <AdminToggle label="Published" checked={draft.published} onChange={published => setDraft({ ...draft, published })} />
           <div className="flex gap-2">
-            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</button>
-            <button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</button>
+            <AdminButton type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</AdminButton>
+            <AdminButton type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</AdminButton>
           </div>
-        </form>
+        </AdminForm></AdminModal>
       )}
+      {message.includes('Loading') && <p role="status" className="py-6 text-sm text-muted">Loading pages…</p>}
+      {rows.length === 0 && !message.includes('Loading') && <AdminEmpty title="No pages yet" description="Create your first blog post or travel guide, then publish it when it is ready." />}
       <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
         {rows.map((row) => (
           <li key={row.kind + row.slug} className="flex items-start justify-between gap-3 px-4 py-3">
@@ -387,12 +394,13 @@ export function PagesSection() {
               <span className="mt-0.5 block break-all font-mono text-xs text-muted">/{row.kind === 'blog' ? 'blog' : 'travel-guides'}/{row.slug}</span>
             </span>
             <span className="shrink-0 text-right">
-              <button onClick={() => setDraft(row)} className="text-xs font-semibold text-link">Edit</button>
+              <span className="flex justify-end gap-3"><AdminButton onClick={() => setPreview(row)} className="text-xs font-semibold text-link">View</AdminButton><AdminButton onClick={() => setDraft(row)} className="text-xs font-semibold text-link">Edit</AdminButton></span>
               <span className={`mt-1 block text-xs font-semibold ${row.published ? 'text-success' : 'text-muted'}`}>{row.published ? 'Published' : 'Draft'}</span>
             </span>
           </li>
         ))}
       </ul>
+      {preview && <AdminModal title={preview.title} onClose={() => setPreview(null)}><p className="text-sm font-semibold text-muted">{preview.published ? 'Published' : 'Draft'} · {preview.kind}</p><p className="mt-4 text-sm text-muted">{preview.excerpt}</p><article className="mt-4 whitespace-pre-wrap break-words text-sm leading-relaxed">{preview.body || 'No content has been added yet.'}</article><AdminButton type="button" onClick={() => { setDraft(preview); setPreview(null) }} className="mt-6 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary">Edit page</AdminButton></AdminModal>}
     </Shell>
   )
 }
@@ -447,7 +455,7 @@ export function LanguagesSection() {
             {defaultLang === lang.code ? (
               <p className="text-sm font-semibold text-success">Default</p>
             ) : (
-              <button onClick={() => save(lang.code === 'is' ? 'is' : 'en')} className="text-sm font-semibold text-link">Make default</button>
+              <AdminButton onClick={() => save(lang.code === 'is' ? 'is' : 'en')} className="text-sm font-semibold text-link">Make default</AdminButton>
             )}
           </li>
         ))}
@@ -514,7 +522,7 @@ export function SettingsSection() {
                 ? 'Outbound WhatsApp notices are sent when a customer messages. Inbound WhatsApp chats are not synced into this inbox.'
                 : 'Each new customer message creates a staff notification and a WhatsApp link with the booking reference. The private message is not included. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server to send that notice automatically. Inbound WhatsApp chats are not synced.'}
           </p>
-          <form onSubmit={save} className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <AdminForm onSubmit={save} className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
@@ -524,8 +532,8 @@ export function SettingsSection() {
               autoComplete="tel"
               className="min-w-0 flex-1 rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus"
             />
-            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save number</button>
-          </form>
+            <AdminButton type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save number</AdminButton>
+          </AdminForm>
           {status && <p className="mt-2 text-xs text-muted">{status}</p>}
         </div>
         <Field label="Address" value={[company?.addressLine1, company?.city].filter(Boolean).join(', ') || null} />

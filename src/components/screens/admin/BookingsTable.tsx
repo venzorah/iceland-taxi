@@ -1,10 +1,9 @@
 'use client'
 
+import { AdminEmpty, AdminButton, AdminModal, AdminNotice, useAdminConfirm } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, X } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
-import { BottomSheet } from '@/components/site/BottomSheet'
 import { useLivePolling } from '@/lib/polling/use-live-polling'
 import { money, statusClass, type OpsBooking } from '@/lib/design/opsData'
 
@@ -26,7 +25,8 @@ const STATUS_TO_API: Record<string, string> = {
 
 type DriverOption = { id: string; displayName: string; status: string }
 
-export function BookingsTable() {
+export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
+  const confirm = useAdminConfirm()
   const [filter, setFilter] = useState('All')
   const [rows, setRows] = useState<OpsBooking[]>([])
   const [drivers, setDrivers] = useState<DriverOption[]>([])
@@ -35,7 +35,8 @@ export function BookingsTable() {
   const [loading, setLoading] = useState(true)
   const [source, setSource] = useState<string>('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(searchQuery)
+  useEffect(() => { setSearch(searchQuery) }, [searchQuery])
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
       const [bRes, dRes] = await Promise.all([fetch('/api/bookings', { signal, cache: 'no-store' }), fetch('/api/drivers', { signal, cache: 'no-store' })])
@@ -77,6 +78,7 @@ export function BookingsTable() {
   }
 
   const remove = async (ref: string) => {
+    if (!await confirm({ title: 'Cancel booking?', description: 'Unpaid, unstarted trips can be cancelled. Paid bookings become cancellation/refund requests for review. No money is refunded automatically.', confirmLabel: 'Cancel booking', danger: true })) return
     setSaveMsg(null)
     try {
     const res = await fetch(`/api/bookings/${ref}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'CANCELLED', expectedStatus: selected ? STATUS_TO_API[selected.status] : undefined }) })
@@ -124,13 +126,13 @@ export function BookingsTable() {
         <div className="flex items-center gap-2">
           <div className="no-scrollbar -mx-3 flex min-w-0 flex-1 gap-2 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {FILTERS.map((f) => (
-              <button
+              <AdminButton
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-150 ${filter === f ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'border border-line bg-bg text-text hover:border-input-line'}`}
               >
                 {f}
-              </button>
+              </AdminButton>
             ))}
           </div>
         </div>
@@ -140,10 +142,11 @@ export function BookingsTable() {
           {saveMsg ? ` · ${saveMsg}` : ''}
         </p>
 
+        {!loading && source === 'database' && !filtered.length && <div className="mt-4"><AdminEmpty title={rows.length ? 'No matching bookings' : 'No bookings yet'} description={rows.length ? 'Try another search or filter.' : 'New bookings will appear here with their journey and payment status.'} /></div>}
         <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg md:hidden">
           {filtered.map((b) => (
             <li key={b.ref}>
-              <button onClick={() => open(b)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface">
+              <AdminButton onClick={() => open(b)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface">
                 <p className="w-12 shrink-0 font-display text-base font-bold tabular-nums text-heading">{b.time}</p>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-heading">{b.customer}</p>
@@ -158,7 +161,7 @@ export function BookingsTable() {
                   <p className="font-mono text-[10px] text-muted">{b.ref}</p>
                 </div>
                 <ChevronRight size={16} className="shrink-0 text-muted" />
-              </button>
+              </AdminButton>
             </li>
           ))}
         </ul>
@@ -197,38 +200,8 @@ export function BookingsTable() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {selected && (
-          <motion.aside
-            key={selected.ref}
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 12 }}
-            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="hidden w-[360px] shrink-0 overflow-y-auto border-l border-line bg-bg p-6 xl:block"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-mono text-xs text-muted">{selected.ref}</p>
-                <h2 className="mt-1 font-display text-xl font-bold text-heading">{selected.route}</h2>
-              </div>
-              <button onClick={() => setSelected(null)} aria-label="Close" className="text-muted hover:text-heading">
-                <X size={18} />
-              </button>
-            </div>
-            <BookingDetail booking={selected} drivers={drivers} onSave={save} onDelete={() => remove(selected.ref)} />
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      {selected && sheetOpen && <AdminModal title={`Booking ${selected.ref}`} onClose={() => { setSelected(null); setSheetOpen(false) }}><h3 className="font-display text-lg font-bold text-heading">{selected.route}</h3><AdminNotice message={saveMsg} /><BookingDetail booking={selected} drivers={drivers} onSave={save} onDelete={() => remove(selected.ref)} /></AdminModal>}
 
-      <BottomSheet open={sheetOpen && !!selected} onClose={() => setSheetOpen(false)} title={selected?.route} hideFrom="xl">
-        {selected && (
-          <>
-            <p className="font-mono text-xs text-muted">{selected.ref}</p>
-            <BookingDetail booking={selected} drivers={drivers} onSave={save} onDelete={() => remove(selected.ref)} />
-          </>
-        )}
-      </BottomSheet>
     </div>
   )
 }
@@ -317,7 +290,7 @@ function BookingDetail({
         className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading placeholder:text-muted"
       />
       <div className="mt-5 flex gap-2">
-        <button
+        <AdminButton
           onClick={() =>
             onSave({
               status,
@@ -329,10 +302,10 @@ function BookingDetail({
           className="flex-1 rounded-lg bg-primary py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover xl:py-2.5"
         >
           Save changes
-        </button>
-        <button type="button" onClick={onDelete} className="whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-error">
+        </AdminButton>
+        <AdminButton type="button" onClick={onDelete} className="whitespace-nowrap rounded-lg border border-line px-3 text-sm font-semibold text-error">
           Cancel booking
-        </button>
+        </AdminButton>
       </div>
     </>
   )

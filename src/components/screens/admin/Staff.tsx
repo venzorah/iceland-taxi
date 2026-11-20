@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminButton, AdminForm, AdminModal, AdminNotice, AdminToggle, AdminEmpty } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Check, Minus, Plus } from 'lucide-react'
 
@@ -27,6 +28,7 @@ const inputClass = 'mt-1 w-full rounded-lg border border-input-line bg-input px-
 export function Staff() {
   const [rows, setRows] = useState<StaffRow[]>([])
   const [msg, setMsg] = useState('Loading…')
+  const [updating, setUpdating] = useState(false)
   const [invite, setInvite] = useState(false)
   const [draft, setDraft] = useState({ name: '', email: '', role: 'STAFF' })
 
@@ -42,7 +44,7 @@ export function Staff() {
   }, [])
 
   useEffect(() => {
-    load()
+    void load().catch(() => setMsg('Could not load this section. Please try again.'))
   }, [load])
 
   const saveInvite = async () => {
@@ -58,11 +60,14 @@ export function Staff() {
     }
     setInvite(false)
     setDraft({ name: '', email: '', role: 'STAFF' })
-    setMsg('Saved')
     await load()
+    setMsg('Staff account saved.')
   }
 
   const update = async (row: StaffRow, patch: { role?: string; active?: boolean }) => {
+    if (updating) return
+    setUpdating(true)
+    try {
     const res = await fetch(`/api/admin/staff/${row.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -73,8 +78,9 @@ export function Staff() {
       setMsg(data?.message || 'Could not update the staff account')
       return
     }
-    setMsg('Saved')
     await load()
+    setMsg('Staff account saved.')
+    } catch { setMsg('Could not update this staff account. Please try again.') } finally { setUpdating(false) }
   }
 
   return (
@@ -114,13 +120,13 @@ export function Staff() {
             <h2 className="font-display text-base font-bold text-heading">Staff accounts</h2>
             <p className="text-xs text-muted">{msg}</p>
           </div>
-          <button onClick={() => setInvite((value) => !value)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary"><Plus size={15} /> Invite</button>
+          <AdminButton onClick={() => setInvite((value) => !value)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary"><Plus size={15} /> Invite</AdminButton>
         </div>
         {invite && (
-          <form
+          <AdminModal title="Add staff account" onClose={() => setInvite(false)}><AdminNotice message={msg} /><AdminForm
             onSubmit={(event) => {
               event.preventDefault()
-              saveInvite()
+              return saveInvite()
             }}
             className="grid gap-3 border-b border-line px-5 py-4 sm:grid-cols-4"
           >
@@ -131,9 +137,10 @@ export function Staff() {
                 {ROLE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
-            <div className="flex items-end"><button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save account</button></div>
-          </form>
+            <div className="flex items-end"><AdminButton type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save account</AdminButton></div>
+          </AdminForm></AdminModal>
         )}
+        {!rows.length && !msg.includes('Loading') && <AdminEmpty title="No staff accounts to show" description="Add a verified staff member to manage access to the admin dashboard." />}
         <ul className="divide-y divide-line">
           {rows.map((row) => (
             <li key={row.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
@@ -141,10 +148,10 @@ export function Staff() {
                 <p className="text-sm font-semibold text-heading">{row.name}</p>
                 <p className="truncate text-xs text-muted">{row.email}</p>
               </div>
-              <select aria-label={`Role for ${row.email}`} value={row.role} onChange={(event) => update(row, { role: event.target.value })} className="rounded-lg border border-input-line bg-input px-2 py-1.5 text-sm text-heading">
+              <select disabled={updating} aria-label={`Role for ${row.email}`} value={row.role} onChange={(event) => update(row, { role: event.target.value })} className="rounded-lg border border-input-line bg-input px-2 py-1.5 text-sm text-heading">
                 {ROLE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
-              <button onClick={() => update(row, { active: !row.active })} className={`w-24 text-right text-xs font-semibold ${row.active ? 'text-success' : 'text-error'}`}>{row.active ? 'Active' : 'Suspended'}</button>
+              <AdminToggle disabled={updating} label={row.active ? 'Active' : 'Suspended'} checked={row.active} onChange={active => update(row, { active })} />
             </li>
           ))}
         </ul>

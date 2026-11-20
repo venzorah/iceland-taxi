@@ -1,10 +1,12 @@
 'use client'
 
+import { AdminButton, AdminForm, AdminEmpty, useAdminConfirm } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
 
 type LibraryImage = { id: string; name: string; url: string; alt: string; source: 'built-in' | 'upload' }
 
 export function ImageLibrary() {
+  const confirm = useAdminConfirm()
   const [images, setImages] = useState<LibraryImage[]>([])
   const [message, setMessage] = useState('Loading images…')
   const [file, setFile] = useState<File | null>(null)
@@ -70,6 +72,8 @@ export function ImageLibrary() {
   }
 
   const remove = async (image: LibraryImage) => {
+    if (!await confirm({ title: 'Archive image?', description: 'Hide this uploaded image from the library? Existing pages retain their images.', confirmLabel: 'Archive image', danger: true })) return
+    setBusy(true)
     try {
     const res = await fetch(`/api/admin/library/${encodeURIComponent(image.id)}`, { method: 'DELETE' })
     const body = await res.json().catch(() => null)
@@ -86,18 +90,19 @@ export function ImageLibrary() {
     <div className="p-4 sm:p-6">
       <h2 className="font-display text-base font-bold text-heading">Image library</h2>
       <p className="mt-1 text-sm text-muted">Choose built-in photos or upload JPEG, PNG and WebP images up to 5 MB. Files are delivered by Cloudinary. Archive hides a library item without breaking existing pages.</p>
-      <form onSubmit={upload} className="mt-4 flex flex-col gap-2 rounded-xl border border-line bg-bg p-4 sm:flex-row sm:items-end">
+      <AdminForm onSubmit={upload} className="mt-4 flex flex-col gap-2 rounded-xl border border-line bg-bg p-4 sm:flex-row sm:items-end">
         <label className="text-xs font-semibold text-muted">
           Image file
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] || null)} className="mt-1 block text-sm text-heading" />
+          <input disabled={busy} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] || null)} className="mt-1 block text-sm text-heading" />
         </label>
         <label className="min-w-0 flex-1 text-xs font-semibold text-muted">
           Description
           <input value={alt} onChange={(event) => setAlt(event.target.value)} placeholder="What the image shows" className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none placeholder:text-muted focus:border-focus" />
         </label>
-        <button disabled={busy || !file} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60">{busy ? 'Uploading…' : 'Add image'}</button>
-      </form>
+        <AdminButton disabled={busy || !file} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60">{busy ? 'Uploading…' : 'Add image'}</AdminButton>
+      </AdminForm>
       <p className="mt-3 text-xs text-muted">{message}</p>
+      {!images.length && !message.includes('Loading') && <AdminEmpty title="No images to show" description="Upload your first photo to start building the image library." />}
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {images.map((image) => (
           <li key={image.id} className="overflow-hidden rounded-xl border border-line bg-card">
@@ -109,9 +114,9 @@ export function ImageLibrary() {
                 <div className="flex gap-3">
                   <label className="cursor-pointer text-xs font-semibold text-link">
                     Replace
-                    <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { replace(image, event.target.files?.[0] || null); event.target.value = '' }} />
+                    <input disabled={busy} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { replace(image, event.target.files?.[0] || null); event.target.value = '' }} />
                   </label>
-                  <button type="button" onClick={() => remove(image)} className="text-xs font-semibold text-error">Archive</button>
+                  <AdminButton type="button" disabled={busy} pendingLabel="Archiving…" onClick={() => remove(image)} className="text-xs font-semibold text-error">Archive</AdminButton>
                 </div>
               )}
             </div>

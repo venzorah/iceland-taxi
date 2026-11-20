@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { useSiteSession } from './SessionProvider'
@@ -26,7 +26,7 @@ type AppPrefs = {
   setLanguage: (l: Lang) => void
   setCurrency: (c: Currency) => void
   setCustomerCategory: (c: 'international' | 'resident') => void
-  setAnnouncements: (a: AnnouncementState) => void
+  setAnnouncements: (a: AnnouncementState) => Promise<void>
   go: (path: string) => void
 }
 
@@ -39,7 +39,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const [currency, setCurrency] = useState<Currency>('EUR')
   const [customerCategory, setCustomerCategory] = useState<'international' | 'resident'>('international')
   const [announcements, setAnnouncementsState] = useState<AnnouncementState>(ANNOUNCEMENTS_SEED)
-  const announcementSave = useRef<number | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -48,16 +47,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((t: Theme) => setThemeState(t), [])
   const go = useCallback((path: string) => router.push(path), [router])
-  const setAnnouncements = useCallback((next: AnnouncementState) => {
-    setAnnouncementsState(next)
-    if (announcementSave.current) window.clearTimeout(announcementSave.current)
-    announcementSave.current = window.setTimeout(() => {
-      fetch('/api/announcements', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(next),
-      }).catch(() => undefined)
-    }, 400)
+  const setAnnouncements = useCallback(async (next: AnnouncementState) => {
+    const response = await fetch('/api/announcements', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(next) })
+    const data = await response.json().catch(() => null)
+    if (!response.ok || !data?.ok) throw new Error(data?.message || 'Could not save announcements. Please try again.')
+    setAnnouncementsState(data.announcements || next)
   }, [])
 
   useEffect(() => {

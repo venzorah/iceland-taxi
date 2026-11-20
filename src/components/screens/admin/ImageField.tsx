@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminButton } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
 
 export type LibraryImage = { id: string; name: string; url: string }
@@ -74,11 +75,11 @@ export function ImageField({
           {busy ? 'Uploading…' : 'Upload image'}
           <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} className="sr-only" onChange={(event) => { upload(event.target.files?.[0] || null); event.target.value = '' }} />
         </label>
-        <button type="button" onClick={() => setOpen((current) => !current)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-heading">
+        <AdminButton type="button" onClick={() => setOpen((current) => !current)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-heading">
           {open ? 'Hide library' : 'Choose from library'}
-        </button>
+        </AdminButton>
         {allowClear && value ? (
-          <button type="button" onClick={() => onChange('')} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-error">Remove</button>
+          <AdminButton type="button" onClick={() => onChange('')} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-error">Remove</AdminButton>
         ) : null}
       </div>
       {message ? <p className="text-xs text-muted">{message}</p> : null}
@@ -86,14 +87,14 @@ export function ImageField({
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {images.map((image) => (
             <li key={image.id}>
-              <button
+              <AdminButton
                 type="button"
                 onClick={() => { onChange(image.url); setOpen(false); setMessage('Image selected. Save to publish it.') }}
                 className={`block w-full overflow-hidden rounded-lg border ${image.url === value ? 'border-focus ring-2 ring-focus' : 'border-line'}`}
               >
                 <img src={image.url} alt={image.name} className="aspect-[4/3] w-full object-cover" />
                 <span className="block truncate px-1 py-1 text-left text-[11px] text-heading">{image.name}</span>
-              </button>
+              </AdminButton>
             </li>
           ))}
         </ul>

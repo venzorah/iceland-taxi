@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminEmpty, AdminButton, AdminToggle, useAdminConfirm } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
 
 type Unit = 'hours' | 'days' | 'weeks'
@@ -16,6 +17,7 @@ function newKey() {
 }
 
 export function TripReminders() {
+  const confirm = useAdminConfirm()
   const [rows, setRows] = useState<Row[]>(START)
   const [status, setStatus] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -42,6 +44,7 @@ export function TripReminders() {
   const save = async () => {
     setSaving(true)
     setStatus(null)
+    try {
     const reminders = rows.map((row) => ({
       amount: Number(row.amount),
       unit: row.unit,
@@ -65,13 +68,14 @@ export function TripReminders() {
       active: row.active,
     })))
     setStatus(body.reminders.length ? 'Reminder times saved. The next email run uses these.' : 'All reminder emails are off.')
+    } finally { setSaving(false) }
   }
 
   return (
     <section className="mt-8">
       <h2 className="font-display text-base font-bold text-heading">Trip reminder emails</h2>
       <p className="mt-1 text-sm leading-relaxed text-muted">These times are before pickup. Each active reminder is emailed to the customer, the assigned driver, and admin.</p>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3 space-y-2">{!rows.length && <li><AdminEmpty title="No reminder times" description="Add a time and save to enable reminder emails." /></li>}
         {rows.map((row) => (
           <li key={row.key} className="flex flex-col gap-2 rounded-xl border border-line bg-bg px-3 py-3 sm:flex-row sm:items-center">
             <label className="text-xs font-semibold text-muted">
@@ -97,35 +101,28 @@ export function TripReminders() {
                 <option value="weeks">weeks before</option>
               </select>
             </label>
-            <label className="flex items-center gap-2 text-sm font-semibold text-heading sm:ml-2 sm:mt-5">
-              <input
-                type="checkbox"
-                checked={row.active}
-                onChange={(event) => setRows((current) => current.map((item) => item.key === row.key ? { ...item, active: event.target.checked } : item))}
-              />
-              Active
-            </label>
-            <button
+            <AdminToggle label="Active" checked={row.active} disabled={saving} onChange={active => setRows(current => current.map(item => item.key === row.key ? { ...item, active } : item))} />
+            <AdminButton
               type="button"
-              onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}
+              onClick={async () => { if (await confirm({ title: 'Remove reminder?', description: 'Remove this reminder time? Save reminder times to apply the change.', confirmLabel: 'Remove reminder', danger: true })) setRows(current => current.filter(item => item.key !== row.key)) }}
               className="text-sm font-semibold text-error sm:ml-auto sm:mt-5"
             >
               Delete
-            </button>
+            </AdminButton>
           </li>
         ))}
       </ul>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button
+        <AdminButton
           type="button"
           onClick={() => setRows((current) => [...current, { key: newKey(), amount: '1', unit: 'days', active: true }])}
           className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-heading"
         >
           Add reminder
-        </button>
-        <button type="button" disabled={saving} onClick={save} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60">
+        </AdminButton>
+        <AdminButton type="button" disabled={saving} onClick={save} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60">
           {saving ? 'Saving…' : 'Save reminder times'}
-        </button>
+        </AdminButton>
       </div>
       {status && <p className="mt-2 text-xs text-muted">{status}</p>}
     </section>

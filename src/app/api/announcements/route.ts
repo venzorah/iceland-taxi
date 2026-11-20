@@ -18,7 +18,7 @@ async function handleGET() {
 }
 
 async function handlePUT(req: Request) {
-  const blocked = await rejectDriverOnly()
+  const blocked = await rejectDriverOnly('theme')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = (await req.json().catch(() => null)) as AnnouncementState | null

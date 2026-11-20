@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminEmpty, AdminButton } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
 import { MessageCircle, Search, Send } from 'lucide-react'
 
@@ -95,7 +96,7 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
         <ul>
           {filtered.map((t) => (
             <li key={t.ref}>
-              <button
+              <AdminButton
                 onClick={() => setActive(t.ref)}
                 className={`flex w-full gap-3 border-b border-line px-4 py-3.5 text-left ${active === t.ref ? 'bg-surface' : 'hover:bg-surface/60'}`}
               >
@@ -108,10 +109,10 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
                   <p className="mt-0.5 truncate text-xs text-muted">{t.preview}</p>
                 </div>
                 <ReadBadge state={t.readState} />
-              </button>
+              </AdminButton>
             </li>
           ))}
-          {filtered.length === 0 && <li className="px-4 py-10 text-center text-sm text-muted">No booking threads yet.</li>}
+          {filtered.length === 0 && <li className="p-3"><AdminEmpty title="No conversations to show" description="Customer and driver conversations appear here when a booking has messages." /></li>}
         </ul>
       </div>
 
@@ -129,12 +130,12 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
                   <MessageCircle size={14} /> WhatsApp
                 </a>
               ) : (
-                <button type="button" onClick={onOpenSettings} className="rounded-lg border border-line px-3 py-2 text-xs font-bold text-heading">
+                <AdminButton type="button" onClick={onOpenSettings} className="rounded-lg border border-line px-3 py-2 text-xs font-bold text-heading">
                   Add WhatsApp number
-                </button>
+                </AdminButton>
               )}
             </div>
-            <div className="flex gap-2 border-b border-line px-5 py-2"><button onClick={() => setDriverChat(false)} aria-pressed={!driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Customer</button><button onClick={() => setDriverChat(true)} aria-pressed={driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Assigned driver</button></div>
+            <div className="flex gap-2 border-b border-line px-5 py-2"><AdminButton onClick={() => setDriverChat(false)} aria-pressed={!driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Customer</AdminButton><AdminButton onClick={() => setDriverChat(true)} aria-pressed={driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Assigned driver</AdminButton></div>
             {driverChat ? <CustomerMessages key={thread.ref} trips={[{ ref: thread.ref, routeLabel: 'Driver conversation' }]} audience="staff" driverConversation /> : <>
             <div className="flex-1 space-y-3 overflow-y-auto bg-surface p-5">
               {messages.map((m) => (
@@ -158,9 +159,9 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
                 placeholder="Reply…"
                 className="flex-1 rounded-lg border border-input-line bg-input px-3 py-2.5 text-sm outline-none focus:border-focus"
               />
-              <button disabled={sending || !draft.trim()} onClick={send} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-on-primary">
+              <AdminButton disabled={sending || !draft.trim()} onClick={send} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-on-primary">
                 <Send size={16} />
-              </button>
+              </AdminButton>
             </div>
             </>}
           </>

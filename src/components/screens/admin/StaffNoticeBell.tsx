@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminButton } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
 import { Bell, MessageCircle } from 'lucide-react'
 
@@ -53,7 +54,7 @@ export function StaffNoticeBell({
 
   return (
     <div className="relative">
-      <button
+      <AdminButton
         type="button"
         aria-label="Notifications"
         aria-expanded={open}
@@ -62,7 +63,7 @@ export function StaffNoticeBell({
       >
         <Bell size={17} />
         {unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-error" />}
-      </button>
+      </AdminButton>
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-line bg-bg shadow-lg">
           <div className="border-b border-line px-4 py-3">
@@ -73,9 +74,9 @@ export function StaffNoticeBell({
           </div>
           {!feature?.enabled && (
             <div className="px-4 py-3">
-              <button type="button" onClick={() => { setOpen(false); onOpenSettings() }} className="text-sm font-semibold text-link">
+              <AdminButton type="button" onClick={() => { setOpen(false); onOpenSettings() }} className="text-sm font-semibold text-link">
                 Add the official WhatsApp number
-              </button>
+              </AdminButton>
             </div>
           )}
           <ul className="max-h-80 overflow-y-auto">
@@ -88,9 +89,9 @@ export function StaffNoticeBell({
                 <p className="mt-1 text-sm leading-snug text-text">{item.notice}</p>
                 <p className="mt-1 text-[11px] text-muted">{deliveryLabel(item.delivery)}</p>
                 <div className="mt-2 flex gap-3">
-                  <button type="button" onClick={() => { setOpen(false); onOpenChat(item.bookingRef) }} className="text-xs font-semibold text-link">
+                  <AdminButton type="button" onClick={() => { setOpen(false); onOpenChat(item.bookingRef) }} className="text-xs font-semibold text-link">
                     Open chat
-                  </button>
+                  </AdminButton>
                   {item.whatsappUrl && (
                     <a href={item.whatsappUrl} className="inline-flex items-center gap-1 text-xs font-semibold text-heading">
                       <MessageCircle size={12} /> WhatsApp

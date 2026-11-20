@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Trash2, X } from 'lucide-react'
+import React, { useRef, useState } from 'react'
+import { AdminEmpty, AdminButton, AdminModal, AdminToggle, AdminNotice, useAdminConfirm } from '@/components/admin/AdminUI'
+import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
 
 import { AnnouncementBar } from '@/components/site/AnnouncementBar'
 import {
@@ -12,7 +12,7 @@ import {
 
 type Props = {
   value: AnnouncementState
-  onChange: (next: AnnouncementState) => void
+  onChange: (next: AnnouncementState) => void | Promise<void>
   /** Stack everything in one column, for the mobile admin app. */
   compact?: boolean
 }
@@ -21,43 +21,51 @@ type Props = {
 export function AnnouncementsManager({ value, onChange, compact }: Props) {
   const [editing, setEditing] = useState<Announcement | null>(null)
   const [isNew, setIsNew] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const confirm = useAdminConfirm()
+  const [busy, setBusy] = useState(false)
+  const lock = useRef(false)
+  const [notice, setNotice] = useState('')
+  const commit = async (next: AnnouncementState) => {
+    if (lock.current) return false
+    lock.current = true; setBusy(true); setNotice('Saving announcements…')
+    try { await onChange(next); setNotice('Announcements saved.'); return true }
+    catch (error) { setNotice(error instanceof Error ? error.message : 'Could not save announcements.'); return false }
+    finally { lock.current = false; setBusy(false) }
+  }
   const [previewLang, setPreviewLang] = useState<'en' | 'is'>('en')
 
   const { settings, items } = value
   const liveCount = visibleAnnouncements(value).length
-  const setSettings = (patch: Partial<AnnouncementSettings>) => onChange({ ...value, settings: { ...settings, ...patch } })
-  const setItems = (next: Announcement[]) => onChange({ ...value, items: next })
+  const setSettings = (patch: Partial<AnnouncementSettings>) => commit({ ...value, settings: { ...settings, ...patch } })
+  const setItems = (next: Announcement[]) => commit({ ...value, items: next })
   const patchItem = (id: string, patch: Partial<Announcement>) => setItems(items.map((a) => (a.id === id ? { ...a, ...patch } : a)))
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
     if (j < 0 || j >= items.length) return
     const next = [...items]
     ;[next[i], next[j]] = [next[j], next[i]]
-    setItems(next)
+    return setItems(next)
   }
   const duplicate = (a: Announcement) => {
     const i = items.findIndex((x) => x.id === a.id)
     const copy = { ...a, id: newAnnouncementId(), text: `${a.text} (copy)`, active: false }
-    setItems([...items.slice(0, i + 1), copy, ...items.slice(i + 1)])
+    return setItems([...items.slice(0, i + 1), copy, ...items.slice(i + 1)])
   }
-  const remove = (id: string) => {
-    setItems(items.filter((a) => a.id !== id))
-    setConfirmDelete(null)
-    if (editing?.id === id) setEditing(null)
+  const remove = async (id: string) => {
+    if (!await confirm({ title: 'Delete announcement?', description: 'Remove this message from the announcement bar?', confirmLabel: 'Delete message', danger: true })) return
+    if (await setItems(items.filter(a => a.id !== id)) && editing?.id === id) setEditing(null)
   }
   const startNew = () => {
     setIsNew(true)
     setEditing({ id: newAnnouncementId(), text: '', textIs: '', linkLabel: '', linkUrl: '', active: true, starts: '', ends: '' })
   }
-  const save = (a: Announcement) => {
-    setItems(isNew ? [...items, a] : items.map((x) => (x.id === a.id ? a : x)))
-    setEditing(null)
-    setIsNew(false)
+  const save = async (a: Announcement) => {
+    if (await setItems(isNew ? [...items, a] : items.map(x => x.id === a.id ? a : x))) { setEditing(null); setIsNew(false) }
   }
 
   return (
     <div className={compact ? 'space-y-4 p-4' : 'mx-auto max-w-6xl space-y-6 p-4 sm:p-6'}>
+      <AdminNotice message={notice} /><fieldset disabled={busy} className="contents">
       {/* What visitors see right now */}
       <section className="overflow-hidden rounded-xl border border-line bg-bg">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-5">
@@ -69,9 +77,9 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
           </div>
           <div className="flex items-center rounded-full border border-line p-0.5 text-xs font-semibold">
             {(['en', 'is'] as const).map((l) => (
-              <button key={l} onClick={() => setPreviewLang(l)} className={`rounded-full px-2.5 py-1 uppercase transition-colors duration-150 ${previewLang === l ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted hover:text-heading'}`}>
+              <AdminButton key={l} onClick={() => setPreviewLang(l)} className={`rounded-full px-2.5 py-1 uppercase transition-colors duration-150 ${previewLang === l ? 'bg-navy text-white dark:bg-white dark:text-navy' : 'text-muted hover:text-heading'}`}>
                 {l}
-              </button>
+              </AdminButton>
             ))}
           </div>
           <Switch label="Show bar" checked={settings.enabled} onChange={(v) => setSettings({ enabled: v })} />
@@ -98,15 +106,12 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
         <section className="overflow-hidden rounded-xl border border-line bg-bg">
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
             <h2 className="font-display text-base font-bold text-heading">Messages <span className="font-sans text-sm font-medium text-muted">· {items.length}</span></h2>
-            <button onClick={startNew} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
+            <AdminButton onClick={startNew} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
               <Plus size={15} /> New message
-            </button>
+            </AdminButton>
           </div>
           {items.length === 0 ? (
-            <div className="px-5 py-12 text-center">
-              <p className="font-semibold text-heading">No announcements yet</p>
-              <p className="mt-1 text-sm text-muted">Add a message and it starts scrolling above the site menu.</p>
-            </div>
+            <div className="p-4"><AdminEmpty title="No announcements yet" description="Add a message to display in the announcement bar above the website menu." /></div>
           ) : (
             <ol className="divide-y divide-line">
               {items.map((a, i) => {
@@ -118,22 +123,16 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
                       <IconBtn label="Move down" disabled={i === items.length - 1} onClick={() => move(i, 1)}><ArrowDown size={14} /></IconBtn>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <button onClick={() => { setIsNew(false); setEditing(a) }} className="block w-full text-left">
+                      <AdminButton onClick={() => { setIsNew(false); setEditing(a) }} className="block w-full text-left">
                         <p className={`text-sm font-semibold ${st === 'off' || st === 'expired' ? 'text-muted' : 'text-heading'}`}>{a.text || 'Untitled message'}</p>
-                      </button>
+                      </AdminButton>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                         <StatusPill status={st} />
                         <span>{scheduleLabel(a)}</span>
                         {a.linkLabel && <span className="text-link">{a.linkLabel} →</span>}
                         {!a.textIs && <span className="text-warning">No Icelandic text</span>}
                       </div>
-                      {confirmDelete === a.id && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm">
-                          <span className="text-heading">Delete this message?</span>
-                          <button onClick={() => remove(a.id)} className="rounded-md bg-error px-3 py-1 text-xs font-bold text-white">Delete</button>
-                          <button onClick={() => setConfirmDelete(null)} className="rounded-md px-2 py-1 text-xs font-semibold text-muted hover:text-heading">Cancel</button>
-                        </div>
-                      )}
+
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <Switch label={a.active ? 'Turn off' : 'Turn on'} hideLabel checked={a.active} onChange={(v) => patchItem(a.id, { active: v })} />
@@ -142,7 +141,7 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
                         <IconBtn label="Edit" onClick={() => { setIsNew(false); setEditing(a) }}><Pencil size={15} /></IconBtn>
                         <IconBtn label="Duplicate" onClick={() => duplicate(a)}><Copy size={15} /></IconBtn>
                       </span>
-                      <IconBtn label="Delete" danger onClick={() => setConfirmDelete(a.id)}><Trash2 size={15} /></IconBtn>
+                      <IconBtn label="Delete" danger onClick={() => remove(a.id)}><Trash2 size={15} /></IconBtn>
                     </div>
                   </li>
                 )
@@ -157,7 +156,7 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
           <p className="mt-4 text-xs font-semibold text-muted">Colour</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {(Object.keys(BAR_STYLES) as BarStyle[]).map((k) => (
-              <button
+              <AdminButton
                 key={k}
                 onClick={() => setSettings({ style: k })}
                 aria-pressed={settings.style === k}
@@ -165,15 +164,15 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
               >
                 <span className={`block h-7 rounded-md ${BAR_STYLES[k].bar.split(' ')[0]}`} />
                 <span className="mt-1 block text-xs font-semibold text-heading">{BAR_STYLES[k].label}</span>
-              </button>
+              </AdminButton>
             ))}
           </div>
           <p className="mt-5 text-xs font-semibold text-muted">Scroll speed</p>
           <div className="mt-2 grid grid-cols-3 rounded-lg bg-surface p-1 text-sm font-semibold">
             {(['slow', 'normal', 'fast'] as BarSpeed[]).map((sp) => (
-              <button key={sp} onClick={() => setSettings({ speed: sp })} className={`rounded-md py-1.5 capitalize transition-colors duration-150 ${settings.speed === sp ? 'bg-bg text-heading shadow-sm' : 'text-muted hover:text-heading'}`}>
+              <AdminButton key={sp} onClick={() => setSettings({ speed: sp })} className={`rounded-md py-1.5 capitalize transition-colors duration-150 ${settings.speed === sp ? 'bg-bg text-heading shadow-sm' : 'text-muted hover:text-heading'}`}>
                 {sp}
-              </button>
+              </AdminButton>
             ))}
           </div>
           <div className="mt-5 flex items-center justify-between gap-3">
@@ -189,10 +188,12 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
         </section>
       </div>
 
+      </fieldset>
       <Editor
         value={editing}
         isNew={isNew}
-        compact={compact}
+        busy={busy}
+        notice={notice}
         onCancel={() => { setEditing(null); setIsNew(false) }}
         onSave={save}
         onDelete={(id) => remove(id)}
@@ -201,35 +202,15 @@ export function AnnouncementsManager({ value, onChange, compact }: Props) {
   )
 }
 
-function Editor({ value, isNew, compact, onCancel, onSave, onDelete }: {
-  value: Announcement | null; isNew: boolean; compact?: boolean
-  onCancel: () => void; onSave: (a: Announcement) => void; onDelete: (id: string) => void
+function Editor({ value, isNew, busy, notice, onCancel, onSave, onDelete }: {
+  value: Announcement | null; isNew: boolean; busy: boolean; notice: string
+  onCancel: () => void; onSave: (a: Announcement) => unknown; onDelete: (id: string) => unknown
 }) {
-  return (
-    <AnimatePresence>
-      {value && (
-        <div className={`${compact ? 'absolute' : 'fixed'} inset-0 z-[70] flex justify-end`}>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: 'easeOut' }} onClick={onCancel} className="absolute inset-0 bg-navy/50" />
-          <motion.div
-            key={value.id}
-            role="dialog"
-            aria-label={isNew ? 'New announcement' : 'Edit announcement'}
-            initial={{ x: 32, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 32, opacity: 0 }}
-            transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
-            className="relative flex h-full w-full max-w-md flex-col bg-bg font-sans text-text shadow-2xl"
-          >
-            <EditorForm initial={value} isNew={isNew} onCancel={onCancel} onSave={onSave} onDelete={onDelete} />
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  )
+  return value ? <AdminModal title={isNew ? 'New announcement' : 'Edit announcement'} onClose={onCancel} busy={busy}><AdminNotice message={notice} /><fieldset disabled={busy} className="contents"><EditorForm key={value.id} initial={value} isNew={isNew} onCancel={onCancel} onSave={onSave} onDelete={onDelete} /></fieldset></AdminModal> : null
 }
 
 function EditorForm({ initial, isNew, onCancel, onSave, onDelete }: {
-  initial: Announcement; isNew: boolean; onCancel: () => void; onSave: (a: Announcement) => void; onDelete: (id: string) => void
+  initial: Announcement; isNew: boolean; onCancel: () => void; onSave: (a: Announcement) => unknown; onDelete: (id: string) => unknown
 }) {
   const [a, setA] = useState(initial)
   const set = (patch: Partial<Announcement>) => setA((x) => ({ ...x, ...patch }))
@@ -238,10 +219,6 @@ function EditorForm({ initial, isNew, onCancel, onSave, onDelete }: {
 
   return (
     <>
-      <div className="flex items-center justify-between border-b border-line px-5 py-4">
-        <h2 className="font-display text-lg font-bold text-heading">{isNew ? 'New announcement' : 'Edit announcement'}</h2>
-        <button onClick={onCancel} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full text-heading transition-colors duration-150 hover:bg-surface"><X size={18} /></button>
-      </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
         <TextArea label="Message · English" required value={a.text} max={140} onChange={(v) => set({ text: v })} placeholder="e.g. Free child seats on all airport transfers this month." />
         <TextArea label="Message · Icelandic" value={a.textIs} max={140} onChange={(v) => set({ textIs: v })} placeholder="Shown on the Icelandic site. Uses English if empty." />
@@ -266,18 +243,18 @@ function EditorForm({ initial, isNew, onCancel, onSave, onDelete }: {
       </div>
       <div className="flex items-center gap-2 border-t border-line px-5 py-4">
         {!isNew && (
-          <button onClick={() => onDelete(a.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-error transition-colors duration-150 hover:bg-surface">
+          <AdminButton onClick={() => onDelete(a.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-error transition-colors duration-150 hover:bg-surface">
             <Trash2 size={15} /> Delete
-          </button>
+          </AdminButton>
         )}
-        <button onClick={onCancel} className="ml-auto rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-heading transition-colors duration-150 hover:bg-surface">Cancel</button>
-        <button
+        <AdminButton onClick={onCancel} className="ml-auto rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-heading transition-colors duration-150 hover:bg-surface">Cancel</AdminButton>
+        <AdminButton
           disabled={!canSave}
           onClick={() => onSave({ ...a, text: a.text.trim(), textIs: a.textIs.trim() })}
           className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isNew ? 'Add message' : 'Save changes'}
-        </button>
+        </AdminButton>
       </div>
     </>
   )
@@ -302,26 +279,13 @@ function scheduleLabel(a: Announcement) {
   return 'No end date'
 }
 
-function Switch({ label, checked, onChange, hideLabel }: { label: string; checked: boolean; onChange: (v: boolean) => void; hideLabel?: boolean }) {
-  return (
-    <div className="flex items-center gap-2 p-1.5 text-sm font-semibold text-heading">
-      {!hideLabel && <span className="whitespace-nowrap" aria-hidden>{label}</span>}
-      <button
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className={`relative h-6 w-10 shrink-0 rounded-full transition-colors duration-150 ${checked ? 'bg-mint' : 'bg-input-line'}`}
-      >
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-150 ease-out ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-      </button>
-    </div>
-  )
+function Switch({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => unknown; hideLabel?: boolean }) {
+  return <AdminToggle label={label} checked={checked} onChange={onChange} />
 }
 
-function IconBtn({ label, onClick, children, disabled, danger }: { label: string; onClick: () => void; children: React.ReactNode; disabled?: boolean; danger?: boolean }) {
+function IconBtn({ label, onClick, children, disabled, danger }: { label: string; onClick: () => unknown; children: React.ReactNode; disabled?: boolean; danger?: boolean }) {
   return (
-    <button
+    <AdminButton
       aria-label={label}
       title={label}
       disabled={disabled}
@@ -329,7 +293,7 @@ function IconBtn({ label, onClick, children, disabled, danger }: { label: string
       className={`grid h-8 w-8 place-items-center rounded-md transition-colors duration-150 hover:bg-surface disabled:opacity-30 disabled:hover:bg-transparent ${danger ? 'text-error' : 'text-muted hover:text-heading'}`}
     >
       {children}
-    </button>
+    </AdminButton>
   )
 }
 

@@ -27,7 +27,8 @@ async function handlePATCH(req: Request, ctx: Ctx) {
   try {
     const route = await prisma.route.update({ where: { id }, data: parsed.data })
     return jsonOk({ ok: true, route })
-  } catch {
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'P2025') throw error
     return jsonError(404, 'NOT_FOUND', 'Route not found')
   }
 }
@@ -38,10 +39,13 @@ async function handleDELETE(_req: Request, ctx: Ctx) {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const { id } = await ctx.params
   try {
-    await prisma.booking.updateMany({ where: { routeId: id }, data: { routeId: null } })
-    await prisma.route.delete({ where: { id } })
+    await prisma.$transaction(async tx => {
+      await tx.booking.updateMany({ where: { routeId: id }, data: { routeId: null } })
+      await tx.route.delete({ where: { id } })
+    })
     return jsonOk({ ok: true, deleted: id })
-  } catch {
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'P2025') throw error
     return jsonError(404, 'NOT_FOUND', 'Route not found')
   }
 }

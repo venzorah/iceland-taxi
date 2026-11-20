@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminButton } from '@/components/admin/AdminUI'
 import React, { useEffect, useState } from 'react'
 import { ImageField, type LibraryImage } from '@/components/screens/admin/ImageField'
 
@@ -85,9 +86,9 @@ export function WebsiteContent() {
                     <textarea aria-label={block.label} disabled={saving !== null} rows={block.value.length > 120 ? 4 : 2} value={block.value} onChange={(event) => update(block.key, event.target.value)} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
                   )}
                 </div>
-                <button type="button" disabled={saving !== null} onClick={() => save(block)} className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary disabled:opacity-60">
+                <AdminButton type="button" disabled={saving !== null} onClick={() => save(block)} className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary disabled:opacity-60">
                   {saving === block.key ? 'Saving…' : 'Save'}
-                </button>
+                </AdminButton>
               </li>
             ))}
           </ul>

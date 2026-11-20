@@ -20,6 +20,16 @@ Completed:
 - Role navigation follow-up: 10 focused navigation/permission/ownership tests passed. Isolated Chrome with mocked sessions/APIs verified Super Admin, Staff, Driver and Customer desktop portal links, mobile tabs, account-menu close, and absence of customer profile requests for staff/drivers. All five dedicated login/signup screens rendered with logos, correct fields and password visibility controls; cross-role login screens required an explicit account switch. This follow-up did not sign in real users or access application data.
 - Supabase SDK application and operational-script usages replaced before removing the packages. Source-only migration/inventory SQL deliberately still reads the old auth schema.
 
+Admin UI follow-up — 19 November 2026:
+
+- Removed the duplicate staff email/sign-out bar; the main header contains a profile dropdown and page/booking search. Admin content uses a bounded viewport with its own scrolling area.
+- Services have no upload control. Service and route deletion now removes catalogue records transactionally while retaining bookings, payment records and saved journey/price details. Driver, vehicle and media removal intentionally archives records to retain history; inactive fleet entries can be shown explicitly.
+- Shared accessible modal, confirmation, form, toggle, busy-button, notice and empty-state components are used across catalogue, fleet, editorial and settings screens. Announcements await server confirmation and surface failures rather than silently swallowing them.
+- Actual DELETE handlers passed isolated in-memory checks for success, missing records, permission denial, retained history, transaction rollback and refusal to archive a driver during an in-progress journey. Run `node --experimental-vm-modules scripts/check-admin-deletions.mjs`; this does not access any database.
+- Five focused staff permission/navigation tests passed. TypeScript, scoped ESLint and the production build passed; the build used one worker with a 2 GB JavaScript heap limit and an invalid loopback database URL.
+- Isolated Chrome with mocked sessions/APIs passed header profile dismissal/search, hidden service uploads, service save/delete/cancel, duplicate-submit prevention, failed/successful toggles, fleet add/view/archive/inactive filtering, failed vehicle save recovery, bounded mobile editorial modals, document height/overflow and failed/successful announcement persistence. The temporary preview route was removed. These checks do not replace a live database smoke test after migration.
+- No deployment, real database mutation, email, notification or payment was initiated by this follow-up.
+
 Still pending:
 
 - Actual source pg_dump/pg_restore rehearsal, full restore content comparison, original-account password verification and final identity import on the new private target. Synthetic migration tests are not a claim that real data has already moved.

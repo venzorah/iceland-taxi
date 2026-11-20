@@ -1,6 +1,6 @@
-import { SessionBar } from '@/components/site/SessionBar'
+import { AdminInteractions } from '@/components/admin/AdminUI'
 import { requirePortal } from '@/lib/auth/page-access'
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  const user = await requirePortal('staff')
-  return <><SessionBar email={user.email} />{children}</>
+  await requirePortal('staff')
+  return <AdminInteractions>{children}</AdminInteractions>
 }

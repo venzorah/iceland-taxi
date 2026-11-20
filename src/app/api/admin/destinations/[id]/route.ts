@@ -23,7 +23,7 @@ async function handlePATCH(req: Request, ctx: Ctx) {
   if (data.name) data.name = data.name.trim()
   if (data.note !== undefined) data.note = data.note?.trim() || null
   if (data.imageUrl !== undefined) data.imageUrl = data.imageUrl?.trim() || null
-  const destination = await prisma.destination.update({ where: { id }, data }).catch(() => null)
+  const destination = await prisma.destination.update({ where: { id }, data }).catch(error => { if (error?.code !== 'P2025') throw error; return null })
   if (!destination) return jsonError(404, 'NOT_FOUND', 'Destination not found')
   return jsonOk({ ok: true, destination })
 }
@@ -33,7 +33,7 @@ async function handleDELETE(_req: Request, ctx: Ctx) {
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const { id } = await ctx.params
-  const destination = await prisma.destination.delete({ where: { id } }).catch(() => null)
+  const destination = await prisma.destination.delete({ where: { id } }).catch(error => { if (error?.code !== 'P2025') throw error; return null })
   if (!destination) return jsonError(404, 'NOT_FOUND', 'Destination not found')
   return jsonOk({ ok: true, deleted: id })
 }

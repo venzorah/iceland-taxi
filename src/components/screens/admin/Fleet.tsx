@@ -1,6 +1,8 @@
 'use client'
 
+import { AdminButton, AdminForm } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
+import { AdminModal, AdminToggle, AdminEmpty, AdminNotice, useAdminConfirm } from '@/components/admin/AdminUI'
 import { Car, Plus, UserSquare2 } from 'lucide-react'
 
 type DriverRow = {
@@ -50,6 +52,10 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [showInactive, setShowInactive] = useState(false)
+  const [viewOnly, setViewOnly] = useState(false)
+  const confirm = useAdminConfirm()
 
   const load = useCallback(async () => {
     try {
@@ -92,9 +98,9 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
         }),
       )
       setDrivers(rows)
-      setMsg(driverJson.source === 'database' || vehicleJson?.ok ? 'Saved in the database' : driverJson.note || 'A database is required before these changes can be saved')
+      setLoadError(false); setMsg('')
     } catch {
-      setMsg('Could not load the fleet')
+      setLoadError(true); setMsg('Could not load the fleet. Please try again.')
     } finally {
       setLoaded(true)
     }
@@ -110,6 +116,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
   }, [view])
 
   const startCreate = () => {
+    setViewOnly(false); setMsg('')
     setEditing(null)
     setDraft(
       view === 'drivers'
@@ -119,7 +126,8 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
     setOpen(true)
   }
 
-  const startEdit = (id: string) => {
+  const startEdit = (id: string, readOnly = false) => {
+    setViewOnly(readOnly); setMsg('')
     if (view === 'drivers') {
       const row = drivers.find((item) => item.id === id)
       if (!row) return
@@ -154,6 +162,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
   const save = async () => {
     setBusy(true)
     setMsg('Saving…')
+    try {
     const path = view === 'drivers' ? (editing ? `/api/admin/drivers/${editing}` : '/api/admin/drivers') : editing ? `/api/admin/vehicles/${editing}` : '/api/admin/vehicles'
     const body =
       view === 'drivers'
@@ -178,19 +187,19 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
           }
     const res = await fetch(path, { method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     const data = await res.json().catch(() => null)
-    setBusy(false)
     if (!res.ok || !data?.ok) {
       setMsg(data?.message || 'Could not save')
       return
     }
     setOpen(false)
-    setMsg('Saved')
     await load()
+    setMsg('Saved successfully.')
+    } finally { setBusy(false) }
   }
 
   const patchDriver = async (id: string, active: boolean) => {
     const label = active ? 'activate' : 'suspend'
-    if (!window.confirm(active ? 'Activate this driver so they can sign in again?' : 'Suspend this driver? They will not be able to sign in.')) return
+    if (!await confirm({ title: active ? 'Activate driver?' : 'Suspend driver?', description: active ? 'Allow this driver to access their assigned trips again?' : 'Driver portal access will be suspended. Booking history will be retained.', confirmLabel: active ? 'Activate driver' : 'Suspend driver', danger: !active })) return
     setMsg(active ? 'Activating…' : 'Suspending…')
     const res = await fetch(`/api/admin/drivers/${id}`, {
       method: 'PATCH',
@@ -202,8 +211,8 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
       setMsg(data?.message || `Could not ${label} the driver`)
       return
     }
-    setMsg(active ? 'Driver activated' : 'Driver suspended')
     await load()
+    setMsg(active ? 'Driver activated.' : 'Driver suspended.')
   }
 
   const remove = async (id: string) => {
@@ -211,7 +220,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
     const warning = view === 'drivers'
       ? 'Archive this driver? Access is disabled and booking history is retained.'
       : 'Hide this vehicle from new bookings? Existing assignments and history are retained.'
-    if (!window.confirm(warning)) return
+    if (!await confirm({ title: `Archive ${noun}?`, description: warning, confirmLabel: 'Archive', danger: true })) return
     setMsg('Archiving…')
     const res = await fetch(view === 'drivers' ? `/api/admin/drivers/${id}` : `/api/admin/vehicles/${id}`, { method: 'DELETE' })
     const data = await res.json().catch(() => null)
@@ -220,8 +229,8 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
       return
     }
     if (editing === id) setOpen(false)
-    setMsg('Archived')
     await load()
+    setMsg('Archived. Existing history was retained.')
   }
 
   const categories = [...new Set([draft.category, ...CATEGORIES].filter(Boolean))]
@@ -237,20 +246,23 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
           </p>
           <p className="mt-1 text-xs text-muted">{msg}</p>
         </div>
-        <button onClick={startCreate} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary">
+        <AdminButton onClick={startCreate} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-on-primary">
           <Plus size={15} /> {view === 'drivers' ? 'Add driver' : 'Add vehicle'}
-        </button>
+        </AdminButton>
       </div>
 
+      <div className="mt-4"><AdminToggle label="Show inactive records" checked={showInactive} onChange={setShowInactive} /></div>
+      {!loaded && <p role="status" className="py-6 text-sm text-muted">Loading fleet…</p>}
+      {loadError && <AdminButton onClick={load} className="mt-3 text-sm font-semibold underline">Try again</AdminButton>}
       {open && (
-        <form
+        <AdminModal title={`${viewOnly ? 'View' : editing ? 'Edit' : 'New'} ${view === 'drivers' ? 'driver' : 'vehicle'}`} busy={busy} onClose={() => setOpen(false)}><AdminNotice message={msg} /><AdminForm
           onSubmit={(event) => {
             event.preventDefault()
-            save()
+            return save()
           }}
           className="mt-4 rounded-2xl border border-line bg-card p-4 shadow-sm"
         >
-          <h2 className="font-display text-base font-bold text-heading">{editing ? (view === 'drivers' ? 'Edit driver' : 'Edit vehicle') : view === 'drivers' ? 'New driver' : 'New vehicle'}</h2>
+          <fieldset disabled={viewOnly}>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {view === 'drivers' ? (
               <>
@@ -292,20 +304,18 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
               </>
             )}
           </div>
-          <label className="mt-3 flex items-center gap-2 text-sm text-heading">
-            <input type="checkbox" checked={draft.active !== 'no'} onChange={(event) => setDraft({ ...draft, active: event.target.checked ? 'yes' : 'no', status: event.target.checked && draft.status === 'Suspended' ? 'Available' : draft.status })} className="h-4 w-4 accent-[var(--mint)]" />
-            {view === 'drivers' ? 'Can sign in' : 'Offered to customers'}
-          </label>
+          <div className="mt-4"><AdminToggle label={view === 'drivers' ? 'Can sign in' : 'Offered to customers'} checked={draft.active !== 'no'} onChange={active => setDraft({ ...draft, active: active ? 'yes' : 'no', status: active && draft.status === 'Suspended' ? 'Available' : draft.status })} /></div>
+          </fieldset>
           <div className="mt-4 flex gap-2">
-            <button type="submit" disabled={busy} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60">{busy ? 'Saving…' : 'Save'}</button>
-            <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</button>
+            {!viewOnly && <AdminButton type="submit" disabled={busy} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60">{busy ? 'Saving…' : 'Save'}</AdminButton>}
+            <AdminButton type="button" onClick={() => setOpen(false)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">{viewOnly ? 'Close' : 'Cancel'}</AdminButton>
           </div>
-        </form>
+        </AdminForm></AdminModal>
       )}
 
       {view === 'drivers' ? (
         <ul className="mt-4 grid gap-3 lg:grid-cols-2">
-          {drivers.map((driver) => (
+          {drivers.filter(driver => showInactive || driver.active).map((driver) => (
             <li key={driver.id || driver.displayName} className="rounded-2xl border border-line bg-card p-4">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-heading"><UserSquare2 size={18} /></span>
@@ -322,9 +332,10 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
               </div>
               {driver.id ? (
                 <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
-                  <button onClick={() => startEdit(driver.id)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary">Edit</button>
-                  <button onClick={() => patchDriver(driver.id, !driver.active)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">{driver.active ? 'Suspend' : 'Activate'}</button>
-                  <button onClick={() => remove(driver.id)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-error">Archive</button>
+                  <AdminButton onClick={() => startEdit(driver.id, true)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">View</AdminButton>
+                  <AdminButton onClick={() => startEdit(driver.id)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary">Edit</AdminButton>
+                  <AdminButton onClick={() => patchDriver(driver.id, !driver.active)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">{driver.active ? 'Suspend' : 'Activate'}</AdminButton>
+                  <AdminButton disabled={!driver.active} onClick={() => remove(driver.id)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-error">Archive</AdminButton>
                 </div>
               ) : <p className="mt-3 text-xs text-muted">Preview only until the database is connected.</p>}
             </li>
@@ -332,7 +343,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
         </ul>
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {vehicles.map((vehicle) => (
+          {vehicles.filter(vehicle => showInactive || vehicle.active).map((vehicle) => (
             <li key={vehicle.id} className="flex flex-col rounded-2xl border border-line bg-card p-4">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-heading"><Car size={18} /></span>
@@ -353,14 +364,15 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
               <p className="mt-1 text-xs text-muted">{vehicle.upgradeIsk > 0 ? `ISK ${vehicle.upgradeIsk.toLocaleString('en-US')} added to the trip price` : 'Included in the trip price'}</p>
               <p className="mt-1 text-xs text-muted">{vehicle.drivers.length ? `Assigned: ${vehicle.drivers.join(', ')}` : 'No driver assigned'}</p>
               <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
-                <button onClick={() => startEdit(vehicle.id)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary">Edit</button>
-                <button onClick={() => remove(vehicle.id)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-error">Archive</button>
+                <AdminButton onClick={() => startEdit(vehicle.id, true)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">View</AdminButton>
+                <AdminButton onClick={() => startEdit(vehicle.id)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary">Edit</AdminButton>
+                <AdminButton disabled={!vehicle.active} onClick={() => remove(vehicle.id)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-error">Archive</AdminButton>
               </div>
             </li>
           ))}
         </ul>
       )}
-      {loaded && (view === 'drivers' ? drivers : vehicles).length === 0 && <p className="mt-4 rounded-2xl border border-line bg-card px-4 py-10 text-center text-sm text-muted">Nothing saved yet. Add a record to store it in the database.</p>}
+      {loaded && !loadError && (view === 'drivers' ? drivers : vehicles).filter(item => showInactive || item.active).length === 0 && <AdminEmpty title={view === 'drivers' ? 'No drivers to show' : 'No vehicles to show'} description={showInactive ? 'Add your first record to get started.' : 'Add a record, or enable inactive records to manage archived entries.'} action={<AdminButton onClick={startCreate} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary">{view === 'drivers' ? 'Add driver' : 'Add vehicle'}</AdminButton>} />}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminEmpty } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
 import { enquiryFollowUp, type EnquiryChannelName } from '@/lib/booking/enquiry'
 
@@ -51,7 +52,7 @@ export function Enquiries({ compact = false, limit }: { compact?: boolean; limit
         <p className="text-sm text-muted">Trips that are not a published listing. Reply on the channel the customer chose.</p>
       </div>
       {msg && <p className="text-sm text-muted">{msg}</p>}
-      {shown.length === 0 && !msg && <p className="text-sm text-muted">No custom enquiries yet.</p>}
+      {shown.length === 0 && !msg && <AdminEmpty title="No custom enquiries yet" description="Custom ride requests will appear here when customers submit them." />}
       <ul className="space-y-3">
         {shown.map((row) => {
           const follow = enquiryFollowUp(row)

@@ -193,7 +193,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
     }
     setOpen(false)
     await load()
-    setMsg('Saved successfully.')
+    setMsg(data.message || 'Saved successfully.')
     } finally { setBusy(false) }
   }
 
@@ -233,6 +233,15 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
     setMsg('Archived. Existing history was retained.')
   }
 
+  const sendLogin = async (driver: DriverRow) => {
+    if (!await confirm({ title: 'Email new driver login?', description: `Generate a new password for ${driver.displayName} and send it to ${driver.email}? This replaces any previous password and signs out existing sessions.`, confirmLabel: 'Generate and email login' })) return
+    const response = await fetch(`/api/admin/drivers/${driver.id}/login`, { method: 'POST' })
+    const data = await response.json().catch(() => null)
+    if (!response.ok || !data?.ok) throw new Error(data?.message || 'Could not send login details.')
+    await load()
+    setMsg(data.message)
+  }
+
   const categories = [...new Set([draft.category, ...CATEGORIES].filter(Boolean))]
 
   return (
@@ -241,7 +250,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
         <div>
           <p className="text-sm leading-relaxed text-muted">
             {view === 'drivers'
-              ? 'Manage driver contact details, vehicles and access. Add the profile first; the driver registers and verifies the same email to activate sign-in.'
+              ? 'Create driver accounts and manage vehicles and access. A generated password and the private sign-in link are emailed to each new driver.'
               : 'Each card is one car. The additional cost is added to the published trip price. 0 means the car is included.'}
           </p>
           <p className="mt-1 text-xs text-muted">{msg}</p>
@@ -269,7 +278,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
                 <label className="text-xs font-semibold text-muted">Name<input required value={draft.displayName || ''} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} className={inputClass} /></label>
                 <label className="text-xs font-semibold text-muted">Email<input required readOnly={!!editing} type="email" value={draft.email || ''} onChange={(event) => setDraft({ ...draft, email: event.target.value })} className={inputClass} /></label>
                 <label className="text-xs font-semibold text-muted">Phone<input value={draft.phone || ''} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} className={inputClass} /></label>
-                <p className="text-xs text-muted">Passwords and verified email changes are managed through secure account sign-in and recovery.</p>
+                <p className="text-xs text-muted">{editing ? 'Use Email login details to generate and email a new password. The driver can also use password recovery.' : 'We generate a secure initial password and email it with the driver sign-in link. Passwords are never displayed here.'}</p>
                 <label className="text-xs font-semibold text-muted">
                   Status
                   <select value={draft.status || 'Available'} onChange={(event) => setDraft({ ...draft, status: event.target.value, active: event.target.value === 'Suspended' ? 'no' : draft.active })} className={inputClass}>
@@ -327,7 +336,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
                   <p className="mt-1 truncate text-sm text-muted">{driver.email || 'No email'}{driver.phone ? ` · ${driver.phone}` : ''}</p>
                   <p className="mt-1 text-sm text-text">{driver.vehicleLabel}</p>
                   {driver.licenceNotes ? <p className="mt-1 text-xs leading-relaxed text-muted">{driver.licenceNotes}</p> : null}
-                  <p className="mt-1 text-xs text-muted">{driver.hasAccount ? 'Sign-in activated' : 'Awaiting verified sign-in'}</p>
+                  <p className="mt-1 text-xs text-muted">{driver.hasAccount ? 'Login account ready' : 'Login not provisioned — email login details to set it up'}</p>
                 </div>
               </div>
               {driver.id ? (
@@ -335,6 +344,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
                   <AdminButton onClick={() => startEdit(driver.id, true)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">View</AdminButton>
                   <AdminButton onClick={() => startEdit(driver.id)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary">Edit</AdminButton>
                   <AdminButton onClick={() => patchDriver(driver.id, !driver.active)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">{driver.active ? 'Suspend' : 'Activate'}</AdminButton>
+                  <AdminButton disabled={!driver.active} pendingLabel="Emailing login…" onClick={() => sendLogin(driver)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">Email login details</AdminButton>
                   <AdminButton disabled={!driver.active} onClick={() => remove(driver.id)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-error">Archive</AdminButton>
                 </div>
               ) : <p className="mt-3 text-xs text-muted">Preview only until the database is connected.</p>}

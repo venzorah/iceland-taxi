@@ -4,7 +4,6 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Eye, EyeOff } from 'lucide-react'
-import { DriverSupport } from '@/components/site/DriverSupport'
 import { loginDestination } from '@/lib/auth/login-destination'
 import { authClient } from '@/lib/auth/client'
 import { endSession } from '@/lib/auth/sign-out'
@@ -21,7 +20,9 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const differentPortal = !!activeUser && activeAccount.kind !== 'guest' && activeAccount.kind !== portal
   const loginPath = adminIntent ? '/admin-login' : driverIntent ? '/driver-login' : '/login'
   const confirmationPath = `/auth/confirm?portal=${portal}`
-  const [mode, setMode] = useState<Mode>(initialMode ?? ((adminIntent ? ['reset', 'update'] : ['register', 'reset', 'update']).includes(search.get('mode') || '') ? search.get('mode') as Mode : 'login'))
+  const allowedModes = portal === 'customer' ? ['login', 'register', 'reset', 'update'] : ['login', 'reset', 'update']
+  const requestedMode = initialMode || search.get('mode') || 'login'
+  const [mode, setMode] = useState<Mode>(allowedModes.includes(requestedMode) ? requestedMode as Mode : 'login')
   const showAccountSwitch = differentPortal && (mode === 'login' || mode === 'register')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -52,11 +53,12 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
         if (error) throw new Error(error.message || 'Please try again.')
         await goToPortal()
       } else if (mode === 'register') {
+        if (portal !== 'customer') throw new Error('This account must be created by an administrator.')
         const { data, error } = await authClient.signUp.email({ email: email.trim(), password, name: name.trim(),
           callbackURL: confirmationPath })
         if (error) throw new Error(error.message || 'Please try again.')
         if (data.token) await goToPortal()
-        else setMessage(driverIntent ? 'Check your email to confirm your sign-in, then return to Driver sign in. Operations must approve driver access before you can open the driver portal.' : 'Check your email to confirm your account, then sign in.')
+        else setMessage('Check your email to confirm your account, then sign in.')
       } else if (mode === 'reset') {
         const { error } = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: `${loginPath}?mode=update` })
         if (error) throw new Error(error.message || 'Please try again.')
@@ -76,9 +78,8 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
     <div className={`w-full max-w-md rounded-3xl border bg-surface p-7 shadow-xl ${adminIntent ? 'border-slate-700 border-t-4' : driverIntent ? 'border-line border-t-4 border-t-primary' : 'border-line'}`}>
       <Link href="/" aria-label="Iceland Taxi home" className="mx-auto block w-fit rounded-xl bg-white p-3"><Image src="/brand/logo-dark-navy-text.png" alt="Iceland Taxi Booking" width={180} height={90} className="h-20 w-auto object-contain" priority /></Link>
       <p className="mt-6 text-xs font-bold uppercase tracking-widest text-muted">{adminIntent ? 'Administration' : driverIntent ? 'Driver portal' : 'Customer account'}</p>
-      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? (adminIntent ? 'Admin sign in' : driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? (driverIntent ? 'Activate driver sign-in' : 'Create your account') : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
-      <p className="mt-2 text-sm text-muted">{adminIntent ? 'Secure access for authorised Iceland Taxi staff. Contact your administrator if you need an account.' : driverIntent ? 'For approved drivers: use the same email registered by operations. Your assigned journeys open in the driver portal.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
-      {mode === 'register' && driverIntent && <p className="mt-4 rounded-xl border border-line bg-bg p-3 text-sm text-muted">Already registered by operations? Create your password here using that email. This activates sign-in; it does not approve a new driver application.</p>}
+      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? (adminIntent ? 'Admin sign in' : driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
+      <p className="mt-2 text-sm text-muted">{adminIntent ? 'Secure access for authorised Iceland Taxi staff. Contact your administrator if you need an account.' : driverIntent ? 'Use the email address and password sent by operations. Driver accounts are created by an administrator.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
       {showAccountSwitch && <div role="status" className="mt-6 space-y-3 rounded-xl border border-line bg-bg p-4 text-sm">
         <p>You are signed in as {activeUser.name || activeUser.email} ({activeAccount.roleLabel}). Sign out below to use a different account.</p>
         <Link href={activeAccount.href} className="inline-block font-semibold text-heading underline">Continue to {activeAccount.label.toLowerCase()}</Link>
@@ -101,17 +102,15 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
       </form>
       <div className="mt-5 flex flex-wrap gap-4 text-sm">{search.get('complete') === '1' && activeUser && <button onClick={() => { void goToPortal().catch(error => setMessage(error.message)) }}>Continue to your account</button>}
         {mode !== 'login' && <Link href={loginPath}>Sign in</Link>}
-        {mode === 'login' && <>{!adminIntent && <Link href={driverIntent ? '/driver-signup' : '/signup'}>{driverIntent ? 'Activate driver account' : 'Create customer account'}</Link>}<button onClick={() => changeMode('reset')}>Forgot password?</button></>}
+        {mode === 'login' && <>{portal === 'customer' && <Link href="/signup">Create customer account</Link>}<button onClick={() => changeMode('reset')}>Forgot password?</button></>}
       </div>
-      {(mode === 'login' || mode === 'reset') && <button type="button" disabled={busy} className="mt-4 text-sm text-muted" onClick={async () => {
+      {portal === 'customer' && (mode === 'login' || mode === 'reset') && <button type="button" disabled={busy} className="mt-4 text-sm text-muted" onClick={async () => {
         if(!email.trim()){setMessage('Enter your email address first.');return}
         setBusy(true)
         try{const result=await authClient.sendVerificationEmail({email:email.trim(),callbackURL:confirmationPath});if(result.error)throw new Error(result.error.message);setMessage('If confirmation is needed, check your email for a new link.')}
         catch{setMessage('Could not send a confirmation link. Please try again later.')}finally{setBusy(false)}
       }}>Resend confirmation email</button>}</>}
       {showAccountSwitch && message && <p role="status" className="mt-3 text-sm">{message}</p>}
-      {!adminIntent && <p className="mt-6 border-t border-line pt-4 text-sm text-muted">{driverIntent ? 'Booking a ride?' : 'Driving with us?'} <Link className="font-semibold text-heading underline" href={driverIntent ? '/login' : '/driver-login'}>{driverIntent ? 'Customer sign in' : 'Driver sign in'}</Link></p>}
-      {driverIntent && <DriverSupport />}
       <button className="mt-5 text-sm text-muted" onClick={async () => { try { await endSession(); window.location.assign(loginPath) } catch { setMessage('Could not sign out. Please try again shortly.') } }}>Sign out of current account</button>
     </div>
   </main>

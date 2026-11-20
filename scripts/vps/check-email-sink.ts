@@ -2,9 +2,10 @@
 import assert from 'node:assert/strict'
 import net from 'node:net'
 import {sendMail} from '../../src/lib/email/mailer'
+import {authenticationEmail,driverLoginEmail,styledEmail} from '../../src/lib/email/templates'
 
 async function main() {
- const previous={smtp:process.env.SMTP_URL,from:process.env.MAIL_FROM}
+ const previous={smtp:process.env.SMTP_URL,from:process.env.MAIL_FROM,app:process.env.NEXT_PUBLIC_APP_URL}
  const sockets=new Set<net.Socket>(); let delivered=''; let recipients=0
  const server=net.createServer(socket=>{
   sockets.add(socket);socket.on('close',()=>sockets.delete(socket))
@@ -31,13 +32,25 @@ async function main() {
   const result=await sendMail({to:'recipient@example.invalid',replyTo:'reply@example.invalid',subject:'VPS mail fixture',text:'Plain booking notice fixture',html:'<p>HTML booking notice fixture</p>'})
   assert.deepEqual(result,{ok:true});assert.equal(recipients,1)
   assert.match(delivered,/Subject: VPS mail fixture/);assert.match(delivered,/Plain booking notice fixture/);assert.match(delivered,/HTML booking notice fixture/);assert.match(delivered,/Reply-To: reply@example.invalid/)
+  process.env.NEXT_PUBLIC_APP_URL='https://taxi.example'
+  for(const [subject,email] of [
+   ['Driver invitation',driverLoginEmail({name:'Fixture Driver',email:'driver@example.invalid',password:'Fixture-password-only-123!'})],
+   ['Password reset',authenticationEmail('Reset your Iceland Taxi password','https://taxi.example/api/auth/reset-password/fixture-token')],
+   ['Booking notice',styledEmail({title:'Your fixture booking',paragraphs:['Your booking is saved.']})],
+  ] as const){assert.deepEqual(await sendMail({to:'recipient@example.invalid',subject,...email}),{ok:true})}
+  assert.equal(recipients,4)
+  assert.match(delivered,/Fixture-password-only-123!/)
+  assert.match(delivered,/driver-login/)
+  assert.match(delivered,/Reset password/)
+  assert.match(delivered,/ffc400/)
   process.env.SMTP_URL=''
   const missing=await sendMail({to:'recipient@example.invalid',subject:'fixture',text:'fixture',html:'fixture'})
-  assert.equal(missing.ok,false);assert.equal(recipients,1)
-  console.log('SMTP sink passed: text/HTML, sender, recipient, reply-to and missing-config behavior; no outbound email')
+  assert.equal(missing.ok,false);assert.equal(recipients,4)
+  console.log('SMTP sink passed: styled driver invitation, password reset and booking notice; text/HTML, reply-to and missing-config behavior; no outbound email')
  } finally {
   if(previous.smtp===undefined)delete process.env.SMTP_URL;else process.env.SMTP_URL=previous.smtp
   if(previous.from===undefined)delete process.env.MAIL_FROM;else process.env.MAIL_FROM=previous.from
+  if(previous.app===undefined)delete process.env.NEXT_PUBLIC_APP_URL;else process.env.NEXT_PUBLIC_APP_URL=previous.app
   for(const socket of sockets)socket.destroy()
   await new Promise<void>(resolve=>server.close(()=>resolve()))
  }

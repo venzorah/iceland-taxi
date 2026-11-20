@@ -30,6 +30,14 @@ Admin UI follow-up — 19 November 2026:
 - Isolated Chrome with mocked sessions/APIs passed header profile dismissal/search, hidden service uploads, service save/delete/cancel, duplicate-submit prevention, failed/successful toggles, fleet add/view/archive/inactive filtering, failed vehicle save recovery, bounded mobile editorial modals, document height/overflow and failed/successful announcement persistence. The temporary preview route was removed. These checks do not replace a live database smoke test after migration.
 - No deployment, real database mutation, email, notification or payment was initiated by this follow-up.
 
+Driver administration and email follow-up — 20 November 2026:
+
+- Driver creation now provisions a linked verified identity and scrypt credential in the same transaction as the business profile. A random initial password and driver login URL are sent only to the driver's email; no plaintext credential is stored in notices or returned to the admin UI. Failed SMTP delivery is explicit and can be retried through the confirmed admin login-email action. That action rotates credentials and revokes old sessions/reset tokens while retaining business IDs.
+- Public driver signup, homepage recruitment/sign-in links and customer-auth driver links were removed. Reserved driver/staff emails are blocked by the real Better Auth creation hook, with its generic anti-enumeration response preserved. Only customers can self-register.
+- Auth and notice mail now use shared branded HTML/text templates, selectable credentials and real CTA buttons. Driver and reset previews were rendered at 390px and 800px with no horizontal overflow. Mail-client-specific rendering and live inbox delivery remain deployment checks.
+- Isolated handler checks passed for permission gates before side effects, strict input, SMTP preflight, failed-delivery reporting and resend rate limits. Unit tests exercise actual Better Auth sign-in with generated credentials, reserved-account signup denial, customer signup, hashed-only persistence, ID preservation and recovery. Actual Nodemailer delivered styled driver/reset/booking fixtures to a loopback-only sink, with no outbound email.
+- 49 focused authentication/email/payment/pricing tests, TypeScript, scoped ESLint and the production build passed. The build used one worker, a 2 GB JavaScript heap limit and an invalid loopback database URL. No production users, database records, configuration or deployments were changed. No real email or payment was sent. No schema migration is required for this follow-up.
+
 Still pending:
 
 - Actual source pg_dump/pg_restore rehearsal, full restore content comparison, original-account password verification and final identity import on the new private target. Synthetic migration tests are not a claim that real data has already moved.

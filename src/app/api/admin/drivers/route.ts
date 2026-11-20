@@ -1,11 +1,13 @@
 import { z } from 'zod'
 
-import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
+import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
+import { createDriverAccount } from '@/lib/auth/driver-accounts'
+import { mailConfigError } from '@/lib/email/mailer'
 
 const createSchema = z.object({
-  displayName: z.string().min(1),
-  email: z.string().email(),
+  displayName: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().max(254),
   phone: z.string().nullable().optional(),
   licenceNotes: z.string().nullable().optional(),
   vehicleId: z.string().nullable().optional(),
@@ -19,34 +21,14 @@ async function handlePOST(req: Request) {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Enter the driver name and email.')
-  const email = parsed.data.email.trim().toLowerCase()
-  const existing = await prisma.user.findUnique({ where: { email } })
-  if (existing) return jsonError(409, 'CONFLICT', 'That email is already used.')
-  const user = await prisma.user.create({
-    data: {
-      email,
-      name: parsed.data.displayName.trim(),
-      phone: parsed.data.phone?.trim() || null,
-      role: 'DRIVER',
-      driver: {
-        create: {
-          displayName: parsed.data.displayName.trim(),
-          licenceNotes: parsed.data.licenceNotes?.trim() || null,
-          vehicleId: parsed.data.vehicleId || null,
-          status: parsed.data.active === false ? 'Suspended' : parsed.data.status?.trim() || 'Available',
-          active: parsed.data.active !== false && parsed.data.status?.trim() !== 'Suspended',
-        },
-      },
-    },
-    include: { driver: true },
-  })
+  if (mailConfigError()) return jsonError(503, 'EMAIL_UNAVAILABLE', 'Configure email delivery before creating driver logins.')
   try {
-    const { notifyAccountCreated } = await import('@/lib/email/notices')
-    await notifyAccountCreated(user)
-  } catch {
-    console.error('[operation] Failed; private error details suppressed.')
+    const result = await createDriverAccount(parsed.data)
+    return jsonOk({ ok: true, ...result, message: result.delivery.sent ? 'Driver created. Login details were emailed to the driver.' : 'Driver created, but email delivery could not be confirmed. Use Email login details to send a new password.' }, { status: 201 })
+  } catch (error) {
+    if (['P2002', 'P2034'].includes((error as { code?: string }).code || '')) return jsonError(409, 'DRIVER_CHANGED', 'This account changed or already exists. Reload Drivers before retrying.')
+    throw error
   }
-  return jsonOk({ ok: true, driver: user.driver }, { status: 201 })
 }
 
 export const POST = apiHandler(handlePOST)

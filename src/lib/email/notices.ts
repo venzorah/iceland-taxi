@@ -3,6 +3,7 @@ import { STAFF_ROLES } from '@/lib/admin/content'
 import { prisma } from '@/lib/api'
 import { sendMail } from './mailer'
 import { reminderLabel } from './schedule'
+import { styledEmail } from './templates'
 
 const APP_NAME = 'Iceland Taxi Booking'
 const ICELAND_TIME = 'Atlantic/Reykjavik'
@@ -14,14 +15,6 @@ const bookingInclude = {
   driver: { include: { user: { select: { email: true, name: true } } } },
   vehicle: true,
 } as const
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
 
 function money(amount: number, currency: string) {
   if (currency === 'ISK') return `ISK ${Math.round(amount).toLocaleString('en-US')}`
@@ -87,12 +80,11 @@ async function deliver(input: {
   const existing = await prisma.emailNotice.findUnique({ where: { dedupeKey: input.dedupeKey } })
   if (existing?.status === 'sent') return
   const company = await companyContext()
-  const html = `<div style="font-family:Georgia,serif;color:#102033;line-height:1.5"><p>${escapeHtml(input.text).replace(/\n/g, '<br>')}</p><p style="color:#5c6b7a;font-size:13px">${escapeHtml(company.name)}</p></div>`
+  const email = styledEmail({ title: input.subject, companyName: company.name, paragraphs: input.text.split('\n\n') })
   const result = await sendMail({
     to,
     subject: input.subject,
-    text: `${input.text}\n\n${company.name}`,
-    html,
+    ...email,
     replyTo: company.replyTo,
   })
   const data = {

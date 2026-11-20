@@ -32,10 +32,10 @@ export function AdminAccessGate({ children }: { children: React.ReactNode }) {
         <div className="max-w-md rounded-2xl border border-line bg-bg p-6 text-center">
           <h1 className="font-display text-xl font-bold text-heading">Staff access required</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            This sign-in is the driver portal. Trips for the driver stay there. Bookings, payments, website pages and settings stay with staff.
+            This area is for authorised staff. Sign in with your administrator account to manage bookings and website settings.
           </p>
-          <a href="/driver" className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">
-            Open driver portal
+          <a href="/admin-login" className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">
+            Admin sign in
           </a>
         </div>
       </div>

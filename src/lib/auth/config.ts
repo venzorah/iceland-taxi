@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
+import { APIError } from 'better-auth/api'
 import { hashAccountPassword, verifyAccountPassword } from './password'
 
 type Configuration = {
@@ -8,6 +9,7 @@ type Configuration = {
   isDisabled: (id: string) => Promise<boolean>
   sendLink: (to: string, subject: string, url: string) => Promise<void>
   proxyHeader?: string
+  canSelfRegister?: (email: string) => Promise<boolean>
 }
 
 /** Shared by the real Prisma server and isolated authentication acceptance checks. */
@@ -79,6 +81,12 @@ export function createAuthentication(config: Configuration) {
       ipAddress: { ipAddressHeaders: config.proxyHeader ? [config.proxyHeader] : [] },
     },
     databaseHooks: {
+      user: { create: { before: async user => {
+        if (config.canSelfRegister && !await config.canSelfRegister(user.email.trim().toLowerCase())) {
+          throw new APIError('FORBIDDEN', { message: 'This account must be managed by an administrator. Use your emailed sign-in details or contact operations.' })
+        }
+        return { data: user }
+      } } },
       session: { create: { before: async session => {
         if (await config.isDisabled(session.userId)) return false
         return { data: session }

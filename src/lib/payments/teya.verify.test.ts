@@ -159,3 +159,26 @@ it('retains safe checkout failure diagnostics without copying upstream secrets o
     }
   } finally { globalThis.fetch = original }
 })
+
+it('identifies checkout transport failures without leaking nested exception messages', async () => {
+  const original = globalThis.fetch
+  try {
+    for (const code of ['ENOTFOUND', 'ECONNRESET', 'UND_ERR_CONNECT_TIMEOUT', 'PRIVATE_VALUE_DO_NOT_PRINT']) {
+      process.env.TEYA_CLIENT_ID = `transport-${code}`
+      process.env.TEYA_CLIENT_SECRET = 'fixture-secret'
+      process.env.TEYA_STORE_ID = 'fixture-store'
+      process.env.TEYA_ENVIRONMENT = 'sandbox'
+      globalThis.fetch = (async input => {
+        if (String(input).includes('/oauth/')) return Response.json({ access_token: 'fixture-token' })
+        throw new TypeError('private-customer-data', { cause: new AggregateError([Object.assign(new Error('fixture-token'), { code })]) })
+      }) as typeof fetch
+      const result = await teyaProvider.createCheckout(checkoutInput)
+      assert.equal(result.ok, false)
+      if (!result.ok) {
+        assert.match(result.message, /checkout session request/)
+        if (code !== 'PRIVATE_VALUE_DO_NOT_PRINT') assert(result.message.includes(code))
+        assert.doesNotMatch(result.message, /PRIVATE_VALUE|private-customer|fixture-token|fixture-secret/)
+      }
+    }
+  } finally { globalThis.fetch = original }
+})

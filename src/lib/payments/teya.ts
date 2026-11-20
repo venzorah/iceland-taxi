@@ -16,6 +16,22 @@ let tokenCache: TokenCache | null = null
 /** Only fixed, locally composed diagnostics; never wrap a provider body or access token. */
 class TeyaCheckoutError extends Error {}
 
+/** Preserve useful transport codes without logging exception messages or request headers. */
+function safeTransportCode(error: unknown) {
+  const allowed = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ECONNRESET', 'ENETUNREACH', 'EHOSTUNREACH', 'ETIMEDOUT', 'CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'ERR_TLS_CERT_ALTNAME_INVALID', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_SOCKET'])
+  const pending: unknown[] = [error]
+  for (let i = 0; i < pending.length && i < 12; i++) {
+    const current = pending[i]
+    if (!current || typeof current !== 'object') continue
+    const detail = current as { code?: unknown; cause?: unknown; errors?: unknown; message?: unknown }
+    if (typeof detail.code === 'string' && allowed.has(detail.code)) return detail.code
+    if (detail.message === 'unexpected redirect') return 'HTTP_REDIRECT_BLOCKED'
+    if (detail.cause) pending.push(detail.cause)
+    if (Array.isArray(detail.errors)) pending.push(...detail.errors.slice(0, 4))
+  }
+  return undefined
+}
+
 /** Hosted checkout uses fixed official hosts selected by TEYA_ENVIRONMENT.
  * Production credentials and token caches must never cross into the sandbox.
  * https://docs.teya.com/online-payments/hosted-checkout/get-started
@@ -209,11 +225,12 @@ export class TeyaPaymentProvider implements PaymentProvider {
       }
     } catch (error) {
       const timedOut = error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)
+      const transportCode = safeTransportCode(error)
       return {
         ok: false,
         provider: this.id,
         code: 'PROVIDER_ERROR',
-        message: error instanceof TeyaCheckoutError ? error.message : `Teya ${stage} request ${timedOut ? 'timed out' : 'failed before a usable response'} (${creds.environment}). Check VPS connectivity and Teya availability; retry the saved booking.`,
+        message: error instanceof TeyaCheckoutError ? error.message : `Teya ${stage} request ${timedOut ? 'timed out' : 'failed before a usable response'} (${creds.environment}${transportCode ? `; ${transportCode}` : ''}). Check VPS connectivity and Teya availability; retry the saved booking.`,
       }
     }
   }

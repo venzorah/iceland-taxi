@@ -2,6 +2,7 @@ import { configuredAppUrl } from '@/lib/app-url'
 import { createHash, createVerify } from 'crypto'
 import { teyaCredentials } from '@/lib/env'
 import { toTeyaMinorUnits } from '@/lib/booking/pricing'
+import { checkoutRejectionDiagnostic } from './teya-diagnostics'
 import type {
   CreatePaymentInput,
   CreatePaymentResult,
@@ -145,7 +146,8 @@ export class TeyaPaymentProvider implements PaymentProvider {
         metadata: {
           booking_ref: input.bookingRef,
           booking_id: input.bookingId || '',
-          description,
+          // Teya permits at most 500 characters per metadata value.
+          description: Array.from(description).slice(0, 500).join(''),
         },
         line_items: [
           {
@@ -157,10 +159,13 @@ export class TeyaPaymentProvider implements PaymentProvider {
       }
 
       if (input.customer?.email || input.customer?.name || input.customer?.phone) {
+        // Phone is optional in Teya's schema, but if supplied must be E.164.
+        // Preserve the original booking contact; only normalize the checkout prefill.
+        const phone = input.customer.phone?.trim().replace(/[\s().-]/g, '')
         payload.customer = {
           name: input.customer.name,
           email: input.customer.email,
-          phone_number: input.customer.phone,
+          phone_number: phone && /^\+[1-9]\d{1,14}$/.test(phone) ? phone : undefined,
         }
       }
       if (input.customer?.email) {
@@ -180,14 +185,22 @@ export class TeyaPaymentProvider implements PaymentProvider {
       })
 
       const text = await res.text()
-      let json: Record<string, unknown> = {}
+      let json: unknown = {}
       try {
         json = text ? JSON.parse(text) : {}
       } catch {
-        json = { raw: text }
+        // HTML/error bodies are not useful structured diagnostics and may contain private data.
+        json = {}
       }
 
       if (!res.ok) {
+        console.warn('[teya.checkout.rejected]', JSON.stringify(checkoutRejectionDiagnostic(res, json, creds.environment, [
+          token, creds.clientId || '', creds.clientSecret || '', creds.storeId || '',
+          creds.webhookPublicKey || '', creds.webhookSecret || '',
+          input.customer?.email || '', input.customer?.name || '', input.customer?.phone || '',
+          input.bookingRef, input.bookingId || '', input.idempotencyKey || '', description,
+          input.returnUrl, input.cancelUrl, input.failureUrl || '',
+        ])))
         return {
           ok: false,
           provider: this.id,
@@ -196,8 +209,9 @@ export class TeyaPaymentProvider implements PaymentProvider {
         }
       }
 
-      const sessionUrl = String(json.session_url || '')
-      const sessionId = String(json.session_id || '')
+      const session = json && typeof json === 'object' ? json as Record<string, unknown> : {}
+      const sessionUrl = typeof session.session_url === 'string' ? session.session_url : ''
+      const sessionId = typeof session.session_id === 'string' ? session.session_id : ''
       if (!sessionUrl || !sessionId) {
         return {
           ok: false,

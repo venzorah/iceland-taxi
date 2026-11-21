@@ -86,3 +86,23 @@ Do not enable reminders until acceptance. Validate installed paths/users first; 
 - Install the root-owned backup script at `/usr/local/lib/iceland-taxi/backup.sh`, mode 0755, with postgres-owned 0700 backup directory. Install/enable the backup service/timer after the local database exists. It makes custom-format whole-database dumps, validates archive readability, writes SHA256, retains 14 days and refuses below 5 GiB free. It uses peer auth, not secrets in arguments. Monitor timer failures and backup age. Daily backups imply up to 24-hour data loss; choose more frequent backups/WAL archiving if business requirements need less.
 - A local backup is not disaster recovery. Copy encrypted backups off the VPS daily to a separately controlled store, with tested keys and retention; configure failure alerts. No backup destination or off-site credentials have been assumed. Keep configuration/secrets in a separate encrypted recovery bundle; pg_dump does not include OS units, DB roles, Cloudinary assets or SMTP credentials. Test restore monthly and after schema/auth changes.
 - Reminder timer/service replaces the old Vercel/cPanel cron. It calls the actual `/api/cron/reminders` endpoint locally with a private Bearer header. Enable **only after production acceptance and SMTP checks**, disable the previous scheduler to avoid duplicates. Do not enable on rehearsal clones; disable WhatsApp, Web Push and email delivery there too. Certbot, backup and reminder timers must be checked after reboot.
+
+## Restore the reviewed reference catalogue (November 2026)
+
+This is an additive content restore, not a database seed or schema migration. Back up the target using the procedure above first. After installing the reviewed release, sign in as Super Admin, open Services or Routes, and select **Restore reference catalogue**. Review the changes, keep the approved **150 ISK per EUR** option selected, and confirm. Refresh a stale preview rather than retrying its old fingerprint.
+
+The restore adds missing airport-transfer, tour and private-driver services, four airport routes, local photo URLs and editable website copy. It corrects the Golden Circle category to TOUR and reuses matching record IDs. Existing custom routes, authored content, non-null prices, publication choices, accounts, bookings and payments are preserved. Exchange rates are appended; previous booking/payment snapshots are unchanged. Matching ambiguities stop the entire transaction. Content is stored in Service, Route, SiteBlock and ExchangeRate; it is not a browser-local fallback.
+
+An operator can instead preview from the reviewed source directory (with its locked dependencies, including tsx):
+
+```sh
+node --env-file=/etc/iceland-taxi/app.env --import tsx scripts/vps/restore-catalogue.ts --target-database iceland_taxi
+```
+
+Inspect the plan and its fingerprint. Apply that exact reviewed preview with:
+
+```sh
+node --env-file=/etc/iceland-taxi/app.env --import tsx scripts/vps/restore-catalogue.ts --target-database iceland_taxi --apply --fingerprint REPLACE_WITH_PREVIEW_FINGERPRINT --restore-eur-rate
+```
+
+Do not run db:seed. The CLI refuses a different database name; the operator must also verify the private connection points to the intended VPS. No live restore has been performed from the developer workstation. Verify the public airport/tour/driver pages and a read-only booking price preview afterward; no checkout is needed. A repeated restore should propose no further changes unless content has changed.

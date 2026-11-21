@@ -52,7 +52,7 @@ function useWorkspace(section: string) {
           return
         }
         setData(body)
-        setMessage(body.source === 'database' ? 'Live database' : 'Seed content')
+        setMessage('')
       } catch {
         if (!cancelled) setMessage('Could not load this section')
       }
@@ -67,9 +67,9 @@ function useWorkspace(section: string) {
 
 function Shell({ message, children }: { message: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-[1100px] p-3 sm:p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6">
       <AdminNotice message={message} />
-      <div className="mt-4">{children}</div>
+      <div className={message ? "mt-4" : ""}>{children}</div>
     </div>
   )
 }
@@ -94,7 +94,7 @@ export function DestinationsSection() {
       return
     }
     setRows(body.destinations)
-    setMessage('Live database')
+    setMessage('')
   }
 
   useEffect(() => {

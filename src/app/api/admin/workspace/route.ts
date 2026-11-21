@@ -29,7 +29,7 @@ function integrations() {
       key: 'teya',
       label: 'Teya payments',
       configured: integrationConfigured('teya'),
-      message: integrationConfigured('teya') ? `${teya.environment === 'production' ? 'Live' : 'Sandbox'} credentials configured. Provider connectivity and webhook delivery still require verification.` : 'Not connected. No card charges can be taken.',
+      message: integrationConfigured('teya') ? `${teya.environment === 'production' ? 'Production' : 'Test'} payment settings saved. Verification pending.` : 'Online payments are unavailable.',
     },
     {
       key: 'google_maps',
@@ -54,8 +54,8 @@ function integrations() {
       label: 'WhatsApp notices',
       configured: integrationConfigured('whatsapp'),
       message: integrationConfigured('whatsapp')
-        ? 'Cloud API credentials present. Outbound notices only. Inbound chats are not synced.'
-        : 'Not connected. Staff open a WhatsApp link.',
+        ? 'Staff notification settings saved.'
+        : 'Staff can open WhatsApp directly.',
     },
   ]
 }

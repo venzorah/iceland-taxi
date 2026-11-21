@@ -1,5 +1,5 @@
 'use client'
-import { endSession } from '@/lib/auth/sign-out'
+import { DriverProfileMenu } from '@/components/site/DriverProfileMenu'
 import { useSiteImages } from '@/components/providers/SiteContent'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -94,13 +94,6 @@ export default function DriverPortal(props: Props) {
 
   const login = async () => { window.location.assign('/driver-login') }
 
-  const logout = async () => {
-    try { await endSession() } catch { setLoadError('Could not sign out. Please try again.'); return }
-    window.location.assign('/driver-login')
-    setDriver(null)
-    setJobs([])
-    setHistory([])
-  }
 
   const advance = async (job: DriverJob) => {
     setBusy(true)
@@ -165,7 +158,7 @@ export default function DriverPortal(props: Props) {
             <button onClick={() => p.onThemeChange?.(th === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="ml-auto grid h-10 w-10 place-items-center rounded-full text-heading">
               {th === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button onClick={logout} className="text-xs font-semibold text-muted hover:text-heading">Sign out</button>
+            <DriverProfileMenu name={driver.displayName} email={driver.email} />
           </div>
         </header>
 

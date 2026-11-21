@@ -88,7 +88,6 @@ export default function MobileAdmin(props: Props) {
 
   const [bookings, setBookings] = useState<OpsBooking[]>([])
   const [drivers, setDrivers] = useState<DriverOption[]>([])
-  const [source, setSource] = useState('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [compose, setCompose] = useState(false)
   const {listings} = usePublishedListings()
@@ -107,7 +106,6 @@ export default function MobileAdmin(props: Props) {
       const dJson = await dRes.json()
       const ops: OpsBooking[] = bJson.ops || bJson.bookings || []
       setBookings(ops)
-      setSource(bJson.source || 'unknown')
       setDrivers(
         (dJson.drivers || []).map((d: { id?: string; displayName?: string; name?: string; status?: string }) => ({
           id: d.id || d.displayName || d.name || '',
@@ -177,7 +175,7 @@ export default function MobileAdmin(props: Props) {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto pb-24">
-          {tab === 'home' && <HomeTab bookings={bookings} source={source} onOpen={setSheet} onTab={setTab} onEnquiries={() => setPage('enquiries')} />}
+          {tab === 'home' && <HomeTab bookings={bookings} onOpen={setSheet} onTab={setTab} onEnquiries={() => setPage('enquiries')} />}
           {tab === 'bookings' && <BookingsTab bookings={bookings} onOpen={setSheet} searchQuery={bookingSearch} />}
           {tab === 'messages' && <MessagesTab chat={chat} setChat={setChat} />}
           {tab === 'services' && <Services />}
@@ -370,7 +368,7 @@ export default function MobileAdmin(props: Props) {
   )
 }
 
-function HomeTab({ bookings, source, onOpen, onTab, onEnquiries }: { bookings: OpsBooking[]; source: string; onOpen: (b: OpsBooking) => void; onTab: (t: string) => void; onEnquiries: () => void }) {
+function HomeTab({ bookings, onOpen, onTab, onEnquiries }: { bookings: OpsBooking[]; onOpen: (b: OpsBooking) => void; onTab: (t: string) => void; onEnquiries: () => void }) {
   const unassigned = bookings.filter((b) => !b.driver && b.status !== 'Pending' && b.status !== 'Cancelled')
   const upcoming = [...bookings].filter((b) => b.time !== '—' && b.status !== 'Completed' && b.status !== 'Cancelled').sort((a, b) => a.time.localeCompare(b.time))
   const usd = bookings.filter((b) => b.currency === 'USD').reduce((s, b) => s + b.amount, 0)
@@ -378,7 +376,7 @@ function HomeTab({ bookings, source, onOpen, onTab, onEnquiries }: { bookings: O
   return (
     <div className="space-y-5 p-4">
       <div>
-        <p className="text-sm text-muted">Live ops · {source}</p>
+        <p className="text-sm text-muted">Today’s operations</p>
         <h1 className="font-display text-2xl font-bold text-heading">Good afternoon</h1>
       </div>
 

@@ -40,7 +40,7 @@ export function Staff() {
       return
     }
     setRows(data.staff || [])
-    setMsg(data.source === 'database' ? 'Live database' : 'Seed account until the database is connected')
+    setMsg('')
   }, [])
 
   useEffect(() => {

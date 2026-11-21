@@ -47,3 +47,10 @@ Still pending:
 - The developer's .env still points wherever the user configured it; it was not switched to the test cluster or real target. New auth needs target migration/import and a private BETTER_AUTH_SECRET before real login testing.
 
 See [authentication implementation/import](auth-transition.md), [deployment](vps-deployment.md) and [database rehearsal/rollback](postgresql-migration.md).
+
+## Reference catalogue and admin presentation follow-up (21 November 2026)
+
+- Compared the reference and live public catalogue APIs. The live catalogue is missing the four reference airport routes, two tours and private-driver offer; Golden Circle has the wrong category. Existing custom routes are preserved. The approved display rate is 150 ISK/EUR.
+- Added a Super Admin preview/confirm restore and a target-name-guarded operator CLI. Additive transactional changes target Service, Route, SiteBlock and ExchangeRate only; matching IDs, authored content/prices/statuses and existing booking/payment snapshots are preserved. No schema migration or seed is required. The real VPS restore has not been run from this workstation.
+- 73 focused catalogue/authentication/booking/email/payment tests passed, including repeat application, stale/conflicting preview rejection, transactional rollback and retained records. The CLI rejected a mismatched target name before connecting. Scoped ESLint, TypeScript validation and the one-worker production build passed with an invalid loopback database URL. Webpack reported a disk-space cache warning; compilation and the full build completed successfully.
+- Isolated production-preview Chrome checks with mocked APIs passed desktop/mobile admin login, no admin signup, password visibility, reset controls, dark-preference contrast and horizontal-overflow checks. Screenshots were visually inspected. No email or authentication request was sent to a real provider. The catalogue modal still needs a real Super Admin acceptance check on the target; unit checks do not claim the live data has already changed.

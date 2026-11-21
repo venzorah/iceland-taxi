@@ -7,7 +7,7 @@ import { ArrowRight, Clock, Plane, Shield } from 'lucide-react'
 import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { useSiteImages } from '@/components/providers/SiteContent'
+import { useSiteBlocks, useSiteImages } from '@/components/providers/SiteContent'
 import { formatPrice, type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
@@ -34,6 +34,7 @@ export default function AirportTransfer(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
   const images = useSiteImages()
+  const content = useSiteBlocks()
   const cur = p.currency as Currency
   const router = useRouter()
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
@@ -63,8 +64,8 @@ export default function AirportTransfer(props: Props) {
         <img src={images.airport} alt="Private transfer at Keflavík Airport" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <p className="flex items-center gap-2 text-sm font-semibold text-cyan"><Plane size={16} /> Keflavík International Airport (KEF)</p>
-          <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private airport transfers with flight tracking</h1>
-          <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Fixed-price private rides between KEF, Reykjavík, Blue Lagoon and southwest hotels. Add your flight number and your driver follows the arrival.</p>
+          <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">{content['airport.hero.title']}</h1>
+          <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">{content['airport.hero.body']}</p>
           <button onClick={p.onBook} className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary hover:bg-primary-hover">
             Book airport transfer <ArrowRight size={16} />
           </button>
@@ -74,9 +75,9 @@ export default function AirportTransfer(props: Props) {
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-3">
           {[
-            { icon: Clock, t: 'Meet at arrivals', d: 'Name sign and included waiting time shown before you pay.' },
-            { icon: Shield, t: 'Private vehicle', d: 'Your party only, choose sedan, SUV, minivan or minibus.' },
-            { icon: Plane, t: 'Flight-aware', d: 'Delays update the pickup window when a flight number is provided.' },
+            { icon: Clock, t: content['airport.meet.title'], d: content['airport.meet.body'] },
+            { icon: Shield, t: content['airport.vehicle.title'], d: content['airport.vehicle.body'] },
+            { icon: Plane, t: content['airport.flight.title'], d: content['airport.flight.body'] },
           ].map(({ icon: Icon, t, d }) => (
             <div key={t} className="rounded-2xl border border-line bg-card p-5">
               <Icon className="text-cyan" size={20} />
@@ -100,7 +101,7 @@ export default function AirportTransfer(props: Props) {
                 <p className="text-xs text-muted">Price</p>
                 <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p>
               </div>
-              <button onClick={() => router.push(`/book?listing=${encodeURIComponent(r.id)}&kind=route`)} className="hidden rounded-full border border-line px-4 py-2 text-sm font-semibold text-heading sm:inline">Book</button>
+              <button onClick={() => router.push(`/book?listing=${encodeURIComponent(r.id)}&kind=route`)} className="rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book</button>
             </li>
           ))}
         </ul>

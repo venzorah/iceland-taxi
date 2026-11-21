@@ -34,7 +34,7 @@ export function Seo() {
     }
     setPages(data.pages)
     setSelId((prev) => prev || data.pages[0]?.id || null)
-    setMsg('Live database')
+    setMsg('')
   }, [])
 
   useEffect(() => {

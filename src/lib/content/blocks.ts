@@ -33,6 +33,24 @@ const texts: SiteBlockDef[] = [
   ['home.airport.body', 'Airport description', 'Private transfers between KEF, Reykjavík, the Blue Lagoon and hotels across the southwest. Add your flight number and your driver follows your arrival time.'],
   ['home.tours.title', 'Tours heading', 'Private sightseeing tours'],
   ['home.tours.body', 'Tours description', 'Your own vehicle and driver, your own schedule. Stop where you want, stay as long as you like.'],
+  ['airport.hero.title', 'Airport page heading', 'Private airport transfers with flight tracking'],
+  ['airport.hero.body', 'Airport page introduction', 'Fixed-price private rides between KEF, Reykjavík, Blue Lagoon and southwest hotels. Add your flight number and your driver follows the arrival.'],
+  ['airport.meet.title', 'Meet at arrivals heading', 'Meet at arrivals'],
+  ['airport.meet.body', 'Meet at arrivals description', 'Name sign and included waiting time shown before you pay.'],
+  ['airport.vehicle.title', 'Private vehicle heading', 'Private vehicle'],
+  ['airport.vehicle.body', 'Private vehicle description', 'Your party only, choose sedan, SUV, minivan or minibus.'],
+  ['airport.flight.title', 'Flight tracking heading', 'Flight-aware'],
+  ['airport.flight.body', 'Flight tracking description', 'Delays update the pickup window when a flight number is provided.'],
+  ['tours.hero.title', 'Tours page heading', 'Private sightseeing tours across Iceland'],
+  ['tours.hero.body', 'Tours page introduction', 'Your own vehicle and driver, your own schedule. Stop where you want, packages are starting points, not fixed bus itineraries.'],
+  ['driver.hero.title', 'Private driver page heading', 'Private driver & chauffeur hire in Iceland'],
+  ['driver.hero.body', 'Private driver introduction', 'Hourly to multi-day hire with a dedicated vehicle. Ideal when the itinerary is still taking shape.'],
+  ['driver.hourly.title', 'Hourly heading', 'Hourly'],
+  ['driver.hourly.body', 'Hourly description', 'City hops, meetings and flexible short windows.'],
+  ['driver.day.title', 'Day hire heading', 'Half-day & full-day'],
+  ['driver.day.body', 'Day hire description', 'Sightseeing loops with room to change the order of stops.'],
+  ['driver.multi.title', 'Multi-day heading', 'Multi-day vacation driver'],
+  ['driver.multi.body', 'Multi-day description', 'Ring Road segments and multi-stop itineraries, request a quotation for custom days.'],
   ['home.driver.title', 'Private driver heading', 'A private driver for your whole stay'],
   ['home.driver.body', 'Private driver description', 'Keep the same driver and vehicle for a few hours or several days. Plan your itinerary together, or ask for a custom quotation.'],
   ['about.kicker', 'About label', 'Iceland Taxi Booking'],
@@ -61,7 +79,7 @@ const texts: SiteBlockDef[] = [
     [`faq.${index}.q`, `FAQ ${index + 1} question`, item.q],
     [`faq.${index}.a`, `FAQ ${index + 1} answer`, item.a],
   ] as [string, string, string][]),
-].map(([key, label, value]) => ({ key, kind: 'text' as const, group: key.startsWith('faq') ? 'FAQs' : key.startsWith('about') ? 'About' : key.startsWith('services') ? 'Services' : 'Homepage', label, value }))
+].map(([key, label, value]) => ({ key, kind: 'text' as const, group: key.startsWith('airport.') ? 'Airport transfers' : key.startsWith('tours.') ? 'Private tours' : key.startsWith('driver.') ? 'Private driver' : key.startsWith('faq') ? 'FAQs' : key.startsWith('about') ? 'About' : key.startsWith('services') ? 'Services' : 'Homepage', label, value }))
 
 export const SITE_BLOCKS: SiteBlockDef[] = [...images, ...texts]
 

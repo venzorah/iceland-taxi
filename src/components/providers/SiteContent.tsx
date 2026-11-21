@@ -33,6 +33,8 @@ export function useSiteBlock(key: string) {
   return blocks[key] ?? SITE_DEFAULTS[key] ?? ''
 }
 
+export function useSiteBlocks() { return useContext(SiteContentContext) }
+
 export function useSiteImages() {
   const blocks = useContext(SiteContentContext)
   return siteImageMap(blocks)

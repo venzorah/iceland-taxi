@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Eye, EyeOff, ShieldCheck, Route } from 'lucide-react'
 import { loginDestination } from '@/lib/auth/login-destination'
 import { authClient } from '@/lib/auth/client'
 import { endSession } from '@/lib/auth/sign-out'
@@ -20,7 +20,7 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const differentPortal = !!activeUser && activeAccount.kind !== 'guest' && activeAccount.kind !== portal
   const loginPath = adminIntent ? '/admin-login' : driverIntent ? '/driver-login' : '/login'
   const confirmationPath = `/auth/confirm?portal=${portal}`
-  const allowedModes = portal === 'customer' ? ['login', 'register', 'reset', 'update'] : ['login', 'reset', 'update']
+  const allowedModes = adminIntent ? ['login', 'update'] : portal === 'customer' ? ['login', 'register', 'reset', 'update'] : ['login', 'reset', 'update']
   const requestedMode = initialMode || search.get('mode') || 'login'
   const [mode, setMode] = useState<Mode>(allowedModes.includes(requestedMode) ? requestedMode as Mode : 'login')
   const showAccountSwitch = differentPortal && (mode === 'login' || mode === 'register')
@@ -73,13 +73,19 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Please try again.') }
     finally { setBusy(false) }
   }
-  const input = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-heading'
-  return <main className={`flex min-h-screen items-center justify-center px-4 py-12 text-heading ${adminIntent ? 'bg-slate-950' : driverIntent ? 'bg-slate-100' : 'bg-bg'}`}>
-    <div className={`w-full max-w-md rounded-3xl border bg-surface p-7 shadow-xl ${adminIntent ? 'border-slate-700 border-t-4' : driverIntent ? 'border-line border-t-4 border-t-primary' : 'border-line'}`}>
-      <Link href="/" aria-label="Iceland Taxi home" className="mx-auto block w-fit rounded-xl bg-white p-3"><Image src="/brand/logo-dark-navy-text.png" alt="Iceland Taxi Booking" width={180} height={90} className="h-20 w-auto object-contain" priority /></Link>
+  const input = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-heading outline-none transition-colors focus:border-focus focus:ring-2 focus:ring-primary/20'
+  const visual = adminIntent ? {
+    image: '/photos/airport.jpg', alt: 'Iceland Taxi driver welcoming a passenger at the airport', badge: 'Operations workspace', title: 'Every journey, under your control.', body: 'Keep your team moving. Plan the day, manage your fleet and give every guest a smooth Icelandic journey.', first: 'Bookings & schedules', second: 'Drivers & fleet', footer: 'Authorised staff access',
+  } : driverIntent ? {
+    image: '/photos/private-driver.jpg', alt: 'A driver on an Icelandic journey', badge: 'Driver portal', title: 'Your next journey starts here.', body: 'See your assigned journeys, stay in touch with operations and help every guest travel with confidence.', first: 'Assigned journeys', second: 'Team messages', footer: 'Invited drivers only',
+  } : {
+    image: '/photos/golden-circle.jpg', alt: 'The scenic Golden Circle in Iceland', badge: 'Explore Iceland', title: 'Your Icelandic journey awaits.', body: 'From airport arrivals to unforgettable private tours, keep your travel plans together in one place.', first: 'Your bookings', second: 'Private journeys', footer: 'Travel with Iceland Taxi Booking',
+  }
+  const formContent = <div className="w-full px-6 py-8 text-slate-900 sm:px-10 sm:py-12 lg:px-14">
+      <Link href="/" aria-label="Iceland Taxi home" className="block w-fit rounded-xl bg-white p-3"><Image src="/brand/logo-dark-navy-text.png" alt="Iceland Taxi Booking" width={180} height={90} className="h-20 w-auto object-contain" priority /></Link>
       <p className="mt-6 text-xs font-bold uppercase tracking-widest text-muted">{adminIntent ? 'Administration' : driverIntent ? 'Driver portal' : 'Customer account'}</p>
-      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? (adminIntent ? 'Admin sign in' : driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
-      <p className="mt-2 text-sm text-muted">{adminIntent ? 'Secure access for authorised Iceland Taxi staff. Contact your administrator if you need an account.' : driverIntent ? 'Use the email address and password sent by operations. Driver accounts are created by an administrator.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
+      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? (adminIntent ? 'Welcome back' : driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
+      <p className="mt-2 text-sm text-muted">{adminIntent ? 'Sign in to manage bookings, your driving team and the journeys ahead.' : driverIntent ? 'Use the email address and password sent by operations. Driver accounts are created by an administrator.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
       {showAccountSwitch && <div role="status" className="mt-6 space-y-3 rounded-xl border border-line bg-bg p-4 text-sm">
         <p>You are signed in as {activeUser.name || activeUser.email} ({activeAccount.roleLabel}). Sign out below to use a different account.</p>
         <Link href={activeAccount.href} className="inline-block font-semibold text-heading underline">Continue to {activeAccount.label.toLowerCase()}</Link>
@@ -88,7 +94,10 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
         {mode === 'register' && <label className="block">Name<input className={`${input} mt-2`} required value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" autoComplete="name" maxLength={100} /></label>}
         {mode !== 'update' && <label className="block">Email<input className={`${input} mt-2`} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></label>}
         {mode !== 'reset' && <div>
-          <label htmlFor="auth-password" className="block">Password</label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="auth-password" className="block">Password</label>
+            {mode === 'login' && !adminIntent && <button type="button" disabled={busy} onClick={() => changeMode('reset')} className="text-sm font-semibold text-heading underline underline-offset-4 hover:text-muted disabled:opacity-60">Forgot password?</button>}
+          </div>
           <div className="relative mt-2">
             <input id="auth-password" className={`${input} pr-14`} type={showPassword ? 'text' : 'password'} maxLength={128} required minLength={mode === 'login' ? 1 : 12} value={password} onChange={e => setPassword(e.target.value)} placeholder={mode === 'login' ? 'Enter your password' : mode === 'register' ? 'Create a password' : 'Enter a new password'} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} aria-describedby={mode !== 'login' ? 'auth-password-hint' : undefined} />
             <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} aria-controls="auth-password" disabled={busy} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-muted hover:text-heading focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60">
@@ -102,7 +111,7 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
       </form>
       <div className="mt-5 flex flex-wrap gap-4 text-sm">{search.get('complete') === '1' && activeUser && <button onClick={() => { void goToPortal().catch(error => setMessage(error.message)) }}>Continue to your account</button>}
         {mode !== 'login' && <Link href={loginPath}>Sign in</Link>}
-        {mode === 'login' && <>{portal === 'customer' && <Link href="/signup">Create customer account</Link>}<button onClick={() => changeMode('reset')}>Forgot password?</button></>}
+        {mode === 'login' && <>{portal === 'customer' && <Link href="/signup">Create customer account</Link>}</>}
       </div>
       {portal === 'customer' && (mode === 'login' || mode === 'reset') && <button type="button" disabled={busy} className="mt-4 text-sm text-muted" onClick={async () => {
         if(!email.trim()){setMessage('Enter your email address first.');return}
@@ -111,7 +120,22 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
         catch{setMessage('Could not send a confirmation link. Please try again later.')}finally{setBusy(false)}
       }}>Resend confirmation email</button>}</>}
       {showAccountSwitch && message && <p role="status" className="mt-3 text-sm">{message}</p>}
-      <button className="mt-5 text-sm text-muted" onClick={async () => { try { await endSession(); window.location.assign(loginPath) } catch { setMessage('Could not sign out. Please try again shortly.') } }}>Sign out of current account</button>
+      {activeUser && <button className="mt-5 text-sm text-muted" onClick={async () => { try { await endSession(); window.location.assign(loginPath) } catch { setMessage('Could not sign out. Please try again shortly.') } }}>Sign out of current account</button>}
+    </div>
+
+  return <main className="flex min-h-dvh items-center justify-center bg-[#081b35] px-4 py-6 font-sans sm:p-8" style={{ colorScheme: 'light', backgroundImage: 'radial-gradient(ellipse at top left, #183959 0%, transparent 55%), radial-gradient(ellipse at bottom right, #173d4a 0%, transparent 50%)' }}>
+    <div className="w-full max-w-[1080px]">
+      <Link href="/" className="mb-5 inline-flex items-center gap-2 px-1 text-sm font-medium text-white/75 transition-colors hover:text-white"><ArrowLeft size={16} /> Back to the website</Link>
+      <section className="grid overflow-hidden rounded-[28px] bg-white p-2 shadow-2xl sm:rounded-[32px] sm:p-3 md:grid-cols-[0.95fr_1.05fr]">
+        <aside className="relative hidden min-h-[640px] flex-col justify-between overflow-hidden rounded-[24px] bg-[#0b213e] p-9 text-white md:flex lg:p-11">
+          <img src={visual.image} alt={visual.alt} className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06162e] via-[#06162e]/70 to-[#06162e]/30" />
+          <div className="relative inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em]"><ShieldCheck size={14} className="text-[#ffc400]" /> {visual.badge}</div>
+          <div className="relative"><div className="mb-6 h-1 w-12 rounded-full bg-[#ffc400]" /><h2 className="font-display text-4xl font-extrabold leading-[1.13] tracking-tight lg:text-[44px]">{visual.title}</h2><p className="mt-5 max-w-xs text-sm leading-7 text-white/75">{visual.body}</p><div className="mt-9 grid grid-cols-2 gap-3 border-t border-white/20 pt-6"><div><CalendarDays size={19} className="mb-3 text-[#ffc400]" /><p className="text-xs font-semibold">{visual.first}</p></div><div><Route size={19} className="mb-3 text-[#ffc400]" /><p className="text-xs font-semibold">{visual.second}</p></div></div></div>
+        </aside>
+        <div className="flex min-w-0 items-center rounded-2xl bg-white [--bg:#ffffff] [--surface:#ffffff] [--heading:#081d3d] [--text:#334155] [--muted:#64748b] [--border:#e2e8f0] [--primary:#ffc400] [--on-primary:#081d3d]">{formContent}</div>
+      </section>
+      <p className="mt-5 text-center text-xs text-white/50">Iceland Taxi Booking · {visual.footer}</p>
     </div>
   </main>
 }

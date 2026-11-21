@@ -9,7 +9,7 @@ import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { formatPrice } from '@/lib/design/data'
 
 import { PublicPageShell } from '@/components/site/PublicPageShell'
-import { useSiteImages } from '@/components/providers/SiteContent'
+import { useSiteBlocks, useSiteImages } from '@/components/providers/SiteContent'
 import { type Currency } from '@/lib/design/data'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
@@ -33,16 +33,13 @@ type Props = {
   announcements?: AnnouncementState
 }
 
-const PACKAGES = [
-  { icon: Clock3, title: 'Hourly', body: 'City hops, meetings and flexible short windows.' },
-  { icon: CalendarRange, title: 'Half-day & full-day', body: 'Sightseeing loops with room to change the order of stops.' },
-  { icon: Map, title: 'Multi-day vacation driver', body: 'Ring Road segments and multi-stop itineraries, request a quotation for custom days.' },
-]
+const PACKAGES = [{ icon: Clock3, key: 'hourly' }, { icon: CalendarRange, key: 'day' }, { icon: Map, key: 'multi' }]
 
 export default function PrivateDriver(props: Props) {
   const p = { theme: 'light' as const, language: 'en' as Lang, currency: 'EUR' as Currency, ...props }
   const th = p.theme as 'light' | 'dark'
   const images = useSiteImages()
+  const content = useSiteBlocks()
   const router = useRouter()
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
   const driverListings = (listings || []).filter((listing) => listing.category === 'driver')
@@ -78,8 +75,8 @@ export default function PrivateDriver(props: Props) {
       <section className="relative overflow-hidden bg-navy text-white">
         <img src={images.privateDriver} alt="Private chauffeur beside a vehicle" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-          <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">Private driver & chauffeur hire in Iceland</h1>
-          <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">Hourly to multi-day hire with a dedicated vehicle. Ideal when the itinerary is still taking shape.</p>
+          <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">{content['driver.hero.title']}</h1>
+          <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">{content['driver.hero.body']}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button onClick={() => driverListings[0] ? router.push(`/book?listing=${encodeURIComponent(driverListings[0].id)}&kind=service`) : router.push('/book?enquiry=1')} className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
               Book a private driver <ArrowRight size={16} />
@@ -96,11 +93,11 @@ export default function PrivateDriver(props: Props) {
 
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-4 md:grid-cols-3">
-          {PACKAGES.map(({ icon: Icon, title, body }) => (
-            <article key={title} className="rounded-2xl border border-line bg-card p-6">
+          {PACKAGES.map(({ icon: Icon, key }) => (
+            <article key={key} className="rounded-2xl border border-line bg-card p-6">
               <Icon className="text-mint" size={22} />
-              <h2 className="mt-4 font-display text-lg font-bold text-heading">{title}</h2>
-              <p className="mt-2 text-sm text-muted">{body}</p>
+              <h2 className="mt-4 font-display text-lg font-bold text-heading">{content[`driver.${key}.title`]}</h2>
+              <p className="mt-2 text-sm text-muted">{content[`driver.${key}.body`]}</p>
             </article>
           ))}
         </div>
@@ -114,13 +111,13 @@ export default function PrivateDriver(props: Props) {
                 </div>
                 <div className="text-right">
                   <p className="font-display text-lg font-bold text-heading">{formatPrice(listing.fromIsk, p.currency, listing.iskPerEur)}</p>
-                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(listing.id)}&kind=service`)} className="text-sm font-bold text-link">Book</button>
+                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(listing.id)}&kind=service`)} className="mt-2 rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book</button>
                 </div>
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-8 text-sm text-muted">A published driver price is fixed. A custom itinerary is an enquiry, not a distance fare.</p>
+        <p className="mt-8 text-sm text-muted">Choose a listed service for a fixed price, or request a quote for a custom itinerary.</p>
       </section>
     </PublicPageShell>
   )

@@ -138,7 +138,7 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3"><label className="min-w-0 flex-1 text-sm text-muted">Search bookings<input aria-label="Search bookings" value={search} onChange={e => setSearch(e.target.value)} placeholder="Reference, customer, route or driver" className="mt-1 block w-full rounded-lg border border-line bg-input px-3 py-2 text-heading" /></label><a href="/book" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">New booking</a></div>
         <p className="mt-2 text-xs text-muted">
-          {loading ? 'Loading bookings…' : `${filtered.length} bookings · source: ${source}`}
+          {loading ? 'Loading bookings…' : `${filtered.length} bookings`}
           {saveMsg ? ` · ${saveMsg}` : ''}
         </p>
 

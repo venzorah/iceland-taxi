@@ -347,7 +347,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
                   <AdminButton disabled={!driver.active} pendingLabel="Emailing login…" onClick={() => sendLogin(driver)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-heading">Email login details</AdminButton>
                   <AdminButton disabled={!driver.active} onClick={() => remove(driver.id)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-error">Archive</AdminButton>
                 </div>
-              ) : <p className="mt-3 text-xs text-muted">Preview only until the database is connected.</p>}
+              ) : <p className="mt-3 text-xs text-muted">This record cannot be edited. Reload the page to try again.</p>}
             </li>
           ))}
         </ul>

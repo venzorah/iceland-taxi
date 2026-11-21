@@ -42,8 +42,9 @@ export function HomePageClient() {
       time: s.time || '',
       passengers: String(s.passengers),
       category: s.category,
+      luggage: String(s.luggage),
     })
-    prefs.go(`/book?${q.toString()}`)
+    prefs.go(`/search?${q.toString()}`)
   }
 
   return (

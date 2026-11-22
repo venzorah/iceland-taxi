@@ -37,15 +37,22 @@ export function ruleFromMinutes(offsetMinutes: number): ReminderRule {
   return { offsetMs, slackMs: slackMs(offsetMs), kind: reminderKind(offsetMinutes) }
 }
 
-/** Reminder kinds whose send time has arrived and whose window is still open. */
-export function dueReminderKinds(pickupAt: Date, createdAt: Date, now: Date, rules: ReminderRule[]) {
+/**
+ * Reminder kinds whose send time has arrived and whose window is still open.
+ * A scheduler that runs less often than a short reminder (the daily host job)
+ * passes that gap as cadenceMs so the notice still goes out on the last run
+ * before pickup. An hourly job omits it and keeps the original window.
+ */
+export function dueReminderKinds(pickupAt: Date, createdAt: Date, now: Date, rules: ReminderRule[], cadenceMs = 0) {
   const due: string[] = []
   for (const reminder of rules) {
     const trigger = pickupAt.getTime() - reminder.offsetMs
+    const untilPickup = pickupAt.getTime() - now.getTime()
+    const lastRunBeforePickup = cadenceMs > reminder.offsetMs && untilPickup > 0 && untilPickup <= cadenceMs
     if (createdAt.getTime() > trigger) continue
-    if (now.getTime() < trigger) continue
-    if (now.getTime() >= trigger + reminder.slackMs) continue
     if (now.getTime() >= pickupAt.getTime()) continue
+    if (!lastRunBeforePickup && now.getTime() < trigger) continue
+    if (!lastRunBeforePickup && now.getTime() >= trigger + reminder.slackMs) continue
     due.push(reminder.kind)
   }
   return due

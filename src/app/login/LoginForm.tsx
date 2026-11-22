@@ -30,7 +30,7 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const loginPath = adminIntent ? '/admin-login' : driverIntent ? '/driver-login' : '/login'
   const confirmationPath = `/auth/confirm?portal=${portal}`
   const allowedModes: Mode[] = adminIntent
-    ? ['login', 'update']
+    ? ['login', 'reset', 'reset-code', 'update']
     : portal === 'customer'
       ? ['login', 'register', 'verify', 'reset', 'reset-code', 'update']
       : ['login', 'verify', 'reset', 'reset-code', 'update']
@@ -171,7 +171,7 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
         {showPasswordField && <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor="auth-password" className="block">Password</label>
-            {mode === 'login' && !adminIntent && <button type="button" disabled={busy} onClick={() => changeMode('reset')} className="text-sm font-semibold text-heading underline underline-offset-4 hover:text-muted disabled:opacity-60">Forgot password?</button>}
+            {mode === 'login' && <button type="button" disabled={busy} onClick={() => changeMode('reset')} className="text-sm font-semibold text-heading underline underline-offset-4 hover:text-muted disabled:opacity-60">Forgot password?</button>}
           </div>
           <div className="relative mt-2">
             <input id="auth-password" className={`${input} pr-14`} type={showPassword ? 'text' : 'password'} maxLength={128} required minLength={mode === 'login' ? 1 : 12} value={password} onChange={e => setPassword(e.target.value)} placeholder={mode === 'login' ? 'Enter your password' : mode === 'register' ? 'Create a password' : 'Enter a new password'} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} aria-describedby={mode !== 'login' ? 'auth-password-hint' : undefined} />

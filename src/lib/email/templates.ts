@@ -35,6 +35,23 @@ export function styledEmail(input: Email) {
   return { text, html: `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${e(input.title)}</title></head><body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#334155"><div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${e(input.preheader || input.title)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#eef2f7" style="table-layout:fixed"><tr><td align="center" style="padding:32px 12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;max-width:600px;border:1px solid #e2e8f0;border-radius:24px;overflow:hidden;background:#ffffff"><tr><td style="height:6px;background:#ffc400;font-size:0">&nbsp;</td></tr><tr><td style="padding:30px 28px 24px;border-bottom:1px solid #eef2f7"><img src="${e(logo)}" alt="${e(company)}" width="180" style="display:block;width:180px;max-width:100%;height:auto;border:0"></td></tr><tr><td style="padding:32px 28px"><p style="margin:0 0 12px;color:#64748b;font-size:11px;line-height:1.5;font-weight:700;letter-spacing:2px;text-transform:uppercase">${e(input.eyebrow || 'Iceland · Every journey matters')}</p><h1 style="margin:0 0 20px;font-family:Arial,sans-serif;font-size:28px;line-height:1.25;letter-spacing:-0.5px;color:#081d3d">${e(input.title)}</h1>${input.paragraphs.map(paragraph => `<p style="margin:0 0 16px;font-size:16px;line-height:1.8;color:#475569">${e(paragraph).replace(/\n/g, '<br>')}</p>`).join('')}${facts}${action}</td></tr><tr><td style="padding:24px 28px;background:#081d3d"><p style="margin:0 0 8px;font-size:14px;font-weight:700;line-height:1.6;color:#ffffff">${e(company)}</p><p style="margin:0;font-size:12px;line-height:1.8;color:#cbd5e1">${e(footer)}</p></td></tr></table><p style="margin:20px 0 0;font-size:11px;line-height:1.7;color:#64748b">© ${new Date().getUTCFullYear()} ${e(company)}</p></td></tr></table></body></html>` }
 }
 
+export function authenticationCodeEmail(subject: string, code: string) {
+  const reset = subject.toLowerCase().includes('password')
+  return styledEmail({
+    title: reset ? 'Reset your password' : 'Your verification code',
+    eyebrow: 'Account security',
+    preheader: 'Your 6-digit code expires in 10 minutes.',
+    paragraphs: [
+      reset
+        ? 'Use this code on the password reset screen to choose a new password.'
+        : 'Enter this code to confirm your email address and finish setting up your account.',
+      'This code expires in 10 minutes. If you did not request it, you can ignore this email.',
+    ],
+    facts: [{ label: 'Your code', value: code, secret: true }],
+    footer: 'If you did not request this, leave the code unused and contact our team if you need help.',
+  })
+}
+
 export function authenticationEmail(subject: string, link: string) {
   const reset = subject.startsWith('Reset ')
   const change = subject.startsWith('Approve ')

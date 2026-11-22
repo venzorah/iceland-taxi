@@ -2,7 +2,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { prisma } from '@/lib/prisma'
 import { configuredAppUrl } from '@/lib/app-url'
 import { sendMail } from '@/lib/email/mailer'
-import { authenticationEmail } from '@/lib/email/templates'
+import { authenticationCodeEmail, authenticationEmail } from '@/lib/email/templates'
 import { createAuthentication } from './config'
 
 let instance: ReturnType<typeof createAuthentication> | undefined
@@ -35,6 +35,11 @@ export function getAuth() {
       const destination = new URL(link)
       if (destination.origin !== url.origin) throw new Error('Invalid authentication link')
       const result = await sendMail({ to, subject, ...authenticationEmail(subject, link) })
+      if (!result.ok) throw new Error('Authentication email delivery is unavailable')
+    },
+    sendCode: async (to, subject, code) => {
+      if (!/^\d{6}$/.test(code)) throw new Error('Invalid authentication code')
+      const result = await sendMail({ to, subject, ...authenticationCodeEmail(subject, code) })
       if (!result.ok) throw new Error('Authentication email delivery is unavailable')
     },
   })

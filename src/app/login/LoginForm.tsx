@@ -10,7 +10,16 @@ import { endSession } from '@/lib/auth/sign-out'
 import { useSiteSession } from '@/components/providers/SessionProvider'
 import { portalNavigation } from '@/lib/auth/portal-navigation'
 
-type Mode = 'login' | 'register' | 'reset' | 'update'
+type Mode = 'login' | 'register' | 'verify' | 'reset' | 'reset-code' | 'update'
+type AuthFailure = { message?: string; code?: string } | null
+
+function authMessage(error: AuthFailure, fallback: string) {
+  const code = error?.code || ''
+  if (code === 'INVALID_OTP' || code === 'OTP_EXPIRED') return 'That code is incorrect or has expired. Request a new one.'
+  if (code === 'TOO_MANY_ATTEMPTS') return 'Too many attempts. Request a new code and try again.'
+  return error?.message || fallback
+}
+
 export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'customer' | 'driver' | 'admin'; initialMode?: Mode }) {
   const search = useSearchParams()
   const { user: activeUser } = useSiteSession()
@@ -20,20 +29,29 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const differentPortal = !!activeUser && activeAccount.kind !== 'guest' && activeAccount.kind !== portal
   const loginPath = adminIntent ? '/admin-login' : driverIntent ? '/driver-login' : '/login'
   const confirmationPath = `/auth/confirm?portal=${portal}`
-  const allowedModes = adminIntent ? ['login', 'update'] : portal === 'customer' ? ['login', 'register', 'reset', 'update'] : ['login', 'reset', 'update']
+  const allowedModes: Mode[] = adminIntent
+    ? ['login', 'update']
+    : portal === 'customer'
+      ? ['login', 'register', 'verify', 'reset', 'reset-code', 'update']
+      : ['login', 'verify', 'reset', 'reset-code', 'update']
   const requestedMode = initialMode || search.get('mode') || 'login'
-  const [mode, setMode] = useState<Mode>(allowedModes.includes(requestedMode) ? requestedMode as Mode : 'login')
+  const [mode, setMode] = useState<Mode>(allowedModes.includes(requestedMode as Mode) ? requestedMode as Mode : 'login')
   const showAccountSwitch = differentPortal && (mode === 'login' || mode === 'register')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState(search.has('error') ? 'Please sign in with an account that has access, or request a new confirmation link.' : search.get('reset') === 'complete' ? 'Your password was reset. Sign in with your new password.' : search.get('complete') === '1' ? 'Email confirmation is complete. Sign in to continue.' : '')
+  const [message, setMessage] = useState(search.has('error') ? 'Please sign in with an account that has access, or request a new confirmation code.' : search.get('reset') === 'complete' ? 'Your password was reset. Sign in with your new password.' : search.get('complete') === '1' ? 'Email confirmation is complete. Sign in to continue.' : '')
   function changeMode(next: Mode) {
     setMode(next)
     setShowPassword(false)
+    setCode('')
     setMessage('')
+  }
+  function setDigits(value: string) {
+    setCode(value.replace(/\D/g, '').slice(0, 6))
   }
   async function goToPortal() {
     const res = await fetch('/api/auth/session', { cache: 'no-store' })
@@ -44,6 +62,20 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
     const destination = loginDestination(session, search.get('next'), window.location.origin, driverIntent)
     if (!destination) throw new Error(driverIntent ? 'This account does not have driver access. Use the email registered by operations, or contact our team.' : 'This account does not have access to a portal. Please contact our team.')
     window.location.assign(destination)
+  }
+  async function sendVerificationCode() {
+    const result = await authClient.emailOtp.sendVerificationOtp({ email: email.trim(), type: 'email-verification' })
+    if (result.error) throw new Error(authMessage(result.error, 'Could not send a confirmation code. Please try again later.'))
+    setCode('')
+    setMessage('If this email needs confirmation, we sent a 6-digit code. It expires in 10 minutes.')
+    setMode('verify')
+  }
+  async function sendResetCode() {
+    const result = await authClient.emailOtp.requestPasswordReset({ email: email.trim() })
+    if (result.error) throw new Error(authMessage(result.error, 'Could not send a reset code. Please try again later.'))
+    setMessage('If an account exists, we sent a 6-digit code. It expires in 10 minutes.')
+    setCode('')
+    setMode('reset-code')
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setMessage('')
@@ -58,14 +90,31 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
           callbackURL: confirmationPath })
         if (error) throw new Error(error.message || 'Please try again.')
         if (data.token) await goToPortal()
-        else setMessage('Check your email to confirm your account, then sign in.')
+        else {
+          setCode('')
+          setMode('verify')
+          setMessage('Enter the 6-digit code we sent to your email.')
+        }
+      } else if (mode === 'verify') {
+        if (code.length !== 6) throw new Error('Enter the 6-digit code from your email.')
+        const { data, error } = await authClient.emailOtp.verifyEmail({ email: email.trim(), otp: code })
+        if (error) throw new Error(authMessage(error, 'That code could not be confirmed.'))
+        if (data?.token) await goToPortal()
+        else {
+          setPassword('')
+          setMode('login')
+          setMessage('Email confirmed. Sign in with your password to continue.')
+        }
       } else if (mode === 'reset') {
-        const { error } = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: `${loginPath}?mode=update` })
-        if (error) throw new Error(error.message || 'Please try again.')
-        setMessage('If an account exists, you will receive a password reset email.')
+        await sendResetCode()
+      } else if (mode === 'reset-code') {
+        if (code.length !== 6) throw new Error('Enter the 6-digit code from your email.')
+        const { error } = await authClient.emailOtp.resetPassword({ email: email.trim(), otp: code, password })
+        if (error) throw new Error(authMessage(error, 'That code could not reset the password.'))
+        window.location.assign(`${loginPath}?reset=complete`)
       } else {
         const token = search.get('token')
-        if (!token) throw new Error('Open a new password reset link from your email.')
+        if (!token) throw new Error('Request a new password code from the sign-in screen.')
         const { error } = await authClient.resetPassword({ newPassword: password, token })
         if (error) throw new Error(error.message || 'Please try again.')
         window.location.assign(`${loginPath}?reset=complete`)
@@ -74,6 +123,8 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
     finally { setBusy(false) }
   }
   const input = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-heading outline-none transition-colors focus:border-focus focus:ring-2 focus:ring-primary/20'
+  const showPasswordField = mode === 'login' || mode === 'register' || mode === 'reset-code' || mode === 'update'
+  const title = mode === 'verify' ? 'Enter your code' : mode === 'reset' ? 'Reset your password' : mode === 'reset-code' ? 'Enter your reset code' : mode === 'register' ? 'Create your account' : mode === 'update' ? 'Set a new password' : adminIntent || !driverIntent ? 'Welcome back' : 'Driver sign in'
   const visual = adminIntent ? {
     image: '/photos/airport.jpg', alt: 'Iceland Taxi driver welcoming a passenger at the airport', badge: 'Operations workspace', title: 'Every journey, under your control.', body: 'Keep your team moving. Plan the day, manage your fleet and give every guest a smooth Icelandic journey.', first: 'Bookings & schedules', second: 'Drivers & fleet', footer: 'Authorised staff access',
   } : driverIntent ? {
@@ -84,8 +135,8 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const formContent = <div className="w-full px-6 py-8 text-slate-900 sm:px-10 sm:py-12 lg:px-14">
       <Link href="/" aria-label="Iceland Taxi home" className="block w-fit rounded-xl bg-white p-3"><Image src="/brand/logo-dark-navy-text.png" alt="Iceland Taxi Booking" width={180} height={90} className="h-20 w-auto object-contain" priority /></Link>
       <p className="mt-6 text-xs font-bold uppercase tracking-widest text-muted">{adminIntent ? 'Administration' : driverIntent ? 'Driver portal' : 'Customer account'}</p>
-      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? (adminIntent ? 'Welcome back' : driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
-      <p className="mt-2 text-sm text-muted">{adminIntent ? 'Sign in to manage bookings, your driving team and the journeys ahead.' : driverIntent ? 'Use the email address and password sent by operations. Driver accounts are created by an administrator.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
+      <h1 className="mt-6 text-3xl font-bold">{title}</h1>
+      <p className="mt-2 text-sm text-muted">{mode === 'verify' ? 'Type the 6-digit code from your email. It expires in 10 minutes.' : mode === 'reset' ? 'We will email a 6-digit code. It expires in 10 minutes.' : mode === 'reset-code' ? 'Type the code from your email, then choose a new password.' : adminIntent ? 'Sign in to manage bookings, your driving team and the journeys ahead.' : driverIntent ? 'Use the email address and password sent by operations. Driver accounts are created by an administrator.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
       {showAccountSwitch && <div role="status" className="mt-6 space-y-3 rounded-xl border border-line bg-bg p-4 text-sm">
         <p>You are signed in as {activeUser.name || activeUser.email} ({activeAccount.roleLabel}). Sign out below to use a different account.</p>
         <Link href={activeAccount.href} className="inline-block font-semibold text-heading underline">Continue to {activeAccount.label.toLowerCase()}</Link>
@@ -93,7 +144,11 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
       {!showAccountSwitch && <><form onSubmit={submit} className="mt-6 space-y-4">
         {mode === 'register' && <label className="block">Name<input className={`${input} mt-2`} required value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" autoComplete="name" maxLength={100} /></label>}
         {mode !== 'update' && <label className="block">Email<input className={`${input} mt-2`} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></label>}
-        {mode !== 'reset' && <div>
+        {(mode === 'verify' || mode === 'reset-code') && <label className="block">Email code
+          <input className={`${input} mt-2 text-center text-2xl tracking-[0.4em]`} inputMode="numeric" autoComplete="one-time-code" required pattern="[0-9]{6}" maxLength={6} value={code} onChange={e => setDigits(e.target.value)} placeholder="000000" aria-describedby="auth-code-hint" />
+          <span id="auth-code-hint" className="mt-1 block text-xs text-muted">6 digits. A new code replaces the previous one.</span>
+        </label>}
+        {showPasswordField && <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor="auth-password" className="block">Password</label>
             {mode === 'login' && !adminIntent && <button type="button" disabled={busy} onClick={() => changeMode('reset')} className="text-sm font-semibold text-heading underline underline-offset-4 hover:text-muted disabled:opacity-60">Forgot password?</button>}
@@ -107,18 +162,22 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
           {mode !== 'login' && <span id="auth-password-hint" className="text-xs text-muted">Use at least 12 characters.</span>}
         </div>}
         {message && <p role="status" className="text-sm">{message}</p>}
-        <button disabled={busy} className="w-full rounded-xl bg-primary px-4 py-3 font-bold text-on-primary disabled:opacity-60">{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? (driverIntent ? 'Create driver sign-in' : 'Create account') : mode === 'reset' ? 'Send reset email' : 'Save password'}</button>
+        <button disabled={busy} className="w-full rounded-xl bg-primary px-4 py-3 font-bold text-on-primary disabled:opacity-60">{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : mode === 'verify' ? 'Confirm email' : mode === 'reset' ? 'Send code' : 'Save password'}</button>
       </form>
       <div className="mt-5 flex flex-wrap gap-4 text-sm">{search.get('complete') === '1' && activeUser && <button onClick={() => { void goToPortal().catch(error => setMessage(error.message)) }}>Continue to your account</button>}
         {mode !== 'login' && <Link href={loginPath}>Sign in</Link>}
-        {mode === 'login' && <>{portal === 'customer' && <Link href="/signup">Create customer account</Link>}</>}
+        {mode === 'login' && portal === 'customer' && <Link href="/signup">Create customer account</Link>}
+        {mode === 'verify' && <button type="button" onClick={() => changeMode('register')}>Edit registration</button>}
       </div>
-      {portal === 'customer' && (mode === 'login' || mode === 'reset') && <button type="button" disabled={busy} className="mt-4 text-sm text-muted" onClick={async () => {
-        if(!email.trim()){setMessage('Enter your email address first.');return}
+      {(mode === 'verify' || mode === 'reset-code' || (!adminIntent && mode === 'login')) && <button type="button" disabled={busy} className="mt-4 text-sm text-muted" onClick={async () => {
+        if (!email.trim()) { setMessage('Enter your email address first.'); return }
         setBusy(true)
-        try{const result=await authClient.sendVerificationEmail({email:email.trim(),callbackURL:confirmationPath});if(result.error)throw new Error(result.error.message);setMessage('If confirmation is needed, check your email for a new link.')}
-        catch{setMessage('Could not send a confirmation link. Please try again later.')}finally{setBusy(false)}
-      }}>Resend confirmation email</button>}</>}
+        try {
+          if (mode === 'reset-code') await sendResetCode()
+          else await sendVerificationCode()
+        } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not send a code. Please try again later.') }
+        finally { setBusy(false) }
+      }}>{mode === 'reset-code' ? 'Resend password code' : 'Resend confirmation code'}</button>}</>}
       {showAccountSwitch && message && <p role="status" className="mt-3 text-sm">{message}</p>}
       {activeUser && <button className="mt-5 text-sm text-muted" onClick={async () => { try { await endSession(); window.location.assign(loginPath) } catch { setMessage('Could not sign out. Please try again shortly.') } }}>Sign out of current account</button>}
     </div>

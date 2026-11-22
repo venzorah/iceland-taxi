@@ -3,7 +3,7 @@ import { apiHandler, jsonError } from '@/lib/api'
 import { mailConfigError } from '@/lib/email/mailer'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-const emailPaths = new Set(['/sign-up/email','/request-password-reset','/send-verification-email','/change-email'])
+const emailPaths = new Set(['/sign-up/email','/request-password-reset','/send-verification-email','/change-email','/email-otp/send-verification-otp','/email-otp/request-password-reset'])
 
 async function handle(req: Request) {
   const path = new URL(req.url).pathname.slice('/api/auth'.length)

@@ -1,3 +1,4 @@
+import { diagnosticId, timed, timingMarker } from './timing'
 import { configuredAppUrl } from '@/lib/app-url'
 import { createHash, createVerify } from 'crypto'
 import { teyaCredentials } from '@/lib/env'
@@ -13,6 +14,7 @@ import type {
 type TokenCache = { context: string; accessToken: string; expiresAt: number }
 
 let tokenCache: TokenCache | null = null
+const tokenRequests = new Map<string, Promise<string>>()
 
 /** Only fixed, locally composed diagnostics; never wrap a provider body or access token. */
 class TeyaCheckoutError extends Error {}
@@ -72,13 +74,17 @@ export class TeyaPaymentProvider implements PaymentProvider {
     }
     const context = createHash('sha256').update(JSON.stringify([creds.environment,creds.clientId,creds.clientSecret,creds.storeId])).digest('hex')
     if (tokenCache?.context === context && tokenCache.expiresAt > Date.now() + 30_000) {
+      timingMarker('oauth_cache_hit')
       return tokenCache.accessToken
     }
 
+    const existing = tokenRequests.get(context)
+    if (existing) return timed('oauth_wait', () => existing)
+    const request = (async () => {
     const body = new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: creds.clientId,
-      client_secret: creds.clientSecret,
+      client_id: creds.clientId!,
+      client_secret: creds.clientSecret!,
       scope: 'checkout/sessions/create checkout/sessions/id/get refunds/create',
     })
 
@@ -101,9 +107,12 @@ export class TeyaPaymentProvider implements PaymentProvider {
     tokenCache = {
       context,
       accessToken: json.access_token,
-      expiresAt: Date.now() + (json.expires_in ?? 3600) * 1000,
+      expiresAt: Date.now() + (typeof json.expires_in === 'number' && Number.isFinite(json.expires_in) ? Math.max(0, Math.min(json.expires_in, 3600)) : 300) * 1000,
     }
     return json.access_token
+    })()
+    tokenRequests.set(context, request)
+    try { return await timed('oauth', () => request) } finally { if (tokenRequests.get(context) === request) tokenRequests.delete(context) }
   }
 
   async createCheckout(input: CreatePaymentInput): Promise<CreatePaymentResult> {
@@ -172,7 +181,7 @@ export class TeyaPaymentProvider implements PaymentProvider {
         payload.customer_success_email = input.customer.email
       }
 
-      const res = await fetch(`${creds.apiUrl}/v2/checkout/sessions`, {
+      const res = await timed('teya_headers', () => fetch(`${creds.apiUrl}/v2/checkout/sessions`, {
         method: 'POST',
         redirect: 'error', signal: AbortSignal.timeout(15000),
         headers: {
@@ -182,25 +191,23 @@ export class TeyaPaymentProvider implements PaymentProvider {
           'idempotency-key': idempotencyKey,
         },
         body: JSON.stringify(payload),
+      }))
+
+      const json: unknown = await timed('teya_body', async () => {
+        const text = await res.text()
+        try { return text ? JSON.parse(text) : {} }
+        catch { return {} } // Never retain or log an unstructured provider error body.
       })
 
-      const text = await res.text()
-      let json: unknown = {}
-      try {
-        json = text ? JSON.parse(text) : {}
-      } catch {
-        // HTML/error bodies are not useful structured diagnostics and may contain private data.
-        json = {}
-      }
-
       if (!res.ok) {
-        console.warn('[teya.checkout.rejected]', JSON.stringify(checkoutRejectionDiagnostic(res, json, creds.environment, [
+        if (res.status === 401 && tokenCache?.accessToken === token) tokenCache = null
+        console.warn('[teya.checkout.rejected]', JSON.stringify({ diagnosticId: diagnosticId(), ...checkoutRejectionDiagnostic(res, json, creds.environment, [
           token, creds.clientId || '', creds.clientSecret || '', creds.storeId || '',
           creds.webhookPublicKey || '', creds.webhookSecret || '',
           input.customer?.email || '', input.customer?.name || '', input.customer?.phone || '',
           input.bookingRef, input.bookingId || '', input.idempotencyKey || '', description,
           input.returnUrl, input.cancelUrl, input.failureUrl || '',
-        ])))
+        ]) }))
         return {
           ok: false,
           provider: this.id,

@@ -31,6 +31,8 @@ type Msg = { id: string; body: string; authorRole: string; time: string }
 export function Messages({ focusRef, onOpenSettings }: Props) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [active, setActive] = useState<string | null>(null)
+  const [before, setBefore] = useState<string | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
   const [driverChat, setDriverChat] = useState(false)
   const [draft, setDraft] = useState('')
@@ -52,16 +54,16 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
   }, [])
   const loadThread = useCallback(async (ref: string, signal?: AbortSignal) => {
     try {
-      const response = await fetch(`/api/messages/${encodeURIComponent(ref)}?as=staff`, { signal, cache: 'no-store' })
+      const response = await fetch(`/api/messages/${encodeURIComponent(ref)}?as=staff${before ? `&before=${encodeURIComponent(before)}` : ''}`, { signal, cache: 'no-store' })
       const data = await response.json()
       if (!response.ok || !data.ok) throw new Error(data.message || 'Could not load messages.')
-      if (!signal?.aborted) { setMessages(data.messages); setErr(null); const readResponse = await fetch(`/api/messages/${encodeURIComponent(ref)}?as=staff`, { method: 'PATCH', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({messageIds:data.messages.map((m:Msg)=>m.id)}) }); if (!readResponse.ok) throw new Error('Messages loaded, but the read status could not be saved. Please retry.') }
+      if (!signal?.aborted) { setMessages(data.messages); setNextCursor(data.nextCursor || null); setErr(null); const readResponse = await fetch(`/api/messages/${encodeURIComponent(ref)}?as=staff`, { method: 'PATCH', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({messageIds:data.messages.map((m:Msg)=>m.id)}) }); if (!readResponse.ok) throw new Error('Messages loaded, but the read status could not be saved. Please retry.') }
     } catch (error) { if (!signal?.aborted) setErr(error instanceof Error ? error.message : 'Could not load messages.'); throw error }
-  }, [])
+  }, [before])
   useEffect(() => { rememberAlertAudience('staff') }, [])
   useLivePolling(loadThreads, true, 30000)
   useEffect(() => { if (focusRef) setActive(focusRef) }, [focusRef])
-  useEffect(() => { setMessages([]); setDraft(''); setErr(null) }, [active, driverChat])
+  useEffect(() => { setMessages([]); setDraft(''); setErr(null); setBefore(null); setNextCursor(null) }, [active, driverChat])
   const pollThread = useCallback(async (signal: AbortSignal) => { if (active) await loadThread(active, signal) }, [active, loadThread])
   useLivePolling(pollThread, !!active && !driverChat, 10000)
 
@@ -72,7 +74,7 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
       const response = await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ bookingRef:active, body:draft.trim(), as:'staff' }) })
       const data = await response.json()
       if (!response.ok || !data.ok) throw new Error(data.message || 'Message was not sent.')
-      setDraft(''); await loadThread(active); await loadThreads()
+      setDraft(''); if (before) setBefore(null); else await loadThread(active); await loadThreads()
     } catch(error) { setErr(error instanceof Error ? error.message : 'Message was not sent.') }
     finally { setSending(false) }
   }
@@ -138,6 +140,7 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
             <div className="flex gap-2 border-b border-line px-5 py-2"><AdminButton onClick={() => setDriverChat(false)} aria-pressed={!driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Customer</AdminButton><AdminButton onClick={() => setDriverChat(true)} aria-pressed={driverChat} className="rounded-lg border border-line px-3 py-2 text-sm">Assigned driver</AdminButton></div>
             {driverChat ? <CustomerMessages key={thread.ref} trips={[{ ref: thread.ref, routeLabel: 'Driver conversation' }]} audience="staff" driverConversation /> : <>
             <div className="flex-1 space-y-3 overflow-y-auto bg-surface p-5">
+              <div className="mb-3 flex gap-3 text-xs"><button disabled={!nextCursor} onClick={() => setBefore(nextCursor)} className="font-semibold underline disabled:opacity-40">Older messages</button>{before && <button onClick={() => setBefore(null)} className="font-semibold underline">Latest messages</button>}</div>
               {messages.map((m) => (
                 <div
                   key={m.id}

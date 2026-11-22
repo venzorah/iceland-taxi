@@ -319,7 +319,7 @@ export default function Booking(props: Props) {
                   </p>
                   <p className="mt-1 text-xs text-muted">{vehicleSpec ? `${vehicleSpec.name}: ${vehicleSpec.pax} seats, ${vehicleSpec.bags} bags` : 'Choose a vehicle'}</p>
                   <button onClick={submitPay} disabled={p.state === 'paying' || !canPay} className="mt-6 hidden w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover disabled:opacity-70 lg:flex">
-                    <Lock size={15} /> {p.state === 'paying' ? 'Processing payment…' : canPay ? `Pay ${totalLabel}` : 'Unavailable'}
+                    <Lock size={15} /> {p.state === 'paying' ? 'Opening secure checkout…' : canPay ? `Pay ${totalLabel}` : 'Unavailable'}
                   </button>
                   <button type="button" onClick={p.onStartEnquiry} className="mt-2 hidden w-full rounded-full border border-line py-3 text-sm font-semibold text-heading hover:bg-surface lg:block">
                     This trip is not listed
@@ -337,7 +337,7 @@ export default function Booking(props: Props) {
                   <p data-listing-price={listingPrice} data-vehicle-extra={vehicleExtra} className="font-display text-xl font-extrabold text-heading">{totalLabel || 'Unavailable'}</p>
                 </div>
                 <button onClick={submitPay} disabled={p.state === 'paying' || !canPay} className="ml-auto flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-primary py-3.5 text-base font-bold text-on-primary transition-transform duration-100 ease-out active:scale-[0.98] disabled:opacity-70 sm:max-w-xs">
-                  <Lock size={16} /> {p.state === 'paying' ? 'Processing…' : canPay ? 'Pay now' : 'Unavailable'}
+                  <Lock size={16} /> {p.state === 'paying' ? 'Opening checkout…' : canPay ? 'Pay now' : 'Unavailable'}
                 </button>
               </div>
             </div>

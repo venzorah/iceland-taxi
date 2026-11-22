@@ -1,4 +1,5 @@
 'use client'
+import { ResponsivePhoto } from '@/components/site/ResponsivePhoto'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { SearchX, ArrowRight } from 'lucide-react'
@@ -31,7 +32,7 @@ export function SearchPageClient() {
           {results.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{results.map(item => {
             const href = `/book?${new URLSearchParams({ listing: item.id, kind: item.kind, date: initial.date, time: initial.time, passengers: String(initial.passengers), luggage: String(initial.luggage) })}`
             return <article key={`${item.kind}:${item.id}`} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-card">
-              {item.imageUrl && <img src={item.imageUrl} alt="" className="h-48 w-full object-cover" />}
+              {item.imageUrl && <ResponsivePhoto src={item.imageUrl} alt="" className="h-48 w-full object-cover" />}
               <div className="flex flex-1 flex-col p-6"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{SERVICE_CATEGORIES.find(category => category.id === item.category)?.label || 'Journey'}</p><h3 className="text-xl font-bold">{listingLabel(item)}</h3>{item.blurb && <p className="mt-3 text-sm leading-relaxed text-muted">{item.blurb}</p>}<p className="my-4 text-sm text-muted">{[item.hoursLabel, item.km ? `${item.km} km` : null, item.paxLabel].filter(Boolean).join(' · ')}</p><div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4"><p className="text-xl font-bold">{formatPrice(item.fromIsk, c.currency, item.iskPerEur)}</p><Link href={href} className="inline-flex items-center gap-2 rounded-full bg-navy px-5 py-3 text-sm font-bold text-white">Book journey <ArrowRight size={16} /></Link></div></div>
             </article>
           })}</div> : <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center"><SearchX className="mx-auto mb-4 text-muted" size={36} /><h3 className="text-xl font-bold">No matching journeys</h3><p className="mx-auto mt-3 max-w-md text-sm text-muted">Try another published pickup, destination or service category. Leave the locations blank to browse that category.</p></div>}

@@ -1,3 +1,4 @@
+import { timed } from '@/lib/payments/timing'
 import { BookingStatus, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { makeBookingRef } from './refs'
@@ -44,7 +45,7 @@ export type CreateBookingInput = {
 }
 
 export async function getExchangeRates() {
-  const rate = await prisma.exchangeRate.findFirst({ orderBy: { effective: 'desc' } })
+  const rate = await timed('rates', () => prisma.exchangeRate.findFirst({ orderBy: { effective: 'desc' }, select: { iskPerUsd: true, iskPerEur: true } }))
   return {
     iskPerUsd: rate?.iskPerUsd ?? 138,
     iskPerEur: rate?.iskPerEur ?? 150,
@@ -56,10 +57,10 @@ export async function getIskPerUsd() {
 }
 
 export async function loadPublishedListings(): Promise<PublishedListing[]> {
-  const [routes, services] = await Promise.all([
-    prisma.route.findMany({ include: { service: true } }),
-    prisma.service.findMany({ orderBy: { sortOrder: 'asc' } }),
-  ])
+  const [routes, services] = await timed('catalogue', () => Promise.all([
+    prisma.route.findMany({ where: { active: true }, select: { id: true, serviceId: true, fromLabel: true, toLabel: true, fromIsk: true, minutes: true, km: true, active: true, service: { select: { id: true, kind: true, titleEn: true, active: true } } } }),
+    prisma.service.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' }, select: { id: true, kind: true, titleEn: true, fromIsk: true, active: true, hoursLabel: true, paxLabel: true, blurbEn: true, imageUrl: true } }),
+  ]))
   return publishedListings(routes, services)
 }
 
@@ -76,7 +77,7 @@ export async function quoteFromCatalogue(params: {
   currency?: QuoteInput['currency']
   depositPct?: number
 }) {
-  const listings = await loadPublishedListings()
+  const [listings, { iskPerUsd, iskPerEur }] = await Promise.all([loadPublishedListings(), getExchangeRates()])
   const listing = matchListing(listings, params)
   const price = shownAdminPrice(listing, params.pickup)
   if (!listing || price == null) {
@@ -101,7 +102,6 @@ export async function quoteFromCatalogue(params: {
     pricedVehicleLabel = vehicle.name
   }
 
-  const { iskPerUsd, iskPerEur } = await getExchangeRates()
   const routeLabel = listing.kind === 'route' ? `${listing.fromLabel} → ${listing.toLabel}` : listing.title
   const quote = buildQuote({
     baseIsk: price,
@@ -139,7 +139,7 @@ export async function quoteFromCatalogue(params: {
 export async function createBooking(input: CreateBookingInput) {
   if (!input.pickupAt || !Number.isFinite(new Date(input.pickupAt).getTime()) || new Date(input.pickupAt) <= new Date()) return { ok: false as const, code: 'INVALID_PICKUP' as const, message: 'Select a future pickup date and time in Iceland.' }
   if (!input.vehicleId) return { ok: false as const, code: 'VEHICLE_REQUIRED' as const, message: 'Select an available vehicle.' }
-  const selectedVehicle = await prisma.vehicle.findUnique({ where: { id: input.vehicleId } })
+  const selectedVehicle = await timed('vehicle', () => prisma.vehicle.findUnique({ where: { id: input.vehicleId }, select: { active: true, pax: true, bags: true } }))
   if (!selectedVehicle?.active || input.passengers > selectedVehicle.pax || (input.luggage ?? 0) > selectedVehicle.bags) return { ok: false as const, code: 'CAPACITY_EXCEEDED' as const, message: 'Choose a vehicle with enough passenger and luggage capacity.' }
 
   const resolved = await quoteFromCatalogue({
@@ -173,7 +173,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   let outcome
   try {
-    outcome = await prisma.$transaction(async tx => {
+    outcome = await timed('availability_transaction', () => prisma.$transaction(async tx => {
   if (pickupAt && (input.vehicleId || input.driverId)) {
     const avail = await checkAvailability({
       pickupAt,
@@ -232,7 +232,7 @@ export async function createBooking(input: CreateBookingInput) {
   })
 
       return { ok: true as const, booking }
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 20000 })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 20000 }))
   } catch (error) {
     if ((error as { code?: string }).code === 'P2034') return { ok: false as const, code: 'NOT_AVAILABLE' as const, message: 'Availability changed. Please choose another pickup time or vehicle.' }
     throw error
@@ -242,7 +242,7 @@ export async function createBooking(input: CreateBookingInput) {
 
   try {
     const { notifyBookingCreated } = await import('@/lib/email/notices')
-    await notifyBookingCreated(booking.id)
+    await timed('notifications', () => notifyBookingCreated(booking.id))
   } catch {
     console.error('[operation] Failed; private error details suppressed.')
   }

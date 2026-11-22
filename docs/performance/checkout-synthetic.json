@@ -1,0 +1,17 @@
+{
+  "conditions": "Fixture scheduling only: two 15ms reads, four 50ms deliveries, OAuth75ms, provider125ms. Sequential reads+mail versus parallel reads+bounded2 awaited mail. Not VPS/Teya timings.",
+  "beforeMs": [
+    440,
+    438,
+    439,
+    439,
+    438
+  ],
+  "afterMs": [
+    320,
+    321,
+    320,
+    322,
+    321
+  ]
+}

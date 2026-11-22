@@ -98,7 +98,7 @@ export function siteImageMap(blocks: Record<string, string>) {
     reykjavik: pick('reykjavik'),
     glacierLagoon: pick('glacierLagoon'),
     blueLagoon: pick('blueLagoon'),
-    logoLight: blocks['image.logoLight'] || LOGO_LIGHT,
-    logoDark: blocks['image.logoDark'] || LOGO_DARK,
+    logoLight: (blocks['image.logoLight'] || LOGO_LIGHT).replace(/^\/brand\/logo-dark-navy-text\.png$/, '/brand/logo-dark-navy-text.webp'),
+    logoDark: (blocks['image.logoDark'] || LOGO_DARK).replace(/^\/brand\/logo-dark-white-text\.png$/, '/brand/logo-dark-white-text.webp'),
   }
 }

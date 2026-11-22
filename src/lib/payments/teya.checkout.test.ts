@@ -107,3 +107,37 @@ test('optional phone prefill follows E.164; metadata stays within the documented
   assert.equal(warnings, 0)
   assert.equal(input.customer.phone, '+3547771234') // Original booking contact was not mutated.
 })
+
+test('concurrent checkouts share one OAuth request while keeping distinct stable checkout keys', async () => {
+  const input = fixture('single-flight')
+  let oauth = 0, posts = 0
+  const keys: string[] = []
+  globalThis.fetch = (async (url, init) => {
+    if (String(url).includes('/oauth/')) { oauth++; await new Promise(r => setTimeout(r, 15)); return Response.json({ access_token:'fixture-shared-token', expires_in:3600 }) }
+    posts++; keys.push(new Headers(init?.headers).get('idempotency-key')!)
+    return Response.json({ session_id:'fixture-session',session_url:'https://checkout.teya.xyz/fixture' })
+  }) as typeof fetch
+  const results = await Promise.all([teyaProvider.createCheckout(input),teyaProvider.createCheckout({...input,idempotencyKey:'fixture-second-attempt'})])
+  assert(results.every(r=>r.ok)); assert.equal(oauth,1); assert.equal(posts,2); assert.equal(new Set(keys).size,2)
+  await teyaProvider.createCheckout(input); assert.equal(oauth,1)
+})
+test('expired and rejected OAuth tokens are reacquired without automatically retrying a checkout POST', async () => {
+  const input = fixture('expiry')
+  let oauth=0, posts=0
+  globalThis.fetch=(async url=>{
+    if(String(url).includes('/oauth/')){oauth++;return Response.json({access_token:'fixture-expiring',expires_in:1})}
+    posts++;return Response.json({}, {status:401})
+  }) as typeof fetch
+  console.warn=()=>{}
+  await teyaProvider.createCheckout(input); await teyaProvider.createCheckout(input)
+  assert.equal(oauth,2);assert.equal(posts,2)
+})
+test('failed OAuth single-flight clears its promise so a later request can recover', async () => {
+  const input=fixture('oauth-recovery');let oauth=0
+  globalThis.fetch=(async url=>{
+    if(String(url).includes('/oauth/')){if(++oauth===1)throw Error('private transport message');return Response.json({access_token:'fixture-recovered'})}
+    return Response.json({session_id:'fixture-session',session_url:'https://checkout.teya.xyz/fixture'})
+  }) as typeof fetch
+  assert.equal((await teyaProvider.createCheckout(input)).ok,false)
+  assert.equal((await teyaProvider.createCheckout(input)).ok,true);assert.equal(oauth,2)
+})

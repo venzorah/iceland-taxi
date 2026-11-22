@@ -13,11 +13,12 @@ fixed = [
     'package.json', 'package-lock.json', 'next.config.ts', 'tsconfig.json',
     'eslint.config.mjs', 'postcss.config.mjs', 'tailwind.config.ts', '.nvmrc', '.env.example',
     'docs/vps-deployment.md', 'docs/vps-validation.md', 'docs/vps-handoff.md',
+    'docs/performance-review.md', 'docs/performance-operations.md',
     'docs/postgresql-migration.md', 'docs/auth-transition.md', 'docs/auth-setup.md',
     'docs/supabase-exit-audit.md', 'docs/local-development.md', 'scripts/package-vps.py',
 ]
 files = [root / name for name in fixed]
-for directory in ['src', 'public', 'prisma', 'deploy/vps', 'scripts/vps']:
+for directory in ['src', 'public', 'prisma', 'deploy/vps', 'scripts/vps', 'deploy/performance', 'scripts/performance', 'docs/performance']:
     files.extend((root / directory).rglob('*'))
 # Include the local validation helpers referenced by the runbooks, not old cPanel tooling.
 files.extend((root / 'scripts').glob('check-*.mjs'))

@@ -63,19 +63,24 @@ async function handleGET(req: Request) {
   const url = new URL(req.url)
   const email = url.searchParams.get('email') || undefined
   const ref = url.searchParams.get('ref') || undefined
+  const cursor = url.searchParams.get('cursor')
+  if (cursor && !/^[a-zA-Z0-9_-]{1,128}$/.test(cursor)) return jsonError(400, 'VALIDATION_ERROR', 'Invalid page.')
 
   const data = await withDb(
     async () => {
-      const bookings = await prisma.booking.findMany({
+      const page = await prisma.booking.findMany({
         where: {
           ...(email ? { guestEmail: email } : {}),
           ...(ref ? { ref } : {}),
         },
         include: { driver: true, vehicle: true, payments: { select: { id: true, status: true, amount: true, currency: true } } },
-        orderBy: { createdAt: 'desc' },
-        take: 100,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        take: 101,
       })
+      const bookings = page.slice(0, 100)
       return {
+        nextCursor: page.length > 100 ? bookings.at(-1)?.id : null,
         source: 'database' as const,
         bookings,
         ops: bookings.map(toOpsBooking),

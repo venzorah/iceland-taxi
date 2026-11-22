@@ -27,6 +27,9 @@ type DriverOption = { id: string; displayName: string; status: string }
 
 export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
   const confirm = useAdminConfirm()
+  const [pages, setPages] = useState<(string | null)[]>([null])
+  const cursor = pages[pages.length - 1]
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [filter, setFilter] = useState('All')
   const [rows, setRows] = useState<OpsBooking[]>([])
   const [drivers, setDrivers] = useState<DriverOption[]>([])
@@ -39,13 +42,14 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
   useEffect(() => { setSearch(searchQuery) }, [searchQuery])
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const [bRes, dRes] = await Promise.all([fetch('/api/bookings', { signal, cache: 'no-store' }), fetch('/api/drivers', { signal, cache: 'no-store' })])
+      const [bRes, dRes] = await Promise.all([fetch(`/api/bookings${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, { signal, cache: 'no-store' }), fetch('/api/drivers', { signal, cache: 'no-store' })])
       const bJson = await bRes.json()
       const dJson = await dRes.json()
       if (!bRes.ok || !bJson.ok || !dRes.ok || !dJson.ok) throw new Error(bJson.message || dJson.message || 'Could not load bookings.')
       if (signal?.aborted) return
       const ops: OpsBooking[] = bJson.ops || bJson.bookings || []
       setRows(ops)
+      setNextCursor(bJson.nextCursor || null)
       setSource(bJson.source || 'unknown')
       setSelected(current => current && ops.some(b => b.ref === current.ref) ? current : null)
       const driverList: DriverOption[] = (dJson.drivers || []).filter((d: { active?: boolean }) => d.active !== false).map(
@@ -57,7 +61,7 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
       )
       setDrivers(driverList)
     } catch (e) { if (!signal?.aborted) setSaveMsg(e instanceof Error ? e.message : 'Could not load bookings.'); throw e } finally { if (!signal?.aborted) setLoading(false) }
-  }, [])
+  }, [cursor])
   useLivePolling(load, true, 20000)
 
   const filtered = rows.filter(b => !search || `${b.ref} ${b.customer} ${b.route} ${b.driver || ''}`.toLowerCase().includes(search.toLowerCase())).filter((b) =>
@@ -166,6 +170,7 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
           ))}
         </ul>
 
+        <div className="mt-4 flex flex-wrap items-center gap-3"><button disabled={loading || pages.length === 1} onClick={() => { setLoading(true); setPages(p => p.slice(0, -1)) }} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Previous</button><span className="text-sm text-muted">Page {pages.length} · Filters search this page</span><button disabled={loading || !nextCursor} onClick={() => { setLoading(true); setPages(p => [...p, nextCursor]) }} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Next</button></div>
         <div className="mt-4 hidden overflow-x-auto rounded-xl border border-line bg-bg md:block">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead className="border-b border-line text-xs font-semibold text-muted">

@@ -29,7 +29,9 @@ async function handleGET(req: Request, ctx: Ctx) {
     return jsonError(404, 'NOT_FOUND', 'Conversation not found.')
   }
 
-  const thread=await getThreadMessages(ref)
+  const before = new URL(req.url).searchParams.get('before')
+  if (before && !/^[a-zA-Z0-9_-]{1,128}$/.test(before)) return jsonError(400, 'VALIDATION_ERROR', 'Invalid page.')
+  const thread=await getThreadMessages(ref, before)
   if(!thread)return jsonError(404,'NOT_FOUND','Conversation not found.')
   return jsonOk({
     ok: true,
@@ -44,6 +46,7 @@ async function handleGET(req: Request, ctx: Ctx) {
       status: thread.booking.status,
     },
     messages: thread.messages,
+    nextCursor: thread.nextCursor,
   })
 }
 

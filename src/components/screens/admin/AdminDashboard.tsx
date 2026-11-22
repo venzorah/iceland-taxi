@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import React, { useState } from 'react'
 import { Menu, Moon, Plus, Sun, Search } from 'lucide-react'
 
@@ -15,15 +16,21 @@ import { Appearance } from './Appearance'
 import { Services } from './Services'
 import { Pricing } from './Pricing'
 import { Routes } from './Routes'
-import { PaymentsList } from './PaymentsList'
-import { Messages } from './Messages'
+const PaymentsList = dynamic(() => import('./PaymentsList').then(module => module.PaymentsList), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
+const Messages = dynamic(() => import('./Messages').then(module => module.Messages), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
 import { StaffNoticeBell } from './StaffNoticeBell'
-import { Fleet } from './Fleet'
+const Fleet = dynamic(() => import('./Fleet').then(module => module.Fleet), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
 import { Seo } from './Seo'
 import { Staff } from './Staff'
 import { AnnouncementsManager } from '@/components/site/AnnouncementsManager'
 import { ANNOUNCEMENTS_SEED, type AnnouncementState } from '@/lib/design/announcements'
-import { CustomersSection, DestinationsSection, LanguagesSection, PagesSection, ReportsSection, ReviewsSection, SettingsSection } from './Workspace'
+const CustomersSection = dynamic(() => import('./Workspace').then(module => module.CustomersSection), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
+const DestinationsSection = dynamic(() => import('./Workspace').then(module => module.DestinationsSection), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
+const LanguagesSection = dynamic(() => import('./Workspace').then(module => module.LanguagesSection), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
+const PagesSection = dynamic(() => import('./Workspace').then(module => module.PagesSection), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
+const ReportsSection = dynamic(() => import('./Workspace').then(module => module.ReportsSection), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
+const ReviewsSection = dynamic(() => import('./Workspace').then(module => module.ReviewsSection), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
+const SettingsSection = dynamic(() => import('./Workspace').then(module => module.SettingsSection), { loading: () => <p role="status" className="p-6 text-muted">Loading…</p> })
 import { ImageLibrary } from './ImageLibrary'
 import { WebsiteContent } from './WebsiteContent'
 import { ContactMessages } from './ContactMessages'

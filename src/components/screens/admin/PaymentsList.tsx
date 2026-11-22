@@ -14,29 +14,39 @@ type PaymentRow = {
 }
 
 export function PaymentsList() {
+  const [pages, setPages] = useState<(string | null)[]>([null])
+  const cursor = pages[pages.length - 1]
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<PaymentRow[]>([])
   const [msg, setMsg] = useState('Loading…')
 
   useEffect(() => {
+    const controller = new AbortController()
+    setLoading(true)
     ;(async () => {
       try {
-        const res = await fetch('/api/admin/payments')
+        const res = await fetch(`/api/admin/payments${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, { signal: controller.signal, cache: 'no-store' })
         const data = await res.json()
         if (!data.ok) {
           setMsg(data.message || 'Could not load payments')
           return
         }
+        if (controller.signal.aborted) return
+        setNextCursor(data.nextCursor || null)
         setRows(data.payments || [])
         setMsg(`${(data.payments || []).length} payments`)
       } catch {
-        setMsg('Failed to load payments')
-      }
+        if (!controller.signal.aborted) setMsg('Failed to load payments')
+      } finally { if (!controller.signal.aborted) setLoading(false) }
     })()
-  }, [])
+    return () => controller.abort()
+  }, [cursor])
 
   return (
     <div className="mx-auto max-w-[1200px] p-3 sm:p-6">
       <p className="text-sm text-muted">{msg} · Card numbers and payment keys stay with the payment provider. This screen shows the booking, amount, and status only.</p>
+      <div className="mt-3 flex items-center gap-3"><button disabled={loading || pages.length === 1} onClick={() => setPages(p => p.slice(0, -1))} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Previous</button><span className="text-sm text-muted">Page {pages.length}</span><button disabled={loading || !nextCursor} onClick={() => setPages(p => [...p, nextCursor])} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Next</button></div>
       <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-bg">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-line text-xs font-semibold text-muted">

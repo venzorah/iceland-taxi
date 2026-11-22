@@ -1,3 +1,4 @@
+import { traceCheckout, timed } from '@/lib/payments/timing'
 import { configuredAppUrl } from '@/lib/app-url'
 import {teyaCredentials} from '@/lib/env'
 import {paymentEnvironmentMatches} from '@/lib/payments/teya'
@@ -29,29 +30,29 @@ type CheckoutBooking = Prisma.BookingGetPayload<{ include: typeof include }>
 function checkoutView(b: CheckoutBooking) {
   return { ref: b.ref, listingId: b.listingId, adminPriceIsk: b.adminPriceIsk, vehicleId: b.vehicleId, vehicle: b.vehicle ? { name: b.vehicle.name, upgradeIsk: b.vehicle.upgradeIsk } : null, amountSnapshot: b.amountSnapshot, amountIskSnapshot: b.amountIskSnapshot, currency: b.currency, status: b.status, pickupAt: b.pickupAt, routeLabel: b.routeLabel }
 }
-export const POST = apiHandler(async (req: Request) => {
-  const parsed = schema.safeParse(await req.json().catch(() => null))
+const checkout = apiHandler(async (req: Request) => {
+  const parsed = await timed('validation_auth', async () => schema.safeParse(await req.json().catch(() => null)))
   if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Enter your contact details, vehicle, pickup address and future Iceland pickup time.', { issues: parsed.error.flatten() })
   const input = parsed.data
-  const user = await getCurrentUser()
-  let booking = input.bookingRef ? await prisma.booking.findUnique({ where: { ref: input.bookingRef }, include }) : null
-  if (input.bookingRef && (!booking || !await canAccessBooking(booking, user))) return jsonError(404, 'NOT_FOUND', 'Booking not found.')
+  const user = await timed('validation_auth', () => getCurrentUser())
+  let booking = input.bookingRef ? await timed('booking_read', () => prisma.booking.findUnique({ where: { ref: input.bookingRef }, include })) : null
+  if (input.bookingRef && (!booking || !await timed('validation_auth', () => canAccessBooking(booking!, user)))) return jsonError(404, 'NOT_FOUND', 'Booking not found.')
   if (input.create) {
     if (user?.role !== 'CUSTOMER' && (process.env.BOOKING_ACCESS_SECRET?.length || 0) < 32) return jsonError(503, 'BOOKING_ACCESS_NOT_CONFIGURED', 'Guest checkout is temporarily unavailable.')
     const c = { ...input.create, guestEmail: user?.role === 'CUSTOMER' ? user.email : input.create.guestEmail.toLowerCase() }
     const customerId = user?.role === 'CUSTOMER' ? user.id : undefined
     const requestKey = input.requestKey || randomUUID()
     const requestHash = createHash('sha256').update(JSON.stringify({ ...c, customerId })).digest('hex')
-    booking = await prisma.booking.findUnique({ where: { requestKey }, include })
+    booking = await timed('booking_read', () => prisma.booking.findUnique({ where: { requestKey }, include }))
     if (booking && (booking.requestHash !== requestHash || (booking.customerId && !ownsBooking(user, booking)))) return jsonError(409, 'REQUEST_CHANGED', 'This checkout request already represents a different booking. Open your saved trip or start a new checkout.')
     if (!booking) {
       try {
-        const created = await createBooking({ ...c, customerId, requestKey, requestHash, serviceLabel: '', routeLabel: '', quote: { baseIsk: 0, customerCategory: c.customerCategory, currency: c.currency }, awaitPaymentWithoutGateway: true })
+        const created = await timed('booking_create', () => createBooking({ ...c, customerId, requestKey, requestHash, serviceLabel: '', routeLabel: '', quote: { baseIsk: 0, customerCategory: c.customerCategory, currency: c.currency }, awaitPaymentWithoutGateway: true }))
         if (!created.ok) return jsonError(409, created.code, created.message)
-        booking = await prisma.booking.findUnique({ where: { id: created.booking.id }, include })
+        booking = await timed('booking_read', () => prisma.booking.findUnique({ where: { id: created.booking.id }, include }))
       } catch (error) {
         if ((error as { code?: string }).code !== 'P2002') throw error
-        booking = await prisma.booking.findUnique({ where: { requestKey }, include })
+        booking = await timed('booking_read', () => prisma.booking.findUnique({ where: { requestKey }, include }))
         if (!booking || booking.requestHash !== requestHash || (booking.customerId && !ownsBooking(user, booking))) return jsonError(409, 'REQUEST_CONFLICT', 'Checkout changed. Please refresh your saved trip.')
       }
     }
@@ -63,38 +64,41 @@ export const POST = apiHandler(async (req: Request) => {
   if (booking.payments.some(p => ['CAPTURED', 'AUTHORIZED', 'REFUNDED'].includes(p.status))) return jsonError(409, 'PAYMENT_ALREADY_RECORDED', 'Payment is already recorded or being processed. Refresh your trip.', { bookingRef: ref })
   const provider = getPaymentProvider()
   if (!provider.isConfigured()) return jsonError(503, 'PAYMENT_NOT_CONFIGURED', 'Your booking is saved and remains unpaid. Online payment is not available yet.', { bookingRef: ref, paid: false })
-  await prisma.payment.updateMany({ where: { checkoutLeaseKey: booking.id, status: { notIn: ['PENDING', 'AUTHORIZED'] } }, data: { checkoutLeaseKey: null } })
+  await timed('payment_write', () => prisma.payment.updateMany({ where: { checkoutLeaseKey: booking.id, status: { notIn: ['PENDING', 'AUTHORIZED'] } }, data: { checkoutLeaseKey: null } }))
   let payment = booking.payments.find(p => p.status === 'PENDING')
   if (payment && (payment.providerRef || payment.checkoutUrl) && !paymentEnvironmentMatches(payment.raw)) return jsonError(409, 'PAYMENT_ENVIRONMENT_MISMATCH', 'This checkout belongs to another payment environment. Contact support before starting another payment.', {bookingRef:ref})
   if (payment?.providerRef && payment.checkoutUrl && Date.now() - payment.createdAt.getTime() > 30 * 60000) {
     await syncTeyaPayment(ref)
-    payment = (await prisma.payment.findUnique({ where: { id: payment.id } })) || undefined
+    const pendingId = payment.id
+    payment = (await timed('payment_prepare', () => prisma.payment.findUnique({ where: { id: pendingId } }))) || undefined
     if (payment && payment.status !== 'PENDING') return jsonError(409, 'PAYMENT_UPDATED', 'The payment status changed. Refresh your trip before retrying.', { bookingRef: ref })
   }
   if (payment?.checkoutUrl && payment.providerRef) return jsonOk({ ok: true, booking: checkoutView(booking), checkoutUrl: payment.checkoutUrl, provider: provider.id, demo: false })
   let created = false
   if (!payment) {
     try {
-      payment = await prisma.payment.create({ data: { bookingId: booking.id, provider: provider.id, status: 'PENDING', currency: booking.currency, amount: booking.amountSnapshot, checkoutLeaseKey: booking.id, raw: {environment:teyaCredentials().environment} } }); created = true
+      payment = await timed('payment_write', () => prisma.payment.create({ data: { bookingId: booking.id, provider: provider.id, status: 'PENDING', currency: booking.currency, amount: booking.amountSnapshot, checkoutLeaseKey: booking.id, raw: {environment:teyaCredentials().environment} } })); created = true
     } catch (error) {
       if ((error as { code?: string }).code !== 'P2002') throw error
       return jsonError(409, 'CHECKOUT_STARTING', 'Checkout is starting. Wait a moment and retry your saved booking.', { bookingRef: ref })
     }
   }
   if (!created) {
-    const claimed = await prisma.payment.updateMany({ where: { id: payment.id, status: 'PENDING', updatedAt: payment.updatedAt, OR: [{ failureReason: { not: null } }, { updatedAt: { lt: new Date(Date.now() - 60000) } }] }, data: { updatedAt: new Date(), failureReason: null, checkoutLeaseKey: booking.id } })
+    const claimed = await timed('payment_write', () => prisma.payment.updateMany({ where: { id: payment.id, status: 'PENDING', updatedAt: payment.updatedAt, OR: [{ failureReason: { not: null } }, { updatedAt: { lt: new Date(Date.now() - 60000) } }] }, data: { updatedAt: new Date(), failureReason: null, checkoutLeaseKey: booking.id } }))
     if (!claimed.count) return jsonError(409, 'CHECKOUT_STARTING', 'Checkout is starting. Wait a moment and retry your saved booking.', { bookingRef: ref })
   }
-  await prisma.payment.update({where:{id:payment.id},data:{raw:{environment:teyaCredentials().environment}}})
+  await timed('payment_write', () => prisma.payment.update({where:{id:payment.id},data:{raw:{environment:teyaCredentials().environment}}}))
   const origin = configuredAppUrl() || new URL(req.url).origin
   const returnBase = `${origin}/api/payments/teya/return?ref=${encodeURIComponent(ref)}`
   const result = await provider.createCheckout({ bookingRef: ref, bookingId: booking.id, idempotencyKey: `itb-${payment.id}`, amount: booking.amountSnapshot, currency: booking.currency, description: `Iceland Taxi Booking · ${booking.serviceLabel}`, returnUrl: `${returnBase}&result=success`, cancelUrl: `${returnBase}&result=cancel`, failureUrl: `${returnBase}&result=failure`, customer: { name: booking.guestName || undefined, email: booking.customer?.email || booking.guestEmail || undefined, phone: booking.guestPhone || undefined } })
   if (!result.ok) {
-    await prisma.payment.update({ where: { id: payment.id }, data: { failureReason: result.message } })
+    await timed('payment_write', () => prisma.payment.update({ where: { id: payment.id }, data: { failureReason: result.message } }))
     return jsonError(502, result.code, 'Your booking is saved and remains unpaid. Payment could not start. Retry from your trip.', { bookingRef: ref, paid: false })
   }
-  await prisma.payment.update({ where: { id: payment.id }, data: { providerRef: result.providerRef, checkoutUrl: result.checkoutUrl, failureReason: null } })
-  const current = await prisma.booking.findUnique({ where: { id: booking.id }, select: { status: true } })
+  await timed('payment_write', () => prisma.payment.update({ where: { id: payment.id }, data: { providerRef: result.providerRef, checkoutUrl: result.checkoutUrl, failureReason: null } }))
+  const current = await timed('booking_read', () => prisma.booking.findUnique({ where: { id: booking.id }, select: { status: true } }))
   if (!current || !['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'].includes(current.status)) return jsonError(409, 'BOOKING_LOCKED', 'This booking changed and cannot continue checkout.', { bookingRef: ref })
   return jsonOk({ ok: true, booking: checkoutView(booking), checkoutUrl: result.checkoutUrl, provider: result.provider, demo: false })
 })
+
+export const POST = (req: Request) => traceCheckout(() => checkout(req))

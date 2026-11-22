@@ -2,8 +2,8 @@
 // (services, routes, prices, fleet, destinations, company settings).
 
 /** Official brand logos from Project media (also mirrored under /public/brand). */
-export const LOGO_LIGHT = '/brand/logo-dark-navy-text.png'
-export const LOGO_DARK = '/brand/logo-dark-white-text.png'
+export const LOGO_LIGHT = '/brand/logo-dark-navy-text.webp'
+export const LOGO_DARK = '/brand/logo-dark-white-text.webp'
 
 export const IMG = {
   hero: '/photos/hero.jpg',

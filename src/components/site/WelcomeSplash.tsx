@@ -41,7 +41,7 @@ export function WelcomeSplash() {
   return (
     <div id="itb-splash" className="itb-splash" role="status" aria-label="Welcome to">
       <p className="itb-splash-word">Welcome to</p>
-      <img className="itb-splash-logo" src="/brand/logo-splash-white.png" alt="Iceland Taxi Booking" />
+      <img className="itb-splash-logo" src="/brand/logo-splash-white.webp" alt="Iceland Taxi Booking" />
     </div>
   )
 }

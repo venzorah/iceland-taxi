@@ -1,4 +1,5 @@
 'use client'
+import { ResponsivePhoto } from '@/components/site/ResponsivePhoto'
 
 import React from 'react'
 import { ArrowRight, Clock, Luggage, MessageCircle, Plane, Users } from 'lucide-react'
@@ -79,7 +80,7 @@ export default function Homepage(props: Props) {
         <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
           <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
             <div className="relative hidden overflow-hidden rounded-2xl sm:block">
-              <img src={images.airport} alt="Chauffeur loading luggage outside Keflavík Airport" className="aspect-[4/3] w-full object-cover" />
+              <ResponsivePhoto src={images.airport} alt="Chauffeur loading luggage outside Keflavík Airport" className="aspect-[4/3] w-full object-cover" />
             </div>
             <div>
               <p className="flex items-center gap-2 text-sm font-semibold text-mint-text"><Plane size={16} /> {text('home.airport.kicker')}</p>
@@ -126,7 +127,7 @@ export default function Homepage(props: Props) {
               {tours.map((tour) => (
                 <article key={tour.id} className="group flex w-[min(82%,20rem)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card sm:w-[60%] md:w-auto md:shrink">
                   <div className="overflow-hidden">
-                    <img src={tour.imageUrl || images.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
+                    <ResponsivePhoto src={tour.imageUrl || images.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                   </div>
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
                     <h3 className="font-display text-lg font-bold text-heading sm:text-xl">{tour.title}</h3>
@@ -171,7 +172,7 @@ export default function Homepage(props: Props) {
                 <button onClick={() => onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</button>
               </div>
             </div>
-            <img src={images.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />
+            <ResponsivePhoto src={images.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />
           </div>
         </section>
 
@@ -182,7 +183,7 @@ export default function Homepage(props: Props) {
           <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:mt-10 sm:auto-rows-[220px] sm:gap-3 lg:grid-cols-4">
             {DESTINATIONS.map((d, i) => (
               <a key={d.name} href="/destinations" className={`group relative overflow-hidden rounded-2xl ${i === 0 ? 'col-span-2 row-span-2' : ''} ${i === 4 ? 'col-span-2' : ''}`}>
-                <img src={d.img} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
+                <ResponsivePhoto src={d.img} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                 <div className="absolute inset-x-0 bottom-0 bg-navy/70 px-4 py-3 backdrop-blur-sm">
                   <p className="font-display text-base font-bold text-white sm:text-lg">{d.name}</p>
                   <p className="text-xs text-white/80">{d.note}</p>
@@ -199,7 +200,7 @@ export default function Homepage(props: Props) {
               <div>
                 <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Our fleet</h2>
                 <p className="mt-3 text-base text-muted">Choose the vehicle that fits your group and luggage. Capacities are per vehicle. <a href="/fleet" className="font-semibold text-link hover:underline">Full fleet page</a></p>
-                <img src={images.fleet} alt="Sedan, SUV and minivan parked in Reykjavík" className="mt-8 hidden aspect-[16/10] w-full rounded-2xl object-cover sm:block" />
+                <ResponsivePhoto src={images.fleet} alt="Sedan, SUV and minivan parked in Reykjavík" className="mt-8 hidden aspect-[16/10] w-full rounded-2xl object-cover sm:block" />
               </div>
               <div className="min-w-0 overflow-hidden rounded-2xl border border-line bg-card">
                 <ul className="divide-y divide-line sm:hidden">
@@ -310,7 +311,7 @@ export default function Homepage(props: Props) {
 
         {/* CTA */}
         <section className="relative isolate overflow-hidden">
-          <img src={images.northernLights} alt="Northern lights above snowy mountains" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+          <ResponsivePhoto src={images.northernLights} alt="Northern lights above snowy mountains" className="absolute inset-0 -z-10 h-full w-full object-cover" />
           <div className="absolute inset-0 -z-10 bg-navy/60" />
           <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-16 text-center sm:px-6 sm:py-24 lg:px-8 lg:py-32">
             <h2 className="font-display text-3xl font-extrabold text-white sm:text-5xl">Your Journey Across Iceland Starts Here.</h2>

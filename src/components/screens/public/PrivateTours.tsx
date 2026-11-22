@@ -1,4 +1,5 @@
 'use client'
+import { ResponsivePhoto } from '@/components/site/ResponsivePhoto'
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
@@ -61,7 +62,7 @@ export default function PrivateTours(props: Props) {
     >
       <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
       <section className="relative overflow-hidden bg-navy text-white">
-        <img src={images.goldenCircle} alt="Golden Circle private tour landscape" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+        <ResponsivePhoto src={images.goldenCircle} alt="Golden Circle private tour landscape" className="absolute inset-0 h-full w-full object-cover opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">{content['tours.hero.title']}</h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">{content['tours.hero.body']}</p>

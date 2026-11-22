@@ -1,3 +1,4 @@
+import { deliverBounded } from './bounded-delivery'
 import { BookingStatus, type Role } from '@prisma/client'
 import { STAFF_ROLES } from '@/lib/admin/content'
 import { prisma } from '@/lib/api'
@@ -74,12 +75,12 @@ async function deliver(input: {
   text: string
   bookingId?: string | null
   bookingRef?: string | null
-}) {
+}, context?: Awaited<ReturnType<typeof companyContext>>) {
   const to = deliverable(input.to)
   if (!to) return
   const existing = await prisma.emailNotice.findUnique({ where: { dedupeKey: input.dedupeKey } })
   if (existing?.status === 'sent') return
-  const company = await companyContext()
+  const company = context || await companyContext()
   const email = styledEmail({ title: input.subject, companyName: company.name, paragraphs: input.text.split('\n\n') })
   const result = await sendMail({
     to,
@@ -129,21 +130,12 @@ async function sendToParties(booking: LoadedBooking, kind: string, subject: stri
   ]
   const admins = await adminEmails()
   for (const admin of admins) targets.push({ role: 'admin', email: admin })
-  const seen = new Set<string>()
-  for (const target of targets) {
-    const email = deliverable(target.email)
-    if (!email || seen.has(email)) continue
-    seen.add(email)
-    await deliver({
-      dedupeKey: `${booking.id}:${kind}:${email}`,
-      kind,
-      to: email,
-      subject,
-      text,
-      bookingId: booking.id,
-      bookingRef: booking.ref,
-    })
-  }
+  const recipients = [...new Set(targets.map(target => deliverable(target.email)).filter((email): email is string => !!email))]
+  const company = await companyContext()
+  await deliverBounded(recipients, email => deliver({
+    dedupeKey: `${booking.id}:${kind}:${email}`,
+    kind, to: email, subject, text, bookingId: booking.id, bookingRef: booking.ref,
+  }, company))
 }
 
 export async function notifyBookingCreated(bookingId: string) {

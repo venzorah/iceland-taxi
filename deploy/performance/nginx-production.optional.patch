@@ -1,0 +1,44 @@
+--- /etc/nginx/sites-available/iceland-taxi-production
++++ /etc/nginx/sites-available/iceland-taxi-production
+@@ -14,7 +14,7 @@
+ }
+ 
+ server {
+-    listen 443 ssl;
++    listen 443 ssl http2;
+     server_name www.icelandtaxibooking.is;
+ 
+     ssl_certificate /etc/letsencrypt/live/icelandtaxibooking.is/fullchain.pem;
+@@ -25,7 +25,7 @@
+ }
+ 
+ server {
+-    listen 443 ssl;
++    listen 443 ssl http2;
+     server_name icelandtaxibooking.is;
+ 
+     ssl_certificate /etc/letsencrypt/live/icelandtaxibooking.is/fullchain.pem;
+@@ -48,6 +48,23 @@
+         proxy_read_timeout 60s;
+     }
+ 
++    # Next.js build-fingerprinted assets only. No disk/proxy cache.
++    location ^~ /_next/static/ {
++        proxy_pass http://127.0.0.1:3002;
++        proxy_http_version 1.1;
++        proxy_set_header Host $host;
++        proxy_set_header X-Real-IP $remote_addr;
++        proxy_set_header X-Forwarded-For $remote_addr;
++        proxy_set_header X-Forwarded-Proto $scheme;
++        proxy_set_header Authorization "";
++        proxy_set_header Connection "";
++        proxy_buffering on;
++        proxy_cache off;
++        proxy_read_timeout 60s;
++        # Preserve Next.js status-specific Cache-Control and the inherited X-Robots-Tag.
++        # Successful fingerprinted assets are immutable; errors retain no-store.
++    }
++
+     location / {
+         proxy_pass http://127.0.0.1:3002;
+         proxy_http_version 1.1;

@@ -1,0 +1,16 @@
+{
+  "conditions": "Loopback production build, all API responses mocked; checkout response deliberately waits200ms; checkout.example fulfilled locally, no outbound payment/email",
+  "reports": [
+    {
+      "stage": "pay-request",
+      "retained": true,
+      "stableKey": true
+    },
+    {
+      "stage": "pay-to-redirect",
+      "ms": 201.5
+    }
+  ],
+  "observedClickToNavigationMs": 256,
+  "duplicatePosts": 1
+}

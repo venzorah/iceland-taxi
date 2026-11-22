@@ -57,7 +57,7 @@
   "overrides": {
     "@prisma/config": {
       "deepmerge-ts": "8.0.2",
-      "effect": "^3.20.0"
+      "effect": "3.22.5"
     },
     "postcss": "$postcss",
     "eslint-config-next": {

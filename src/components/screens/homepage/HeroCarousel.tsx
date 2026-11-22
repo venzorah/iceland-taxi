@@ -1,5 +1,6 @@
 'use client'
 
+import { ResponsivePhoto } from '@/components/site/ResponsivePhoto'
 import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, MessageCircle, Pause, Play } from 'lucide-react'
@@ -15,6 +16,8 @@ const EASE = [0.23, 1, 0.32, 1] as const
 export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang; autoplay: boolean; onSearch?: (p: SearchPayload) => void }) {
   const reduce = useReducedMotion()
   const [index, setIndex] = useState(0)
+  const [visited, setVisited] = useState([0])
+  useEffect(() => { setVisited(previous => previous.includes(index) ? previous : [...previous, index]) }, [index])
   const [paused, setPaused] = useState(!autoplay)
   const [hovered, setHovered] = useState(false)
   const touchX = useRef<number | null>(null)
@@ -96,11 +99,15 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
         if (Math.abs(dx) > 45) (dx < 0 ? next : prev)()
       }}
     >
-      {/* Images: crossfade, all preloaded */}
-      {slides.map((s, i) => (
-        <img
+      {/* Only current/visited slides load; never preload all five photos. */}
+      {slides.map((s, i) => (i === index || visited.includes(i)) && (
+        <ResponsivePhoto
           key={s.img}
           src={s.img}
+          priority={i === index}
+          sizes="100vw"
+          width={1920}
+          height={1080}
           alt={i === index ? s.alt : ''}
           aria-hidden={i !== index}
           className={`absolute inset-0 -z-10 h-full w-full object-cover transition-opacity duration-300 ease-out ${i === index ? 'opacity-100' : 'opacity-0'}`}

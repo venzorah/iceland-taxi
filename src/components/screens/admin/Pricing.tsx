@@ -57,6 +57,9 @@ export function Pricing() {
       setMsg(rateData.message || 'Could not save rate')
       return
     }
+    window.dispatchEvent(new Event('itb-catalogue-updated'))
+    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('itb-catalogue') : null
+    channel?.postMessage('changed'); channel?.close()
     const usedKeys = new Set(extras.filter((extra) => !extra.isNew).map((extra) => extra.key))
     for (const extra of extras) {
       const labelEn = extra.labelEn.trim()

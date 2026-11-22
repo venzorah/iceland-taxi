@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, CalendarDays, Eye, EyeOff, ShieldCheck, Route } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Eye, EyeOff, ShieldCheck, Route, MailCheck } from 'lucide-react'
 import { loginDestination } from '@/lib/auth/login-destination'
 import { authClient } from '@/lib/auth/client'
 import { endSession } from '@/lib/auth/sign-out'
@@ -24,6 +24,15 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const requestedMode = initialMode || search.get('mode') || 'login'
   const [mode, setMode] = useState<Mode>(allowedModes.includes(requestedMode) ? requestedMode as Mode : 'login')
   const showAccountSwitch = differentPortal && (mode === 'login' || mode === 'register')
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null)
+  const [resendCoolingDown, setResendCoolingDown] = useState(false)
+  const verificationHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { if (verificationEmail) verificationHeading.current?.focus() }, [verificationEmail])
+  useEffect(() => {
+    if (!resendCoolingDown) return
+    const timer = setTimeout(() => setResendCoolingDown(false), 30000)
+    return () => clearTimeout(timer)
+  }, [resendCoolingDown])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -58,7 +67,7 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
           callbackURL: confirmationPath })
         if (error) throw new Error(error.message || 'Please try again.')
         if (data.token) await goToPortal()
-        else setMessage('Check your email to confirm your account, then sign in.')
+        else { setVerificationEmail(email.trim()); setPassword(''); setShowPassword(false); setMessage('') }
       } else if (mode === 'reset') {
         const { error } = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: `${loginPath}?mode=update` })
         if (error) throw new Error(error.message || 'Please try again.')
@@ -82,15 +91,35 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
     image: '/photos/golden-circle.jpg', alt: 'The scenic Golden Circle in Iceland', badge: 'Explore Iceland', title: 'Your Icelandic journey awaits.', body: 'From airport arrivals to unforgettable private tours, keep your travel plans together in one place.', first: 'Your bookings', second: 'Private journeys', footer: 'Travel with Iceland Taxi Booking',
   }
   const formContent = <div className="w-full px-6 py-8 text-slate-900 sm:px-10 sm:py-12 lg:px-14">
-      <Link href="/" aria-label="Iceland Taxi home" className="block w-fit rounded-xl bg-white p-3"><Image src="/brand/logo-dark-navy-text.png" alt="Iceland Taxi Booking" width={180} height={90} className="h-20 w-auto object-contain" priority /></Link>
+      <Link href="/" aria-label="Iceland Taxi home" className="block w-fit rounded-xl bg-white p-3"><Image src="/brand/logo-dark-navy-text.webp" alt="Iceland Taxi Booking" width={180} height={90} className="h-20 w-auto object-contain" priority /></Link>
       <p className="mt-6 text-xs font-bold uppercase tracking-widest text-muted">{adminIntent ? 'Administration' : driverIntent ? 'Driver portal' : 'Customer account'}</p>
-      <h1 className="mt-6 text-3xl font-bold">{mode === 'login' ? (adminIntent ? 'Welcome back' : driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
-      <p className="mt-2 text-sm text-muted">{adminIntent ? 'Sign in to manage bookings, your driving team and the journeys ahead.' : driverIntent ? 'Use the email address and password sent by operations. Driver accounts are created by an administrator.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
+      <h1 ref={verificationHeading} tabIndex={-1} className="mt-6 text-3xl font-bold outline-none">{verificationEmail ? 'Check your email' : mode === 'login' ? (adminIntent ? 'Welcome back' : driverIntent ? 'Driver sign in' : 'Welcome back') : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Set a new password'}</h1>
+      <p className="mt-2 text-sm text-muted">{verificationEmail ? 'Confirm your email address to finish setting up your customer account.' : adminIntent ? 'Sign in to manage bookings, your driving team and the journeys ahead.' : driverIntent ? 'Use the email address and password sent by operations. Driver accounts are created by an administrator.' : mode === 'register' ? 'Create a customer account to manage your bookings.' : 'Sign in to book a ride, view your trips and message our team.'}</p>
       {showAccountSwitch && <div role="status" className="mt-6 space-y-3 rounded-xl border border-line bg-bg p-4 text-sm">
         <p>You are signed in as {activeUser.name || activeUser.email} ({activeAccount.roleLabel}). Sign out below to use a different account.</p>
         <Link href={activeAccount.href} className="inline-block font-semibold text-heading underline">Continue to {activeAccount.label.toLowerCase()}</Link>
       </div>}
-      {!showAccountSwitch && <><form onSubmit={submit} className="mt-6 space-y-4">
+      {verificationEmail && <div className="mt-6 space-y-5">
+        <div className="rounded-2xl border border-line bg-slate-50 p-5">
+          <MailCheck aria-hidden="true" size={32} className="mb-4 text-heading" />
+          <p className="text-sm leading-relaxed">Check <strong className="break-all">{verificationEmail}</strong> for your confirmation link. Open it to verify your account, then sign in.</p>
+          <p className="mt-3 text-sm text-muted">If you don’t see it, check your spam or junk folder. Delivery may take a few minutes.</p>
+        </div>
+        {message && <p role="status" className="text-sm">{message}</p>}
+        <Link href={loginPath} className="block w-full rounded-xl bg-primary px-4 py-3 text-center font-bold text-on-primary">Go to sign in</Link>
+        <button type="button" disabled={busy || resendCoolingDown} className="w-full rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60" onClick={async () => {
+          if (busy || resendCoolingDown) return
+          setBusy(true); setMessage('')
+          try {
+            const result = await authClient.sendVerificationEmail({ email: verificationEmail, callbackURL: confirmationPath })
+            if (result.error) throw new Error('Delivery could not be requested.')
+            setMessage('If confirmation is still needed, a new link will arrive in your inbox.'); setResendCoolingDown(true)
+          } catch { setMessage('Could not request another confirmation email. Please try again shortly.') }
+          finally { setBusy(false) }
+        }}>{busy ? 'Requesting email…' : resendCoolingDown ? 'Resend available shortly' : 'Resend confirmation email'}</button>
+        <button type="button" disabled={busy} className="text-sm font-semibold underline underline-offset-4 disabled:opacity-60" onClick={() => { setVerificationEmail(null); setEmail(''); changeMode('register') }}>Use a different email</button>
+      </div>}
+      {!showAccountSwitch && !verificationEmail && <><form onSubmit={submit} className="mt-6 space-y-4">
         {mode === 'register' && <label className="block">Name<input className={`${input} mt-2`} required value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" autoComplete="name" maxLength={100} /></label>}
         {mode !== 'update' && <label className="block">Email<input className={`${input} mt-2`} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></label>}
         {mode !== 'reset' && <div>

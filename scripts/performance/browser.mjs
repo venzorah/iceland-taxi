@@ -1,0 +1,31 @@
+// Local fixture-only production browser benchmark. Never points at a live origin.
+import { writeFile } from 'node:fs/promises'
+const origin = 'http://127.0.0.1:3118', debug = 'http://127.0.0.1:9250'
+const output = process.argv[2] || '/tmp/iceland-performance.json'
+for (const page of await (await fetch(debug+'/json/list')).json()) if (page.url.startsWith(origin)) await fetch(debug+'/json/close/'+page.id)
+const fixture = { id:'fixture-route', kind:'route', category:'airport',serviceId:'fixture-service',routeId:'fixture-route',title:'Airport transfer',fromLabel:'KEF',toLabel:'Reykjavík',fromIsk:22900,iskPerEur:150,minutes:45,km:49,hoursLabel:'45 min',paxLabel:null,blurb:null,imageUrl:null }
+const data = path => path==='/api/listings'?{ok:true,listings:[fixture]}:path==='/api/auth/get-session'?null:path==='/api/auth/session'?{user:null}:path==='/api/public/site'?{ok:true,blocks:{}}:path==='/api/company'?{company:{}}:path==='/api/announcements'?{announcements:{settings:{enabled:true,speed:'normal',style:'navy',pauseOnHover:true},items:[]}}:{ok:true}
+const keepAlive=setInterval(()=>{},1000)
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)), results=[]
+for (const mobile of [false,true]) for (const path of ['/','/search?category=airport&pickup=KEF&destination=Reykjav%C3%ADk&date=2027-01-02&time=12%3A30&passengers=3&luggage=2']) for(let repeat=0;repeat<3;repeat++) {
+ if(process.argv[3] && process.argv[3] !== `${mobile?'mobile':'desktop'}-${path==='/'?'home':'search'}`)continue
+ const target=await(await fetch(debug+'/json/new?about:blank',{method:'PUT'})).json(),ws=new WebSocket(target.webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r)
+ let next=0;const pending=new Map(), requests=new Map();let errors=0
+ const call=(method,params={})=>new Promise((resolve,reject)=>{const id=++next;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}))})
+ ws.onmessage=async event=>{try { const m=JSON.parse(event.data);if(m.id){const p=pending.get(m.id);pending.delete(m.id);if(p)m.error?p.reject(m.error):p.resolve(m.result);return}if(m.method==='Runtime.exceptionThrown'||(m.method==='Runtime.consoleAPICalled'&&m.params.type==='error'))errors++
+ if(m.method==='Network.requestWillBeSent'){const u=new URL(m.params.request.url);requests.set(m.params.requestId,{path:u.pathname,type:m.params.type,bytes:0})}
+ if(m.method==='Network.loadingFinished'){const r=requests.get(m.params.requestId);if(r)r.bytes=m.params.encodedDataLength}
+ if(m.method==='Fetch.requestPaused'){const p=m.params,u=new URL(p.request.url);if(u.origin!==origin){await call('Fetch.failRequest',{requestId:p.requestId,errorReason:'BlockedByClient'});return}if(u.pathname.startsWith('/api/')){await sleep(50);await call('Fetch.fulfillRequest',{requestId:p.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'application/json'},{name:'Cache-Control',value:'no-store'}],body:Buffer.from(JSON.stringify(data(u.pathname))).toString('base64')})}else await call('Fetch.continueRequest',{requestId:p.requestId})}} catch(error) { if (!String(error.message || '').includes('Invalid InterceptionId') && error.code !== -32602) errors++ } }
+ const js=async expression=>(await call('Runtime.evaluate',{expression,returnByValue:true})).result.value
+ await call('Page.enable');await call('Runtime.enable');await call('Network.enable');await call('Fetch.enable',{patterns:[{urlPattern:'*'}]});if(repeat===0)await call('Network.clearBrowserCache')
+ await call('Emulation.setDeviceMetricsOverride',{width:mobile?390:1440,height:mobile?844:1000,deviceScaleFactor:1,mobile});await call('Emulation.setCPUThrottlingRate',{rate:mobile?4:1});await call('Network.emulateNetworkConditions',{offline:false,latency:mobile?150:0,downloadThroughput:mobile?200000:-1,uploadThroughput:mobile?93750:-1})
+ await call('Page.addScriptToEvaluateOnNewDocument',{source:`window.__perf={lcp:0,cls:0,events:[]};try{new PerformanceObserver(l=>{for(const e of l.getEntries())window.__perf.lcp=e.startTime}).observe({type:'largest-contentful-paint',buffered:true});new PerformanceObserver(l=>{for(const e of l.getEntries())if(!e.hadRecentInput)window.__perf.cls+=e.value}).observe({type:'layout-shift',buffered:true});new PerformanceObserver(l=>{for(const e of l.getEntries())window.__perf.events.push(e.duration)}).observe({type:'event',durationThreshold:16,buffered:true})}catch{}`})
+ await call('Page.navigate',{url:origin+path});for(let i=0;i<450;i++){if(await js(`document.readyState==='complete' && document.querySelector('select')?.options.length>1`))break;await sleep(100)}await sleep(1800)
+ const perf=await js('window.__perf'), rows=[...requests.values()];const sum=type=>rows.filter(r=>!type||r.type===type).reduce((s,r)=>s+r.bytes,0)
+ let journeyVerified=null
+ if(path.startsWith('/search'))journeyVerified=await js(`(()=>{const a=[...document.querySelectorAll('a')].find(a=>a.textContent.includes('Book journey'));if(!a)return false;const p=new URL(a.href).searchParams;return p.get('listing')==='fixture-route'&&p.get('date')==='2027-01-02'&&p.get('time')==='12:30'&&p.get('passengers')==='3'&&p.get('luggage')==='2'})()`)
+ const result={mobile,path:path.split('?')[0],cache:repeat===0?'cold':'warm',repeat,...perf,requests:rows.length,bytes:sum(),jsBytes:sum('Script'),imageBytes:sum('Image'),catalogueRequests:rows.filter(r=>r.path==='/api/listings').length,apiRequests:rows.filter(r=>r.path.startsWith('/api/')).map(r=>r.path),errors,journeyVerified,ready:await js(`document.querySelector('select')?.options.length>1`),fixtureFailure:journeyVerified===false?await js('document.body.innerText.slice(-1800)'):undefined};results.push(result);await writeFile(output,JSON.stringify({results},null,2));console.log(JSON.stringify(result))
+ ws.close();await fetch(debug+'/json/close/'+target.id)
+}
+clearInterval(keepAlive)
+await writeFile(output,JSON.stringify({conditions:{origin,api:'CDP fixture responses, fixed 50ms wait; no database/provider requests',mobile:'390x844, CPU 4x, latency150ms, download1.6Mbps/upload750kbps',desktop:'1440x1000, CPU1x, unthrottled',external:'blocked (including remote fonts)',sample:'3 per route/profile; first cold, two warm; 1.8s post-load observation, no genuine INP sample'},results},null,2))

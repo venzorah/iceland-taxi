@@ -20,6 +20,7 @@ export function BookingPageClient() {
   const params = useSearchParams()
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
   const { user } = useSiteSession()
+  const payPending = useRef(false)
   const requestKey = useRef('')
   const requestBody = useRef('')
   const [savedRef, setSavedRef] = useState('')
@@ -194,6 +195,9 @@ export function BookingPageClient() {
       return
     }
     if (!pickupAt || new Date(pickupAt) <= new Date()) { setError('Choose a future pickup date and time in Iceland.'); return }
+    if (payPending.current) return
+    payPending.current = true
+    const payStart = performance.now()
     const fingerprint = JSON.stringify({ payload, pickupAt, passengers, luggage, listingId: listing.id })
     if (requestBody.current !== fingerprint) { requestBody.current = fingerprint; requestKey.current = crypto.randomUUID() }
     setPayState('paying')
@@ -250,6 +254,7 @@ export function BookingPageClient() {
         return
       }
       if (data.checkoutUrl && data.demo !== true) {
+        performance.measure('itb.pay-to-redirect', { start: payStart, end: performance.now() })
         window.location.href = data.checkoutUrl
         return
       }
@@ -259,10 +264,10 @@ export function BookingPageClient() {
         return
       }
     } catch (e) {
-      console.error(e)
+      void e // Never log customer-bearing transport exceptions.
       setPayState('default')
       setError('Could not confirm checkout. Retry the same details or check your trips before starting another booking.')
-    }
+    } finally { payPending.current = false }
   }
 
   const sendEnquiry = async (payload: EnquiryPayload) => {
@@ -297,13 +302,17 @@ export function BookingPageClient() {
   const showPicker = !listingsError && listings !== null && !listing && !showEnquiry
 
   async function retryPayment() {
+    if (payPending.current) return
+    payPending.current = true
+    const payStart = performance.now()
     setPayState('paying'); setError(null)
     try {
       const response = await fetch('/api/payments/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingRef: savedRef }) })
       const data = await response.json()
       if (!response.ok || !data.checkoutUrl) throw new Error(data.message || 'Payment could not start.')
+      performance.measure('itb.pay-to-redirect', { start: payStart, end: performance.now() })
       window.location.assign(data.checkoutUrl)
-    } catch (error) { setError(error instanceof Error ? error.message : 'Payment could not start.'); setPayState('default') }
+    } catch (error) { setError(error instanceof Error ? error.message : 'Payment could not start.'); setPayState('default') } finally { payPending.current = false }
   }
   if (savedRef || (payState === 'confirmed' && confirmation)) {
     const ref = confirmation?.ref || savedRef

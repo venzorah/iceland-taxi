@@ -1,20 +1,29 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
-import type { PublishedListing } from '@/lib/booking/listings'
+import { useEffect, useSyncExternalStore } from 'react'
 import { fetchPublishedListings } from '@/lib/booking/fetch-listings'
-
-/** A catalogue outage must not replace the entire public page with an error boundary. */
+import { createCatalogueStore, type CatalogueState } from '@/lib/booking/catalogue-store'
+const store = createCatalogueStore(() => fetchPublishedListings(AbortSignal.timeout(15000)))
+const serverSnapshot: CatalogueState = { listings: null, error: '' }
+let users = 0, connected = false, interval: ReturnType<typeof setInterval> | undefined
+function connect() {
+  // One set of listeners for this browser window, retained through client navigation.
+  // A publication edit must invalidate cached data even while no catalogue screen is mounted.
+  if (!connected) {
+    connected = true
+    const refresh = () => { if (users && !document.hidden) void store.refresh() }
+    const invalidate = () => { void store.invalidate() }
+    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('itb-catalogue') : null
+    if (channel) channel.onmessage = invalidate
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('itb-catalogue-updated', invalidate)
+  }
+  if (++users === 1) interval = setInterval(() => { if (!document.hidden) void store.refresh() }, 30000)
+  return () => { if (--users === 0) clearInterval(interval) }
+}
+/** Quotes/availability remain uncached and authoritative. Public selections revalidate after 15s. */
 export function usePublishedListings() {
-  const [listings, setListings] = useState<PublishedListing[] | null>(null)
-  const [error, setError] = useState('')
-  const [attempt, setAttempt] = useState(0)
-  const retry = useCallback(() => { setListings(null); setError(''); setAttempt(value => value + 1) }, [])
-  useEffect(() => {
-    const controller = new AbortController()
-    fetchPublishedListings(AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]))
-      .then(data => { if (!controller.signal.aborted) { setListings(data); setError('') } })
-      .catch(() => { if (!controller.signal.aborted) { setListings([]); setError('Published prices are temporarily unavailable. Please retry, or contact our team about your journey.') } })
-    return () => controller.abort()
-  }, [attempt])
-  return { listings, error, retry }
+  const state = useSyncExternalStore(store.subscribe, store.getSnapshot, () => serverSnapshot)
+  useEffect(() => { const disconnect = connect(); void store.refresh(); return disconnect }, [])
+  return { ...state, retry: () => { void store.invalidate() } }
 }

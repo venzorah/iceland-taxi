@@ -4,12 +4,15 @@ import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { driverConversationAccess } from '@/lib/driver/access'
 import { pushMessageAlert } from '@/lib/push/send'
 type Ctx = { params: Promise<{ ref: string }> }
-export const GET = apiHandler(async (_req: Request, ctx: Ctx) => {
+export const GET = apiHandler(async (req: Request, ctx: Ctx) => {
   const { ref } = await ctx.params
   const access = await driverConversationAccess(ref)
   if (!access) return jsonError(404, 'NOT_FOUND', 'Assigned conversation not found.')
-  const messages = await prisma.message.findMany({ where: { bookingId: access.booking.id, channel: 'driver_ops' }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], include: { author: { select: { name: true } } } })
-  return jsonOk({ ok: true, messages: messages.map(m => ({ id: m.id, body: m.body, authorRole: m.authorRole, authorName: m.author?.name || (m.authorRole === 'driver' ? 'Driver' : 'Operations'), time: m.createdAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Reykjavik' }) })) }, { headers: { 'Cache-Control': 'private, no-store' } })
+  const before = new URL(req.url).searchParams.get('before')
+  if (before && !/^[a-zA-Z0-9_-]{1,128}$/.test(before)) return jsonError(400, 'VALIDATION_ERROR', 'Invalid page.')
+  const page = await prisma.message.findMany({ where: { bookingId: access.booking.id, channel: 'driver_ops' }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 101, ...(before ? { cursor: { id: before }, skip: 1 } : {}), include: { author: { select: { name: true } } } })
+  const messages = page.slice(0, 100).reverse()
+  return jsonOk({ ok: true, nextCursor: page.length > 100 ? page[99].id : null, messages: messages.map(m => ({ id: m.id, body: m.body, authorRole: m.authorRole, authorName: m.author?.name || (m.authorRole === 'driver' ? 'Driver' : 'Operations'), time: m.createdAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Reykjavik' }) })) }, { headers: { 'Cache-Control': 'private, no-store' } })
 })
 export const POST = apiHandler(async (req: Request, ctx: Ctx) => {
   const { ref } = await ctx.params

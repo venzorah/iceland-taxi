@@ -10,6 +10,11 @@ export async function adminRequest<T = Record<string, unknown>>(url: string, ini
   const response = await fetch(url, { cache: 'no-store', ...init })
   const data = await response.json().catch(() => null)
   if (!response.ok || !data?.ok) throw new Error(data?.message || 'Could not complete this action. Please try again.')
+  if ((init?.method || 'GET').toUpperCase() !== 'GET' && /^\/api\/admin\/(services|routes|pricing|catalogue)(\/|$)/.test(url)) {
+    window.dispatchEvent(new Event('itb-catalogue-updated'))
+    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('itb-catalogue') : null
+    channel?.postMessage('changed'); channel?.close()
+  }
   return data as T
 }
 

@@ -90,13 +90,15 @@ export async function listStaffInbox() {
   }))
 }
 
-export async function getThreadMessages(bookingRef: string) {
+export async function getThreadMessages(bookingRef: string, before?: string | null) {
   const booking = await prisma.booking.findUnique({
     where: { ref: bookingRef },
     include: {
       messages: {
         where: { channel: { not: 'driver_ops' } },
-        orderBy: { createdAt: 'asc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 101,
+        ...(before ? { cursor: { id: before }, skip: 1 } : {}),
         include: { author: { select: { name: true, email: true, role: true } } },
       },
     },
@@ -104,7 +106,8 @@ export async function getThreadMessages(bookingRef: string) {
   if (!booking) return null
   return {
     booking,
-    messages: booking.messages.map((m) => ({
+    nextCursor: booking.messages.length > 100 ? booking.messages[99].id : null,
+    messages: booking.messages.slice(0, 100).reverse().map((m) => ({
       id: m.id,
       body: m.body,
       authorRole: m.authorRole,

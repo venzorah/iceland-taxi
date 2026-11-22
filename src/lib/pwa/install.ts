@@ -14,6 +14,13 @@ export function isIosBrowser() {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
+/** A mouse or trackpad computer. Phones and tablets still get the install prompt. */
+export function isDesktopBrowser() {
+  if (typeof window === 'undefined') return false
+  if (isIosBrowser()) return false
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches
+}
+
 /**
  * Show at most one prompt. Never while the app is already installed, and never
  * again until a fresh install event exists after the previous one was used.
@@ -25,8 +32,9 @@ export function canShowInstallPrompt(state: {
   hasDeferredPrompt: boolean
   promptUsed: boolean
   ios: boolean
+  desktop: boolean
 }) {
-  if (state.standalone || state.installed || state.visible) return false
+  if (state.desktop || state.standalone || state.installed || state.visible) return false
   if (state.hasDeferredPrompt && !state.promptUsed) return true
   return state.ios
 }

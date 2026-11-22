@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 
-import { canShowInstallPrompt, INSTALL_PROMPT_INTERVAL_MS, isIosBrowser, isStandaloneDisplay } from '@/lib/pwa/install'
+import { canShowInstallPrompt, INSTALL_PROMPT_INTERVAL_MS, isDesktopBrowser, isIosBrowser, isStandaloneDisplay } from '@/lib/pwa/install'
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
@@ -52,7 +52,17 @@ export function InstallPrompt() {
     window.addEventListener('appinstalled', onInstalled)
     media.addEventListener('change', onMode)
 
+    const closeForDesktop = () => {
+      if (!isDesktopBrowser() || !openRef.current) return
+      openRef.current = false
+      setOpen(false)
+    }
+    const pointer = window.matchMedia('(hover: hover) and (pointer: fine)')
     const tick = () => {
+      if (isDesktopBrowser()) {
+        closeForDesktop()
+        return
+      }
       const show = canShowInstallPrompt({
         standalone: isStandaloneDisplay(),
         installed: installedThisSession,
@@ -60,18 +70,21 @@ export function InstallPrompt() {
         hasDeferredPrompt: !!deferredPrompt,
         promptUsed,
         ios: isIosBrowser(),
+        desktop: false,
       })
       if (!show) return
       openRef.current = true
       setOpen(true)
     }
     const timer = window.setInterval(tick, INSTALL_PROMPT_INTERVAL_MS)
+    pointer.addEventListener('change', closeForDesktop)
 
     return () => {
       window.clearInterval(timer)
       window.removeEventListener('beforeinstallprompt', onPrompt)
       window.removeEventListener('appinstalled', onInstalled)
       media.removeEventListener('change', onMode)
+      pointer.removeEventListener('change', closeForDesktop)
     }
   }, [])
 

@@ -65,7 +65,7 @@ test('admin provisioned driver can sign in using emailed credentials; customer s
   assert(f.sent[0].html.includes('https://taxi.example/driver-login'))
   const memory = { AuthIdentity: structuredClone(state.identities), AuthAccount: structuredClone(state.accounts), AuthSession: [], AuthVerification: [], AuthRateLimit: [] }
   const emails: string[] = []
-  const auth = createAuthentication({ database: memoryAdapter(memory), baseURL: 'https://taxi.example', secret: 'fixture-auth-signing-secret-at-least-32-characters', isDisabled: async () => false, canSelfRegister: async email => !['reserved-driver@example.test', 'reserved-staff@example.test'].includes(email), sendLink: async email => { emails.push(email) } })
+  const auth = createAuthentication({ database: memoryAdapter(memory), baseURL: 'https://taxi.example', secret: 'fixture-auth-signing-secret-at-least-32-characters', isDisabled: async () => false, canSelfRegister: async email => !['reserved-driver@example.test', 'reserved-staff@example.test'].includes(email), sendLink: async email => { emails.push(email) }, sendCode: async email => { emails.push(email) } })
   const request = (path: string, body: object) => auth.handler(new Request(`https://taxi.example/api/auth${path}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://taxi.example' }, body: JSON.stringify(body) }))
   const login = await request('/sign-in/email', { email: 'driver@example.test', password })
   assert.equal(login.status, 200, 'Generated credentials work with actual Better Auth')

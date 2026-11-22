@@ -14,7 +14,9 @@ async function run(req: Request) {
   if (!allowed(req)) return jsonError(401, 'UNAUTHORIZED', 'CRON_SECRET is missing or does not match')
   await prisma.rateLimit.deleteMany({ where: { resetAt: { lt: new Date(Date.now() - 86400000) } } })
   await prisma.authRateLimit.deleteMany({ where: { lastRequest: { lt: BigInt(Date.now() - 86400000) } } })
-  const result = await sendDueReminders()
+  const requested = Number(new URL(req.url).searchParams.get('cadenceMs'))
+  const cadenceMs = Number.isFinite(requested) && requested >= 60 * 60 * 1000 && requested <= 48 * 60 * 60 * 1000 ? requested : 0
+  const result = await sendDueReminders(new Date(), cadenceMs)
   return jsonOk({ ok: true, ...result })
 }
 

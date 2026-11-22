@@ -35,6 +35,22 @@ describe('trip reminder schedule', () => {
     assert.deepEqual(dueReminderKinds(pickup, late, now, rules), [])
   })
 
+  it('sends a short reminder on the last daily run even when that run is early', () => {
+    const now = new Date(pickup.getTime() - 18 * 60 * 60 * 1000)
+    assert.deepEqual(dueReminderKinds(pickup, created, now, rules, 24 * 60 * 60 * 1000), ['reminder.300m'])
+  })
+
+  it('keeps the short reminder on its own window when the job runs often', () => {
+    const now = new Date(pickup.getTime() - 18 * 60 * 60 * 1000)
+    assert.deepEqual(dueReminderKinds(pickup, created, now, rules), [])
+  })
+
+  it('does not send a short reminder for a booking made after that reminder was due', () => {
+    const late = new Date(pickup.getTime() - 60 * 60 * 1000)
+    const now = new Date(pickup.getTime() - 2 * 60 * 60 * 1000)
+    assert.deepEqual(dueReminderKinds(pickup, late, now, rules, 24 * 60 * 60 * 1000), [])
+  })
+
   it('does not send after the trip has started', () => {
     const now = new Date(pickup.getTime() + 60 * 1000)
     assert.deepEqual(dueReminderKinds(pickup, created, now, rules), [])

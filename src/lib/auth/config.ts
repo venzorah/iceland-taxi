@@ -1,5 +1,6 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { APIError } from 'better-auth/api'
+import { emailOTP } from 'better-auth/plugins/email-otp'
 import { hashAccountPassword, verifyAccountPassword } from './password'
 
 type Configuration = {
@@ -8,6 +9,7 @@ type Configuration = {
   secret: string
   isDisabled: (id: string) => Promise<boolean>
   sendLink: (to: string, subject: string, url: string) => Promise<void>
+  sendCode: (to: string, subject: string, code: string, purpose: 'sign-in' | 'email-verification' | 'forget-password' | 'change-email') => Promise<void>
   proxyHeader?: string
   canSelfRegister?: (email: string) => Promise<boolean>
 }
@@ -54,6 +56,10 @@ export function createAuthentication(config: Configuration) {
         '/sign-up/email': { window: 600, max: 5 },
         '/request-password-reset': { window: 600, max: 5 },
         '/send-verification-email': { window: 600, max: 5 },
+        '/email-otp/send-verification-otp': { window: 600, max: 5 },
+        '/email-otp/verify-email': { window: 600, max: 8 },
+        '/email-otp/request-password-reset': { window: 600, max: 5 },
+        '/email-otp/reset-password': { window: 600, max: 8 },
       },
     },
     emailAndPassword: {
@@ -71,9 +77,30 @@ export function createAuthentication(config: Configuration) {
       expiresIn: 3600,
       sendOnSignUp: true,
       sendOnSignIn: false,
-      autoSignInAfterVerification: false,
-      sendVerificationEmail: async ({ user, url }) => config.sendLink(user.email, 'Confirm your Iceland Taxi email', url),
+      autoSignInAfterVerification: true,
+      // The OTP plugin supplies this callback. An explicit link callback overrides it.
+      // Keep signup verification on the same six-digit-code flow as the client.
     },
+    plugins: [
+      emailOTP({
+        overrideDefaultEmailVerification: true,
+        sendVerificationOnSignUp: true,
+        disableSignUp: true,
+        otpLength: 6,
+        expiresIn: 600,
+        allowedAttempts: 5,
+        storeOTP: 'hashed',
+        rateLimit: { window: 600, max: 8 },
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          const subject = type === 'forget-password'
+            ? 'Your Iceland Taxi password code'
+            : type === 'change-email'
+              ? 'Your Iceland Taxi email code'
+              : 'Your Iceland Taxi verification code'
+          await config.sendCode(email, subject, otp, type)
+        },
+      }),
+    ],
     advanced: {
       cookiePrefix: 'iceland-taxi',
       useSecureCookies: config.baseURL.startsWith('https:'),

@@ -298,8 +298,8 @@ export async function notifyTripReminder(bookingId: string, kind: string) {
   await sendToParties(
     booking,
     kind,
-    `${APP_NAME} trip in ${when}: ${booking.ref}`,
-    `Reminder: booking ${booking.ref} is in ${when}.`,
+    `${APP_NAME} trip reminder: ${booking.ref}`,
+    `Booking ${booking.ref} is coming up. This is the ${when} notice. Use the pickup time below.`,
     true,
   )
 }

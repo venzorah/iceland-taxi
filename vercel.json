@@ -5,7 +5,7 @@
   "installCommand": "npm ci",
   "crons": [
     {
-      "path": "/api/cron/reminders",
+      "path": "/api/cron/reminders?cadenceMs=86400000",
       "schedule": "0 6 * * *"
     }
   ]

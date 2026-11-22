@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, CalendarDays, Eye, EyeOff, ShieldCheck, Route } from 'lucide-react'
+import { ArrowLeft, CalendarDays, ClipboardPaste, Eye, EyeOff, ShieldCheck, Route } from 'lucide-react'
 import { loginDestination } from '@/lib/auth/login-destination'
 import { authClient } from '@/lib/auth/client'
 import { endSession } from '@/lib/auth/sign-out'
@@ -43,6 +43,8 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const [showPassword, setShowPassword] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  const submittedCode = useRef('')
   const [message, setMessage] = useState(search.has('error') ? 'Please sign in with an account that has access, or request a new confirmation code.' : search.get('reset') === 'complete' ? 'Your password was reset. Sign in with your new password.' : search.get('complete') === '1' ? 'Email confirmation is complete. Sign in to continue.' : '')
   function changeMode(next: Mode) {
     setMode(next)
@@ -53,6 +55,22 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   function setDigits(value: string) {
     setCode(value.replace(/\D/g, '').slice(0, 6))
   }
+  async function pasteCode() {
+    try {
+      const text = await navigator.clipboard.readText()
+      const digits = text.replace(/\D/g, '').slice(0, 6)
+      if (digits.length !== 6) throw new Error('Copy the 6-digit code from the email first.')
+      setDigits(digits)
+      setMessage('')
+    } catch (error) {
+      setMessage(error instanceof Error && error.message.startsWith('Copy the 6-digit') ? error.message : 'Allow clipboard access, or select the code in the email and paste it here.')
+    }
+  }
+  useEffect(() => {
+    if (mode !== 'verify' || code.length !== 6 || busy || submittedCode.current === code) return
+    submittedCode.current = code
+    formRef.current?.requestSubmit()
+  }, [mode, code, busy])
   async function goToPortal() {
     const res = await fetch('/api/auth/session', { cache: 'no-store' })
     if (!res.ok) throw new Error('Could not load your account. Please try again.')
@@ -141,13 +159,15 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
         <p>You are signed in as {activeUser.name || activeUser.email} ({activeAccount.roleLabel}). Sign out below to use a different account.</p>
         <Link href={activeAccount.href} className="inline-block font-semibold text-heading underline">Continue to {activeAccount.label.toLowerCase()}</Link>
       </div>}
-      {!showAccountSwitch && <><form onSubmit={submit} className="mt-6 space-y-4">
+      {!showAccountSwitch && <><form ref={formRef} onSubmit={submit} className="mt-6 space-y-4">
         {mode === 'register' && <label className="block">Name<input className={`${input} mt-2`} required value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" autoComplete="name" maxLength={100} /></label>}
         {mode !== 'update' && <label className="block">Email<input className={`${input} mt-2`} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></label>}
-        {(mode === 'verify' || mode === 'reset-code') && <label className="block">Email code
-          <input className={`${input} mt-2 text-center text-2xl tracking-[0.4em]`} inputMode="numeric" autoComplete="one-time-code" required pattern="[0-9]{6}" maxLength={6} value={code} onChange={e => setDigits(e.target.value)} placeholder="000000" aria-describedby="auth-code-hint" />
-          <span id="auth-code-hint" className="mt-1 block text-xs text-muted">6 digits. A new code replaces the previous one.</span>
-        </label>}
+        {(mode === 'verify' || mode === 'reset-code') && <div>
+          <label htmlFor="auth-code" className="block">Email code</label>
+          <input id="auth-code" name="one-time-code" className={`${input} mt-2 text-center text-2xl tracking-[0.4em]`} inputMode="numeric" autoComplete="one-time-code" required pattern="[0-9]{6}" maxLength={6} value={code} onChange={e => setDigits(e.target.value)} placeholder="000000" aria-describedby="auth-code-hint" />
+          <span id="auth-code-hint" className="mt-1 block text-xs text-muted">Select the code in the email to copy it. On your phone, it can also appear above the keyboard.</span>
+          <button type="button" disabled={busy} onClick={() => { void pasteCode() }} className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-heading underline underline-offset-4 disabled:opacity-60"><ClipboardPaste size={16} aria-hidden="true" /> Paste code</button>
+        </div>}
         {showPasswordField && <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor="auth-password" className="block">Password</label>

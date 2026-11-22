@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { authenticationEmail, driverLoginEmail, styledEmail } from './templates'
+import { authenticationCodeEmail, authenticationEmail, driverLoginEmail, styledEmail } from './templates'
 
 const previous = process.env.NEXT_PUBLIC_APP_URL
 afterEach(() => { if (previous === undefined) delete process.env.NEXT_PUBLIC_APP_URL; else process.env.NEXT_PUBLIC_APP_URL = previous })
@@ -11,7 +11,7 @@ test('driver email includes selectable credentials and a real sign-in button, wi
   assert(mail.text.includes('Initial password: Secret<&"123456789'))
   assert(mail.html.includes('Secret&lt;&amp;&quot;123456789'))
   assert(mail.html.includes('href="https://taxi.example/driver-login"'))
-  assert(mail.html.includes('user-select:text'))
+  assert(mail.html.includes('user-select:all'))
   assert(mail.html.includes('role="presentation"'))
   assert.doesNotMatch(mail.html, /<script|onclick|<form|javascript:/)
   for (const link of mail.html.matchAll(/href="([^"]*)"/g)) assert.doesNotMatch(link[1], /Secret|driver@example|password=/)
@@ -27,6 +27,16 @@ test('verification, reset and email-change messages have styled action buttons a
     assert(mail.text.includes('https://taxi.example/api/auth/verify-email?token=fixture&callbackURL='))
     assert(mail.html.includes('expires in one hour'))
   }
+})
+
+test('verification codes include the site hint phones use to offer autofill', () => {
+  process.env.NEXT_PUBLIC_APP_URL = 'https://taxi.example'
+  const mail = authenticationCodeEmail('Your Iceland Taxi verification code', '123456')
+  assert(mail.text.includes('Select the code to copy it.'))
+  assert(mail.html.includes('user-select:all'))
+  assert(mail.text.endsWith('@taxi.example #123456'))
+  assert(mail.html.includes('@taxi.example #123456'))
+  assert.doesNotMatch(mail.html, /<script|onclick|javascript:/)
 })
 
 test('notice content is escaped and foreign or unsafe action links are rejected', () => {

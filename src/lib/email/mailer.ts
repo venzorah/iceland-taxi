@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { emailLogoAttachment, EMAIL_LOGO_SRC } from './logo-email'
 
 export type MailResult =
   | { ok: true }
@@ -55,6 +56,7 @@ export async function sendMail(input: { to: string; subject: string; text: strin
       subject: input.subject,
       text: input.text,
       html: input.html,
+      attachments: input.html.includes(EMAIL_LOGO_SRC) ? [emailLogoAttachment()] : undefined,
     })
     return { ok: true }
   } catch (error) {

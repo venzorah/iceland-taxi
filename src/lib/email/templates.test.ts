@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
+import { emailLogoAttachment } from './logo-email'
 import { authenticationCodeEmail, authenticationEmail, driverLoginEmail, styledEmail } from './templates'
 
 const previous = process.env.NEXT_PUBLIC_APP_URL
@@ -13,6 +14,8 @@ test('driver email includes selectable credentials and a real sign-in button, wi
   assert(mail.html.includes('href="https://taxi.example/driver-login"'))
   assert(mail.html.includes('user-select:all'))
   assert(mail.html.includes('role="presentation"'))
+  assert(mail.html.includes('src="cid:iceland-taxi-logo"'))
+  assert(mail.html.includes('bgcolor="#ffffff"'))
   assert.doesNotMatch(mail.html, /<script|onclick|<form|javascript:/)
   for (const link of mail.html.matchAll(/href="([^"]*)"/g)) assert.doesNotMatch(link[1], /Secret|driver@example|password=/)
 })
@@ -27,6 +30,13 @@ test('verification, reset and email-change messages have styled action buttons a
     assert(mail.text.includes('https://taxi.example/api/auth/verify-email?token=fixture&callbackURL='))
     assert(mail.html.includes('expires in one hour'))
   }
+})
+
+test('the logo travels inside the message on a white background', () => {
+  const logo = emailLogoAttachment()
+  assert.equal(logo.cid, 'iceland-taxi-logo')
+  assert.equal(logo.content.subarray(0, 8).toString('hex'), '89504e470d0a1a0a')
+  assert.ok(logo.content.length < 80_000)
 })
 
 test('verification codes include the site hint phones use to offer autofill', () => {

@@ -1,5 +1,6 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return
-  const { publishCatalogueOnStart } = await import('./instrumentation-node')
-  await publishCatalogueOnStart()
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { publishCatalogueOnStart } = await import('./instrumentation-node')
+    await publishCatalogueOnStart()
+  }
 }

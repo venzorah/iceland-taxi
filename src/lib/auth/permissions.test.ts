@@ -8,10 +8,10 @@ const modules = ['staff', 'payments', 'pricing', 'services', 'routes', 'destinat
 
 test('super admin can open every admin section and perform every staff role', () => {
   for (const section of sections) assert.equal(canViewAdminSection('SUPER_ADMIN', section), true)
-  for (const module of modules) assert.equal(canUseAdminModule('SUPER_ADMIN', module), true)
+  for (const area of modules) assert.equal(canUseAdminModule('SUPER_ADMIN', area), true)
   for (const role of ['BOOKING_MANAGER', 'FINANCE_MANAGER', 'CONTENT_MANAGER', 'STAFF']) {
-    for (const module of modules) {
-      if (canUseAdminModule(role, module)) assert.equal(canUseAdminModule('SUPER_ADMIN', module), true)
+    for (const area of modules) {
+      if (canUseAdminModule(role, area)) assert.equal(canUseAdminModule('SUPER_ADMIN', area), true)
     }
   }
 })

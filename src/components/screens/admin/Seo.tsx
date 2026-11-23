@@ -2,6 +2,7 @@
 import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import { AdminButton, AdminToggle, AdminModal, AdminNotice, AdminForm } from '@/components/admin/AdminUI'
+import { useAdminList } from '@/components/admin/AdminList'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 
@@ -19,6 +20,7 @@ const inputClass = 'mt-1 w-full rounded-lg border border-input-line bg-input px-
 
 export function Seo() {
   const [pages, setPages] = useState<SeoPage[]>([])
+  const list = useAdminList(pages, row => `${row.path} ${row.titleEn || ''} ${row.descriptionEn || ''}`, row => row.noIndex ? 'hidden' : 'published', [{value:'published',label:'Indexable'},{value:'hidden',label:'No index'}], 'SEO pages')
   const [selId, setSelId] = useState<string | null>(null)
   const [msg, setMsg] = useState('Loading…')
   useNoticeToast(msg)
@@ -100,8 +102,9 @@ export function Seo() {
           </AdminButton>
         </div>
         <p className="mt-2 text-xs text-muted">{msg}</p>
+        {list.controls}{list.pagination}
         <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
-          {pages.map((page) => (
+          {list.visible.map((page) => (
             <li key={page.id}>
               <AdminButton onClick={() => { setCreating(false); setSelId(page.id); setEditorOpen(true) }} className={`flex w-full items-center gap-4 px-4 py-3 text-left ${selId === page.id && !creating ? 'bg-surface' : ''}`}>
                 <div className="min-w-0 flex-1">

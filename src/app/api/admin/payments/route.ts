@@ -1,3 +1,4 @@
+import { parseListQuery, paymentListWhere } from '@/lib/admin/list-query'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 
@@ -5,10 +6,13 @@ async function handleGET(req: Request) {
   const blocked = await rejectDriverOnly('payments')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
+  const query = parseListQuery(new URL(req.url).searchParams)
+  if (!query.success) return jsonError(400, 'VALIDATION_ERROR', 'Invalid search or filter.')
   try {
     const cursor = new URL(req.url).searchParams.get('cursor')
     if (cursor && !/^[a-zA-Z0-9_-]{1,128}$/.test(cursor)) return jsonError(400, 'VALIDATION_ERROR', 'Invalid page.')
     const page = await prisma.payment.findMany({
+      where: paymentListWhere(query.data),
       select: {
         id: true,
         provider: true,

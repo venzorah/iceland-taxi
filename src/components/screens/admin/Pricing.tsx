@@ -2,12 +2,13 @@
 import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import { AdminButton, AdminToggle, AdminEmpty, AdminForm } from '@/components/admin/AdminUI'
+import { useAdminList, publicationOptions } from '@/components/admin/AdminList'
 import React, { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 import { Panel } from './Services'
 
-type Extra = { id: string; key: string; labelEn: string; isk: number; active: boolean; isNew?: boolean }
+type Extra = { id: string; key: string; labelEn: string; isk: number; active: boolean; labelIs?: string | null; sortOrder?: number; isNew?: boolean }
 
 function addonKey(label: string) {
   const slug = label
@@ -47,8 +48,10 @@ export function Pricing() {
     load()
   }, [load])
 
+  const list = useAdminList(extras, row => `${row.labelEn} ${row.labelIs || ''} ${row.key}`, row => row.active ? 'published' : 'hidden', publicationOptions, 'add-ons')
   const save = async () => {
     setMsg(null)
+    if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(eurRate) || eurRate <= 0 || extras.some(extra => !extra.labelEn.trim() || !Number.isFinite(extra.isk) || extra.isk < 0 || !Number.isInteger(extra.sortOrder ?? 0) || (extra.sortOrder ?? 0) < 0)) { setMsg('Enter valid exchange rates, add-on names, prices and display orders.'); return }
     const rateRes = await fetch('/api/admin/pricing', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -83,7 +86,7 @@ export function Pricing() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           key,
-          labelEn,
+          labelEn, labelIs: extra.labelIs?.trim() || '', sortOrder: extra.sortOrder ?? 0,
           isk: Math.max(0, Math.round(Number(extra.isk) || 0)),
           active: extra.active,
         }),
@@ -131,7 +134,8 @@ export function Pricing() {
       <Panel title="Add-ons" hint="Edit a name or a cost, or add a new add-on. The cost is in ISK.">
         <div className="space-y-3">
           {extras.length === 0 && <AdminEmpty title="No add-ons yet" description="Add optional extras with a name and ISK price, then save pricing to publish your changes." />}
-          {extras.map((extra) => (
+          {list.controls}{list.pagination}
+          {list.visible.map((extra) => (
             <div key={extra.id} className="grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-[1fr_160px_auto] sm:items-end">
               <label className="block min-w-0">
                 <span className="text-xs font-semibold text-muted">Add-on</span>
@@ -157,7 +161,7 @@ export function Pricing() {
                   className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus"
                 />
               </label>
-              <AdminToggle label="Active" checked={extra.active} onChange={active => setExtras(list => list.map(item => item.id === extra.id ? { ...item, active } : item))} />
+              <label className="block text-xs font-semibold text-muted">Icelandic label (optional)<input value={extra.labelIs || ''} onChange={e => setExtras(list => list.map(item => item.id === extra.id ? { ...item, labelIs: e.target.value } : item))} className="mt-1 w-full rounded-lg border border-line p-3" /></label><label className="block text-xs font-semibold text-muted">Display order<input required type="number" min={0} max={100000} step={1} value={extra.sortOrder ?? 0} onChange={e => setExtras(list => list.map(item => item.id === extra.id ? { ...item, sortOrder: Number(e.target.value) } : item))} className="mt-1 w-full rounded-lg border border-line p-3" /></label><AdminToggle label="Active" checked={extra.active} onChange={active => setExtras(list => list.map(item => item.id === extra.id ? { ...item, active } : item))} />
             </div>
           ))}
           <AdminButton

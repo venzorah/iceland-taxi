@@ -16,6 +16,7 @@ const createSchema = z.object({
   note: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   active: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).max(100000).optional(),
 })
 
 async function handlePOST(req: Request) {
@@ -31,7 +32,7 @@ async function handlePOST(req: Request) {
       note: parsed.data.note?.trim() || null,
       imageUrl: parsed.data.imageUrl?.trim() || null,
       active: parsed.data.active ?? true,
-      sortOrder: count + 1,
+      sortOrder: parsed.data.sortOrder ?? count + 1,
     },
   })
   return jsonOk({ ok: true, destination }, { status: 201 })

@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminButton } from '@/components/admin/AdminUI'
+import { useAdminList } from '@/components/admin/AdminList'
 import React, { useEffect, useState } from 'react'
 import { ImageField, type LibraryImage } from '@/components/screens/admin/ImageField'
 
@@ -58,7 +59,8 @@ export function WebsiteContent() {
     } catch { setMessage('Could not confirm the save. Please try again.') } finally { setSaving(null) }
   }
 
-  const groups = [...new Set(blocks.map((block) => block.group))]
+  const list = useAdminList(blocks, row => `${row.label} ${row.group} ${row.value}`, row => row.group, [...new Set(blocks.map(row => row.group))].map(value => ({ value, label: value })), 'website content')
+  const groups = [...new Set(list.visible.map((block) => block.group))]
 
   return (
     <div className="space-y-8 p-4 sm:p-6">
@@ -67,11 +69,12 @@ export function WebsiteContent() {
         <p className="mt-1 text-sm text-muted">Edit the public wording and photos. Upload a new picture or pick one from the library, then save. Clearing a text field and saving restores the original.</p>
         <p className="mt-2 text-xs text-muted">{message}</p>
       </div>
+      {list.controls}{list.pagination}
       {groups.map((group) => (
         <section key={group}>
           <h3 className="font-display text-sm font-bold text-heading">{group}</h3>
           <ul className="mt-3 space-y-3">
-            {blocks.filter((block) => block.group === group).map((block) => (
+            {list.visible.filter((block) => block.group === group).map((block) => (
               <li key={block.key} className="rounded-xl border border-line bg-bg p-4">
                 <div className="block text-xs font-semibold text-muted">
                   {block.label}

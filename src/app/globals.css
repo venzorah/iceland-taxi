@@ -171,3 +171,17 @@ html.itb-welcome .itb-splash-logo {
     font-size: 16px;
   }
 }
+
+/* Show validation only after a submit attempt, rather than on untouched fields. */
+input[data-inline-error-id], textarea[data-inline-error-id], select[data-inline-error-id] {
+  border-color: #dc2626 !important;
+  outline-color: #dc2626;
+}
+.field-validation-error {
+  display: block;
+  margin-top: 0.375rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+}

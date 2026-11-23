@@ -1,5 +1,6 @@
 'use client'
 
+import { useAdminList, useListQuery } from '@/components/admin/AdminList'
 import { AdminEmpty } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
 import { enquiryFollowUp, type EnquiryChannelName } from '@/lib/booking/enquiry'
@@ -23,9 +24,11 @@ export function Enquiries({ compact = false, limit }: { compact?: boolean; limit
   const [rows, setRows] = useState<Row[]>([])
   const [msg, setMsg] = useState<string | null>(null)
 
+  const list = useAdminList(rows, row => JSON.stringify(row), row => row.channel, [{ value: 'EMAIL', label: 'Email' }, { value: 'WHATSAPP', label: 'WhatsApp' }], 'enquiries')
+  const query = useListQuery(list.query, list.filter)
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/enquiries')
+      const res = await fetch(`/api/admin/enquiries?${query}`)
       const data = await res.json()
       if (!res.ok || !data.ok) {
         setMsg(data.message || 'Could not load enquiries')
@@ -37,13 +40,13 @@ export function Enquiries({ compact = false, limit }: { compact?: boolean; limit
     } catch {
       setMsg('Could not load enquiries')
     }
-  }, [])
+  }, [query])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const shown = typeof limit === 'number' ? rows.slice(0, limit) : rows
+  const shown = typeof limit === 'number' ? rows.slice(0, limit) : list.visible
 
   return (
     <div className={compact ? 'space-y-3' : 'mx-auto max-w-5xl space-y-4 p-3 sm:p-6'}>
@@ -51,6 +54,7 @@ export function Enquiries({ compact = false, limit }: { compact?: boolean; limit
         <h2 className="font-display text-lg font-bold text-heading">Custom enquiries</h2>
         <p className="text-sm text-muted">Trips that are not a published listing. Reply on the channel the customer chose.</p>
       </div>
+      {!compact && <>{list.controls}{list.pagination}</>}
       {msg && <p className="text-sm text-muted">{msg}</p>}
       {shown.length === 0 && !msg && <AdminEmpty title="No custom enquiries yet" description="Custom ride requests will appear here when customers submit them." />}
       <ul className="space-y-3">

@@ -1,3 +1,4 @@
+import { parseListQuery, bookingListWhere } from '@/lib/admin/list-query'
 import { getCurrentUser } from '@/lib/auth/session'
 import { grantGuestBookingAccess } from '@/lib/customer/booking-access'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
@@ -63,6 +64,8 @@ async function handleGET(req: Request) {
   const url = new URL(req.url)
   const email = url.searchParams.get('email') || undefined
   const ref = url.searchParams.get('ref') || undefined
+  const query = parseListQuery(url.searchParams)
+  if (!query.success) return jsonError(400, 'VALIDATION_ERROR', 'Invalid search or filter.')
   const cursor = url.searchParams.get('cursor')
   if (cursor && !/^[a-zA-Z0-9_-]{1,128}$/.test(cursor)) return jsonError(400, 'VALIDATION_ERROR', 'Invalid page.')
 
@@ -70,6 +73,7 @@ async function handleGET(req: Request) {
     async () => {
       const page = await prisma.booking.findMany({
         where: {
+          ...bookingListWhere(query.data),
           ...(email ? { guestEmail: email } : {}),
           ...(ref ? { ref } : {}),
         },

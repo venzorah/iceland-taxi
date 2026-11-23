@@ -1,13 +1,18 @@
+import { z } from 'zod'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { enquiryFollowUp, type EnquiryChannelName } from '@/lib/booking/enquiry'
 
-async function handleGET() {
+async function handleGET(req: Request) {
   const blocked = await rejectDriverOnly('enquiries')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
+  const params = new URL(req.url).searchParams
+  const parsed = z.object({ q: z.string().trim().max(200), filter: z.enum(['', 'EMAIL', 'WHATSAPP']) }).safeParse({ q: params.get('q') || '', filter: params.get('filter') || '' })
+  if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Invalid enquiry search.')
+  const { q, filter } = parsed.data
   try {
-    const rows = await prisma.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 200 })
+    const rows = await prisma.enquiry.findMany({ where: { ...(filter ? { channel: filter } : {}), ...(q ? { OR: ['name', 'email', 'phone', 'fromLabel', 'toLabel', 'notes'].map(field => ({ [field]: { contains: q, mode: 'insensitive' as const } })) } : {}) }, orderBy: { createdAt: 'desc' }, take: 200 })
     const enquiries = rows.map((row) => {
       const channel = row.channel as EnquiryChannelName
       const followUp = enquiryFollowUp({

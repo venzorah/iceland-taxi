@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle2, AlertCircle, Info, TriangleAlert, X } from 'lucide-react'
 import { notify, noticeKind, type ToastKind } from '@/lib/forms/feedback'
-import { validateFields } from '@/lib/forms/validation'
+import { validateFields, showFieldError, clearFieldError } from '@/lib/forms/validation'
 export function useNoticeToast(message: string | null | undefined, kind?: ToastKind) {
   useEffect(() => { if (message) { const resolved = kind || noticeKind(message); if (resolved) notify(message, resolved) } }, [message, kind])
 }
@@ -16,6 +16,7 @@ export function FormFeedback() {
   const customerDialog = useRef<HTMLDialogElement>(null)
   const [items, setItems] = useState<Toast[]>([]), [mounted, setMounted] = useState(false)
   const viewport = useRef<HTMLDivElement>(null), nextId = useRef(0)
+  useEffect(() => { setItems([]); setCustomerTarget(null) }, [admin])
   useEffect(() => {
     setMounted(true)
     const receive = (event: Event) => {
@@ -33,17 +34,20 @@ export function FormFeedback() {
     }
     const invalid = (event: Event) => {
       const field = event.target as HTMLInputElement
-      notify(field.validationMessage || 'Please check the highlighted field.', 'error')
+      event.preventDefault()
+      showFieldError(field)
+      field.form?.querySelector<HTMLElement>('input:invalid, select:invalid, textarea:invalid')?.focus()
     }
     const submit = (event: Event) => {
       if (event.target instanceof HTMLFormElement && !validateFields(event.target)) { event.preventDefault(); event.stopPropagation() }
     }
     const input = (event: Event) => {
       const field = event.target as HTMLInputElement
-      if (field.dataset?.requiredWhitespace) { field.setCustomValidity(''); delete field.dataset.requiredWhitespace }
+      if (field.dataset?.requiredWhitespace && field.value.trim()) { field.setCustomValidity(''); delete field.dataset.requiredWhitespace }
+      if (field.dataset?.inlineErrorId) { if (field.validity.valid) clearFieldError(field); else showFieldError(field) }
     }
-    window.addEventListener('itb-toast', receive); document.addEventListener('invalid', invalid, true); document.addEventListener('submit', submit, true); document.addEventListener('input', input, true)
-    return () => { window.removeEventListener('itb-toast', receive); document.removeEventListener('invalid', invalid, true); document.removeEventListener('submit', submit, true); document.removeEventListener('input', input, true) }
+    window.addEventListener('itb-toast', receive); document.addEventListener('invalid', invalid, true); document.addEventListener('submit', submit, true); document.addEventListener('input', input, true); document.addEventListener('change', input, true)
+    return () => { window.removeEventListener('itb-toast', receive); document.removeEventListener('invalid', invalid, true); document.removeEventListener('submit', submit, true); document.removeEventListener('input', input, true); document.removeEventListener('change', input, true) }
   }, [admin])
   useEffect(() => {
     if (!admin) return
@@ -54,6 +58,7 @@ export function FormFeedback() {
   }, [items, admin])
   useEffect(() => {
     if (admin || !items.length || !customerTarget) return
+    if (!customerTarget.isConnected || !customerTarget.open) { setCustomerTarget(null); return }
     const children = [...customerTarget.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasAttribute('data-feedback-section'))
     const previous = children.map(child => ({ child, display: child.style.display, inert: child.inert }))
     previous.forEach(({ child }) => { child.style.display = 'none'; child.inert = true })

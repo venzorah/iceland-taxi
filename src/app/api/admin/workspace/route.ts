@@ -80,17 +80,23 @@ async function handleGET(req: Request) {
   if (section && !modules[section]) return jsonError(400, 'VALIDATION_ERROR', 'Choose a workspace section.')
   const blocked = await rejectDriverOnly(section ? modules[section] : 'workspace')
   if (blocked) return blocked
+  const params = new URL(req.url).searchParams
+  const search = (params.get('q') || '').trim()
+  const category = params.get('category') || ''
+  if (search.length > 200 || !['', 'INTERNATIONAL', 'RESIDENT'].includes(category)) return jsonError(400, 'VALIDATION_ERROR', 'Invalid customer search.')
+  const customerCategory = category as 'INTERNATIONAL' | 'RESIDENT'
   const data = await withDb(
     async () => {
       const [destinations, users, bookings, bookingCount, grouped, company] = await Promise.all([
         prisma.destination.findMany({ orderBy: { sortOrder: 'asc' } }),
         prisma.user.findMany({
-          where: { role: 'CUSTOMER' },
+          where: { role: 'CUSTOMER', ...(section === 'customers' && search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }, { phone: { contains: search, mode: 'insensitive' } }] } : {}), ...(section === 'customers' && category ? { category: customerCategory } : {}) },
           select: { name: true, email: true, phone: true, category: true, preferredCurrency: true, _count: { select: { bookings: true } } },
           orderBy: { createdAt: 'desc' },
           take: 100,
         }),
         prisma.booking.findMany({
+          where: { ...(section === 'customers' && search ? { OR: [{ guestName: { contains: search, mode: 'insensitive' } }, { guestEmail: { contains: search, mode: 'insensitive' } }, { guestPhone: { contains: search, mode: 'insensitive' } }] } : {}), ...(section === 'customers' && category ? { customerCategory } : {}) },
           orderBy: { createdAt: 'desc' },
           take: 200,
           select: { guestName: true, guestEmail: true, guestPhone: true, currency: true, customerCategory: true, customerId: true },

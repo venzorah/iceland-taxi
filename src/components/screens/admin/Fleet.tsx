@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminButton, AdminForm } from '@/components/admin/AdminUI'
+import { useAdminList } from '@/components/admin/AdminList'
 import React, { useCallback, useEffect, useState } from 'react'
 import { AdminModal, AdminToggle, AdminEmpty, AdminNotice, useAdminConfirm } from '@/components/admin/AdminUI'
 import { Car, Plus, UserSquare2 } from 'lucide-react'
@@ -243,6 +244,9 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
   }
 
   const categories = [...new Set([draft.category, ...CATEGORIES].filter(Boolean))]
+  const driverList = useAdminList(drivers.filter(row => showInactive || row.active), row => `${row.displayName} ${row.email} ${row.phone} ${row.vehicleLabel}`, row => row.status, STATUSES.map(value => ({ value, label: value })), 'drivers')
+  const vehicleList = useAdminList(vehicles.filter(row => showInactive || row.active), row => `${row.name} ${row.plate} ${row.category} ${row.useCase}`, row => row.category, CATEGORIES.map(value => ({ value, label: value })), 'vehicles')
+  const list = view === 'drivers' ? driverList : vehicleList
 
   return (
     <div className="mx-auto max-w-[1400px] p-3 sm:p-6">
@@ -261,6 +265,8 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
       </div>
 
       <div className="mt-4"><AdminToggle label="Show inactive records" checked={showInactive} onChange={setShowInactive} /></div>
+      <div className="mt-4">{list.controls}{list.pagination}</div>
+      {loaded && !loadError && (view === 'drivers' ? drivers : vehicles).some(item => showInactive || item.active) && !list.filteredCount && <AdminEmpty title="No matching records" description="Try another search or change your filters." />}
       {!loaded && <p role="status" className="py-6 text-sm text-muted">Loading fleet…</p>}
       {loadError && <AdminButton onClick={load} className="mt-3 text-sm font-semibold underline">Try again</AdminButton>}
       {open && (
@@ -324,7 +330,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
 
       {view === 'drivers' ? (
         <ul className="mt-4 grid gap-3 lg:grid-cols-2">
-          {drivers.filter(driver => showInactive || driver.active).map((driver) => (
+          {driverList.visible.map((driver) => (
             <li key={driver.id || driver.displayName} className="rounded-2xl border border-line bg-card p-4">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-heading"><UserSquare2 size={18} /></span>
@@ -353,7 +359,7 @@ export function Fleet({ view }: { view: 'drivers' | 'vehicles' }) {
         </ul>
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {vehicles.filter(vehicle => showInactive || vehicle.active).map((vehicle) => (
+          {vehicleList.visible.map((vehicle) => (
             <li key={vehicle.id} className="flex flex-col rounded-2xl border border-line bg-card p-4">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-heading"><Car size={18} /></span>

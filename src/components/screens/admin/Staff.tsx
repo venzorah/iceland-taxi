@@ -2,6 +2,7 @@
 import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import { AdminButton, AdminForm, AdminModal, AdminNotice, AdminToggle, AdminEmpty } from '@/components/admin/AdminUI'
+import { useAdminList, publicationOptions } from '@/components/admin/AdminList'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Check, Minus, Plus } from 'lucide-react'
 
@@ -28,6 +29,7 @@ const inputClass = 'mt-1 w-full rounded-lg border border-input-line bg-input px-
 
 export function Staff() {
   const [rows, setRows] = useState<StaffRow[]>([])
+  const list = useAdminList(rows, row => `${row.name} ${row.email} ${row.roleLabel}`, row => row.active ? 'published' : 'hidden', publicationOptions, 'staff')
   const [msg, setMsg] = useState('Loading…')
   useNoticeToast(msg)
   const [updating, setUpdating] = useState(false)
@@ -143,8 +145,9 @@ export function Staff() {
           </AdminForm></AdminModal>
         )}
         {!rows.length && !msg.includes('Loading') && <AdminEmpty title="No staff accounts to show" description="Add a verified staff member to manage access to the admin dashboard." />}
-        <ul className="divide-y divide-line">
-          {rows.map((row) => (
+        {list.controls}{list.pagination}
+      <ul className="divide-y divide-line">
+          {list.visible.map((row) => (
             <li key={row.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-heading">{row.name}</p>

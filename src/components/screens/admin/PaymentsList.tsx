@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminEmpty } from '@/components/admin/AdminUI'
+import { ListSearch } from '@/components/admin/AdminList'
 import React, { useEffect, useState } from 'react'
 
 type PaymentRow = {
@@ -14,6 +15,9 @@ type PaymentRow = {
 }
 
 export function PaymentsList() {
+  const [query, setQuery] = useState(''), [status, setStatus] = useState(''), [serverQuery, setServerQuery] = useState('')
+  useEffect(() => { const timer = setTimeout(() => setServerQuery(query.trim()), 300); return () => clearTimeout(timer) }, [query])
+  useEffect(() => { setPages([null]) }, [serverQuery, status])
   const [pages, setPages] = useState<(string | null)[]>([null])
   const cursor = pages[pages.length - 1]
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -26,7 +30,7 @@ export function PaymentsList() {
     setLoading(true)
     ;(async () => {
       try {
-        const res = await fetch(`/api/admin/payments${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, { signal: controller.signal, cache: 'no-store' })
+        const res = await fetch(`/api/admin/payments?${new URLSearchParams({ q: serverQuery, status, ...(cursor ? { cursor } : {}) })}`, { signal: controller.signal, cache: 'no-store' })
         const data = await res.json()
         if (!data.ok) {
           setMsg(data.message || 'Could not load payments')
@@ -41,11 +45,12 @@ export function PaymentsList() {
       } finally { if (!controller.signal.aborted) setLoading(false) }
     })()
     return () => controller.abort()
-  }, [cursor])
+  }, [cursor, serverQuery, status])
 
   return (
     <div className="mx-auto max-w-[1200px] p-3 sm:p-6">
-      <p className="text-sm text-muted">{msg} · Card numbers and payment keys stay with the payment provider. This screen shows the booking, amount, and status only.</p>
+      <ListSearch query={query} onQuery={setQuery} filter={status} onFilter={setStatus} options={['REQUIRES_CREDENTIALS','PENDING','AUTHORIZED','CAPTURED','FAILED','REFUNDED'].map(value => ({ value, label: value.replaceAll('_',' ') }))} label="payments" />
+      <p className="mt-4 text-sm text-muted">{msg} · Card numbers and payment keys stay with the payment provider. This screen shows the booking, amount, and status only.</p>
       <div className="mt-3 flex items-center gap-3"><button disabled={loading || pages.length === 1} onClick={() => setPages(p => p.slice(0, -1))} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Previous</button><span className="text-sm text-muted">Page {pages.length}</span><button disabled={loading || !nextCursor} onClick={() => setPages(p => [...p, nextCursor])} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Next</button></div>
       <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-bg">
         <table className="w-full min-w-[720px] text-left text-sm">

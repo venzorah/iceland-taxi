@@ -2,7 +2,6 @@
 import { useSiteImages } from '@/components/providers/SiteContent'
 
 import { validateFields } from '@/lib/forms/validation'
-import { notify } from '@/lib/forms/feedback'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Baby, Check, CheckCircle2, Copy, Lock, MessageCircle, Plane, Repeat, Signpost } from 'lucide-react'
 
@@ -158,7 +157,7 @@ export default function Booking(props: Props) {
   const submitPay = () => {
     if (!canPay) return
     if (fields.current && !validateFields(fields.current)) return
-    if (!guestName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail) || !hotel.trim() || !p.date || !p.time) { setValidation('Enter your name, email, pickup address, and Iceland pickup date and time.'); notify('Enter your name, email, pickup address, and Iceland pickup date and time.', 'error'); return }
+    if (!guestName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail) || !hotel.trim() || !p.date || !p.time) { setValidation('Enter your name, email, pickup address, and Iceland pickup date and time.'); return }
     setValidation('')
     p.onPay?.(payPayload())
   }

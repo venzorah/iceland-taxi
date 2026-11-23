@@ -8,6 +8,7 @@ const patchSchema = z.object({
   note: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   active: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).max(100000).optional(),
 })
 
 type Ctx = { params: Promise<{ id: string }> }

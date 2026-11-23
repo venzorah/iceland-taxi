@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminButton, AdminForm, AdminEmpty, useAdminConfirm } from '@/components/admin/AdminUI'
+import { useAdminList } from '@/components/admin/AdminList'
 import React, { useEffect, useState } from 'react'
 
 type LibraryImage = { id: string; name: string; url: string; alt: string; source: 'built-in' | 'upload' }
@@ -8,6 +9,7 @@ type LibraryImage = { id: string; name: string; url: string; alt: string; source
 export function ImageLibrary() {
   const confirm = useAdminConfirm()
   const [images, setImages] = useState<LibraryImage[]>([])
+  const list = useAdminList(images, row => `${row.name} ${row.alt}`, row => row.source, [{value:'built-in',label:'Built-in'},{value:'upload',label:'Uploaded'}], 'images')
   const [message, setMessage] = useState('Loading images…')
   const [file, setFile] = useState<File | null>(null)
   const [alt, setAlt] = useState('')
@@ -90,6 +92,7 @@ export function ImageLibrary() {
     <div className="p-4 sm:p-6">
       <h2 className="font-display text-base font-bold text-heading">Image library</h2>
       <p className="mt-1 text-sm text-muted">Choose built-in photos or upload JPEG, PNG and WebP images up to 5 MB. Files are delivered by Cloudinary. Archive hides a library item without breaking existing pages.</p>
+      {list.controls}{list.pagination}
       <AdminForm onSubmit={upload} className="mt-4 flex flex-col gap-2 rounded-xl border border-line bg-bg p-4 sm:flex-row sm:items-end">
         <label className="text-xs font-semibold text-muted">
           Image file
@@ -104,7 +107,7 @@ export function ImageLibrary() {
       <p className="mt-3 text-xs text-muted">{message}</p>
       {!images.length && !message.includes('Loading') && <AdminEmpty title="No images to show" description="Upload your first photo to start building the image library." />}
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {images.map((image) => (
+        {list.visible.map((image) => (
           <li key={image.id} className="overflow-hidden rounded-xl border border-line bg-card">
             <img src={image.url} alt={image.alt || image.name} className="aspect-[4/3] w-full object-cover" />
             <div className="space-y-1 p-3">

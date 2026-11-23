@@ -1,6 +1,7 @@
 'use client'
 
-import { AdminButton } from '@/components/admin/AdminUI'
+import { AdminButton, AdminNotice } from '@/components/admin/AdminUI'
+import { useAdminList } from '@/components/admin/AdminList'
 import React, { useEffect, useState } from 'react'
 
 export type LibraryImage = { id: string; name: string; url: string }
@@ -22,6 +23,7 @@ export function ImageField({
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const list = useAdminList(images, row => row.name, row => row.url.startsWith('/') ? 'built-in' : 'upload', [{value:'built-in',label:'Built-in'},{value:'upload',label:'Uploaded / external'}], 'image library')
 
   useEffect(() => {
     if (provided) {
@@ -82,10 +84,11 @@ export function ImageField({
           <AdminButton type="button" onClick={() => onChange('')} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-error">Remove</AdminButton>
         ) : null}
       </div>
-      {message ? <p className="text-xs text-muted">{message}</p> : null}
+      <AdminNotice message={message} />
+      {open && <div>{list.controls}{list.pagination}</div>}
       {open ? (
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {images.map((image) => (
+          {list.visible.map((image) => (
             <li key={image.id}>
               <AdminButton
                 type="button"

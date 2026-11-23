@@ -39,10 +39,13 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
   const [source, setSource] = useState<string>('loading')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [search, setSearch] = useState(searchQuery)
+  const [serverSearch, setServerSearch] = useState(searchQuery)
+  useEffect(() => { const timer = setTimeout(() => setServerSearch(search.trim()), 300); return () => clearTimeout(timer) }, [search])
+  useEffect(() => { setPages([null]); setLoading(true) }, [serverSearch, filter])
   useEffect(() => { setSearch(searchQuery) }, [searchQuery])
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const [bRes, dRes] = await Promise.all([fetch(`/api/bookings${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, { signal, cache: 'no-store' }), fetch('/api/drivers', { signal, cache: 'no-store' })])
+      const [bRes, dRes] = await Promise.all([fetch(`/api/bookings?${new URLSearchParams({ q: serverSearch, filter, ...(cursor ? { cursor } : {}) })}`, { signal, cache: 'no-store' }), fetch('/api/drivers', { signal, cache: 'no-store' })])
       const bJson = await bRes.json()
       const dJson = await dRes.json()
       if (!bRes.ok || !bJson.ok || !dRes.ok || !dJson.ok) throw new Error(bJson.message || dJson.message || 'Could not load bookings.')
@@ -61,20 +64,10 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
       )
       setDrivers(driverList)
     } catch (e) { if (!signal?.aborted) setSaveMsg(e instanceof Error ? e.message : 'Could not load bookings.'); throw e } finally { if (!signal?.aborted) setLoading(false) }
-  }, [cursor])
+  }, [cursor, serverSearch, filter])
   useLivePolling(load, true, 20000)
 
-  const filtered = rows.filter(b => !search || `${b.ref} ${b.customer} ${b.route} ${b.driver || ''}`.toLowerCase().includes(search.toLowerCase())).filter((b) =>
-    filter === 'All'
-      ? true
-      : filter === 'Needs driver'
-        ? !b.driver && b.status === 'Confirmed'
-        : filter === 'Awaiting payment'
-          ? b.status === 'Awaiting Payment'
-          : filter === 'Quotes'
-            ? b.status === 'Pending'
-            : b.status === 'Completed',
-  )
+  const filtered = rows
 
   const open = (b: OpsBooking) => {
     setSelected(b)
@@ -140,7 +133,7 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
             ))}
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3"><label className="min-w-0 flex-1 text-sm text-muted">Search bookings<input aria-label="Search bookings" value={search} onChange={e => setSearch(e.target.value)} placeholder="Reference, customer, route or driver" className="mt-1 block w-full rounded-lg border border-line bg-input px-3 py-2 text-heading" /></label><a href="/book" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">New booking</a></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3"><label className="min-w-0 flex-1 text-sm text-muted">Search bookings<input aria-label="Search bookings" value={search} onChange={e => setSearch(e.target.value)} type="search" maxLength={200} placeholder="Reference, customer, route or driver" className="mt-1 block w-full rounded-lg border border-line bg-input px-3 py-2 text-heading" /></label><a href="/book" className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary">New booking</a></div>
         <p className="mt-2 text-xs text-muted">
           {loading ? 'Loading bookings…' : `${filtered.length} bookings`}
           {saveMsg ? ` · ${saveMsg}` : ''}
@@ -170,7 +163,7 @@ export function BookingsTable({ searchQuery = '' }: { searchQuery?: string }) {
           ))}
         </ul>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3"><button disabled={loading || pages.length === 1} onClick={() => { setLoading(true); setPages(p => p.slice(0, -1)) }} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Previous</button><span className="text-sm text-muted">Page {pages.length} · Filters search this page</span><button disabled={loading || !nextCursor} onClick={() => { setLoading(true); setPages(p => [...p, nextCursor]) }} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Next</button></div>
+        <div className="mt-4 flex flex-wrap items-center gap-3"><button disabled={loading || pages.length === 1} onClick={() => { setLoading(true); setPages(p => p.slice(0, -1)) }} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Previous</button><span className="text-sm text-muted">Page {pages.length} · Search and filters cover all records</span><button disabled={loading || !nextCursor} onClick={() => { setLoading(true); setPages(p => [...p, nextCursor]) }} className="rounded-xl border border-line px-4 py-2 disabled:opacity-40">Next</button></div>
         <div className="mt-4 hidden overflow-x-auto rounded-xl border border-line bg-bg md:block">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead className="border-b border-line text-xs font-semibold text-muted">

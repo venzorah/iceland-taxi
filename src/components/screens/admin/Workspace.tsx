@@ -1,6 +1,7 @@
 'use client'
 
 import { AdminButton, AdminForm } from '@/components/admin/AdminUI'
+import { useAdminList, publicationOptions } from '@/components/admin/AdminList'
 import React, { useEffect, useState } from 'react'
 import { AdminModal, AdminEmpty, AdminNotice, AdminToggle, useAdminConfirm } from '@/components/admin/AdminUI'
 import { ImageField } from './ImageField'
@@ -8,7 +9,7 @@ import { TripReminders } from './TripReminders'
 
 type Workspace = {
   source: string
-  destinations: { name: string; note: string | null; imageUrl: string | null; active: boolean }[]
+  destinations: { name: string; note: string | null; imageUrl: string | null; active: boolean; sortOrder: number }[]
   customers: { name: string; email: string; phone: string | null; category: string; bookings: number; currency: string }[]
   reports: {
     bookings: number
@@ -35,16 +36,18 @@ type Workspace = {
   }
 }
 
-function useWorkspace(section: string) {
+function useWorkspace(section: string, query = '', filter = '') {
   const [data, setData] = useState<Workspace | null>(null)
   const [message, setMessage] = useState('Loading…')
   const [tick, setTick] = useState(0)
+  const [search, setSearch] = useState('')
+  useEffect(() => { const timer = setTimeout(() => setSearch(query), 300); return () => clearTimeout(timer) }, [query])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch(`/api/admin/workspace?section=${encodeURIComponent(section)}`)
+        const res = await fetch(`/api/admin/workspace?section=${encodeURIComponent(section)}&q=${encodeURIComponent(search)}&category=${encodeURIComponent(filter)}`)
         const body = await res.json()
         if (cancelled) return
         if (!res.ok || !body.ok) {
@@ -60,7 +63,7 @@ function useWorkspace(section: string) {
     return () => {
       cancelled = true
     }
-  }, [tick, section])
+  }, [tick, section, search, filter])
 
   return { data, message, reload: () => setTick((value) => value + 1) }
 }
@@ -78,13 +81,14 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <AdminEmpty title="Nothing here yet" description="Records will appear here as your team and customers use the app." action={<p className="max-w-md text-sm text-muted">{children}</p>} />
 }
 
-type DestinationRow = { id: string; name: string; note: string | null; imageUrl: string | null; active: boolean }
+type DestinationRow = { id: string; name: string; note: string | null; imageUrl: string | null; active: boolean; sortOrder: number }
 
 export function DestinationsSection() {
   const confirm = useAdminConfirm()
   const [rows, setRows] = useState<DestinationRow[]>([])
+  const list = useAdminList(rows, row => JSON.stringify(row), row => row.active ? 'published' : 'hidden', publicationOptions, 'destinations')
   const [message, setMessage] = useState('Loading…')
-  const [draft, setDraft] = useState<{ id?: string; name: string; note: string; imageUrl: string; active: boolean } | null>(null)
+  const [draft, setDraft] = useState<{ id?: string; name: string; note: string; imageUrl: string; active: boolean; sortOrder: number } | null>(null)
 
   const load = async () => {
     const res = await fetch('/api/admin/destinations')
@@ -106,7 +110,7 @@ export function DestinationsSection() {
     const res = await fetch(draft.id ? `/api/admin/destinations/${draft.id}` : '/api/admin/destinations', {
       method: draft.id ? 'PATCH' : 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: draft.name, note: draft.note || null, imageUrl: draft.imageUrl || null, active: draft.active }),
+      body: JSON.stringify({ name: draft.name, note: draft.note || null, imageUrl: draft.imageUrl || null, active: draft.active, sortOrder: draft.sortOrder }),
     })
     const body = await res.json().catch(() => null)
     if (!res.ok || !body?.ok) {
@@ -120,15 +124,16 @@ export function DestinationsSection() {
 
   return (
     <Shell message={message}>
+      {list.controls}{list.pagination}
       <div className="mb-3 flex justify-end">
-        <AdminButton onClick={() => setDraft({ name: '', note: '', imageUrl: '', active: true })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add destination</AdminButton>
+        <AdminButton onClick={() => setDraft({ name: '', note: '', imageUrl: '', active: true, sortOrder: rows.length + 1 })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add destination</AdminButton>
       </div>
       {draft && (
         <AdminModal title={draft.id ? 'Edit destination' : 'New destination'} onClose={() => setDraft(null)}><AdminNotice message={message} />        <AdminForm onSubmit={(event) => { event.preventDefault(); return save() }} className="mb-4 grid gap-3 rounded-xl border border-line bg-bg p-4">
           <label className="text-xs font-semibold text-muted">Name<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <label className="text-xs font-semibold text-muted">Note<input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" /></label>
           <div className="text-xs font-semibold text-muted">Image<ImageField key={draft.id || 'new-destination'} value={draft.imageUrl} allowClear onChange={imageUrl => setDraft(current => current ? { ...current, imageUrl } : null)} /></div>
-          <AdminToggle label="Shown on the public site" checked={draft.active} onChange={active => setDraft({ ...draft, active })} />
+          <label className="text-xs font-semibold text-muted">Display order<input required type="number" min={0} max={100000} step={1} value={draft.sortOrder} onChange={event => setDraft({ ...draft, sortOrder: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-line p-3" /></label><AdminToggle label="Shown on the public site" checked={draft.active} onChange={active => setDraft({ ...draft, active })} />
           <div className="flex gap-2">
             <AdminButton type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save</AdminButton>
             <AdminButton type="button" onClick={() => setDraft(null)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-heading">Cancel</AdminButton>
@@ -137,7 +142,7 @@ export function DestinationsSection() {
       )}
       {message.includes('Loading') ? <p role="status" className="py-6 text-sm text-muted">Loading destinations…</p> : rows.length === 0 ? <Empty>No destinations yet. Use Add destination to create your first one.</Empty> : (
         <ul className="grid gap-3 sm:grid-cols-2">
-          {rows.map((item) => (
+          {list.visible.map((item) => (
             <li key={item.id} className="flex gap-3 overflow-hidden rounded-xl border border-line bg-bg p-3">
               {item.imageUrl ? <img src={item.imageUrl} alt="" className="h-20 w-24 shrink-0 rounded-lg object-cover" /> : null}
               <div className="min-w-0 flex-1">
@@ -146,7 +151,7 @@ export function DestinationsSection() {
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <p className={`text-xs font-semibold ${item.active ? 'text-success' : 'text-muted'}`}>{item.active ? 'Shown on the public site' : 'Hidden'}</p>
                   <span className="inline-flex gap-3">
-                    <AdminButton onClick={() => setDraft({ id: item.id, name: item.name, note: item.note || '', imageUrl: item.imageUrl || '', active: item.active })} className="text-xs font-semibold text-link">Edit</AdminButton>
+                    <AdminButton onClick={() => setDraft({ id: item.id, name: item.name, note: item.note || '', imageUrl: item.imageUrl || '', active: item.active, sortOrder: item.sortOrder ?? 0 })} className="text-xs font-semibold text-link">Edit</AdminButton>
                     <AdminButton
                       onClick={async () => {
                         if (!await confirm({ title: 'Delete destination?', description: `Remove “${item.name}” from the website?`, confirmLabel: 'Delete destination', danger: true })) return
@@ -175,10 +180,13 @@ export function DestinationsSection() {
 }
 
 export function CustomersSection() {
-  const { data, message, reload } = useWorkspace('customers')
-  const rows = data?.customers ?? []
+  const [rows, setRows] = useState<Workspace['customers']>([])
   const [draft, setDraft] = useState<{ email: string; name: string; category: string; existing: boolean } | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const list = useAdminList(rows, row => JSON.stringify(row), row => row.category, [{ value: 'INTERNATIONAL', label: 'Visitors' }, { value: 'RESIDENT', label: 'Residents' }], 'customers')
+
+  const { data, message, reload } = useWorkspace('customers', list.query, list.filter)
+  useEffect(() => { if (data) setRows(data.customers) }, [data])
 
   const save = async () => {
     if (!draft) return
@@ -199,6 +207,7 @@ export function CustomersSection() {
 
   return (
     <Shell message={status || message}>
+      {list.controls}{list.pagination}
       <div className="mb-3 flex justify-end">
         <AdminButton onClick={() => setDraft({ email: '', name: '', category: 'INTERNATIONAL', existing: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">Add customer</AdminButton>
       </div>
@@ -220,7 +229,7 @@ export function CustomersSection() {
       )}
       {!data && message.includes('Loading') ? <p role="status" className="py-6 text-sm text-muted">Loading customers…</p> : rows.length === 0 ? <Empty>No customer accounts or guest bookings yet.</Empty> : (
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
-          {rows.map((row) => (
+          {list.visible.map((row) => (
             <li key={row.email} className="px-4 py-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-semibold text-heading">{row.name}</p>
@@ -318,6 +327,7 @@ type EditorialDraft = {
 export function PagesSection() {
   const [preview, setPreview] = useState<EditorialDraft | null>(null)
   const [rows, setRows] = useState<EditorialDraft[]>([])
+  const list = useAdminList(rows, row => JSON.stringify(row), row => row.published ? 'published' : 'hidden', publicationOptions, 'pages')
   const [message, setMessage] = useState('Loading…')
   const [draft, setDraft] = useState<EditorialDraft | null>(null)
 
@@ -367,6 +377,7 @@ export function PagesSection() {
 
   return (
     <Shell message={message}>
+      {list.controls}{list.pagination}
       <div className="mb-3 flex justify-end gap-2">
         <AdminButton onClick={() => setDraft({ id: null, kind: 'blog', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-on-primary">New blog post</AdminButton>
         <AdminButton onClick={() => setDraft({ id: null, kind: 'guide', slug: '', title: '', excerpt: '', body: '', tag: '', published: false })} className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm font-semibold text-heading">New guide</AdminButton>
@@ -385,9 +396,10 @@ export function PagesSection() {
         </AdminForm></AdminModal>
       )}
       {message.includes('Loading') && <p role="status" className="py-6 text-sm text-muted">Loading pages…</p>}
+      {rows.length > 0 && !list.filteredCount && <AdminEmpty title="No matching records" description="Try another search or clear the filters." />}
       {rows.length === 0 && !message.includes('Loading') && <AdminEmpty title="No pages yet" description="Create your first blog post or travel guide, then publish it when it is ready." />}
       <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">
-        {rows.map((row) => (
+        {list.visible.map((row) => (
           <li key={row.kind + row.slug} className="flex items-start justify-between gap-3 px-4 py-3">
             <span className="min-w-0">
               <span className="block text-sm font-semibold leading-snug text-heading">{row.title}</span>

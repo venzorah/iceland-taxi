@@ -1,5 +1,4 @@
-import { ServiceKind } from '@prisma/client'
-import { z } from 'zod'
+import { createServiceSchema } from '@/lib/admin/service-schema'
 import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
@@ -11,28 +10,19 @@ async function handleGET() {
   return jsonOk({ ok: true, services })
 }
 
-const createSchema = z.object({
-  slug: z.string().min(1),
-  kind: z.nativeEnum(ServiceKind),
-  titleEn: z.string().trim().min(1),
-  titleIs: z.string().optional(),
-  blurbEn: z.string().optional(),
-  fromIsk: z.number().int().nonnegative().optional(),
-  hoursLabel: z.string().optional(),
-  paxLabel: z.string().optional(),
-  imageUrl: z.string().optional(),
-  active: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-})
 
 async function handlePOST(req: Request) {
   const blocked = await rejectDriverOnly('services')
   if (blocked) return blocked
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const body = await req.json().catch(() => null)
-  const parsed = createSchema.safeParse(body)
+  const parsed = createServiceSchema.safeParse(body)
   if (!parsed.success) return jsonError(400, 'VALIDATION_ERROR', 'Invalid service', { issues: parsed.error.flatten() })
-  const service = await prisma.service.create({ data: parsed.data })
+  let service
+  try { service = await prisma.service.create({ data: parsed.data }) } catch (error) {
+    if ((error as { code?: string }).code === 'P2002') return jsonError(409, 'DUPLICATE_SLUG', 'That service identifier is already in use.')
+    throw error
+  }
   return jsonOk({ ok: true, service }, { status: 201 })
 }
 

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { Prisma, type PrismaClient, type Service, type Route, type ExchangeRate, type SiteBlock } from '@prisma/client'
 import { SITE_BLOCKS } from '@/lib/content/blocks'
 import { HttpError } from '@/lib/security/http'
-import { REFERENCE_SERVICES, REFERENCE_ROUTES, REFERENCE_EUR_RATE } from './reference'
+import { REFERENCE_SERVICES, REFERENCE_ROUTES, REFERENCE_EXTRAS, REFERENCE_EUR_RATE } from './reference'
 
 type Snapshot = { services: Service[]; routes: Route[]; rate: ExchangeRate | null; blocks: SiteBlock[] }
 type Change = { field: string; before: unknown; after: unknown }
@@ -12,15 +12,17 @@ const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u0
 const contentKeys = new Set(['home.airport.kicker', 'home.airport.title', 'home.airport.body', 'home.tours.title', 'home.tours.body', 'image.airport', 'image.goldenCircle', 'image.southCoast', 'image.northernLights', 'image.privateDriver', ...SITE_BLOCKS.filter(block => /^(airport|tours|driver)\./.test(block.key)).map(block => block.key)])
 const referenceBlocks = SITE_BLOCKS.filter(block => contentKeys.has(block.key))
 
-/** Deterministic plan: retain authored values/prices and IDs, fill gaps, correct reference categories. */
+/** Install the official price list. Matched rows are updated. Anything else is paused, not deleted, so booking history stays. */
 export function planCatalogueRestore(snapshot: Snapshot): CatalogueRestorePlan {
   const actions: Action[] = [], warnings: string[] = [], conflicts: string[] = []
   const serviceIds = new Map<string, string>()
+  const keptServiceIds = new Set<string>()
   for (const reference of REFERENCE_SERVICES) {
     const matches = snapshot.services.filter(row => row.slug === reference.slug || normalize(row.titleEn) === normalize(reference.titleEn))
-    if (matches.length > 1 || (matches[0]?.slug === reference.slug && normalize(matches[0].titleEn) !== normalize(reference.titleEn))) { conflicts.push(`Resolve duplicate or conflicting service: ${reference.titleEn}.`); continue }
+    if (matches.length > 1) { conflicts.push(`Resolve duplicate or conflicting service: ${reference.titleEn}.`); continue }
     const existing = matches[0], id = existing?.id || `reference-${reference.slug}`
     serviceIds.set(reference.slug, id)
+    keptServiceIds.add(id)
     if (!existing) {
       if (snapshot.services.some(row => row.id === id)) { conflicts.push(`The restore ID for ${reference.titleEn} is already used.`); continue }
       const data = { ...reference, active: true }
@@ -29,35 +31,50 @@ export function planCatalogueRestore(snapshot: Snapshot): CatalogueRestorePlan {
     }
     const data: Record<string, unknown> = {}
     if (existing.kind !== reference.kind) data.kind = reference.kind
-    if (existing.fromIsk === null) data.fromIsk = reference.fromIsk
-    else if (existing.fromIsk !== reference.fromIsk) warnings.push(`${reference.titleEn}: keeping the existing ISK ${existing.fromIsk} price (reference: ${reference.fromIsk}).`)
+    if (existing.fromIsk !== reference.fromIsk) data.fromIsk = reference.fromIsk
+    if (existing.titleEn !== reference.titleEn) data.titleEn = reference.titleEn
+    if (existing.slug !== reference.slug) data.slug = reference.slug
+    if (existing.sortOrder !== reference.sortOrder) data.sortOrder = reference.sortOrder
     for (const field of ['blurbEn', 'imageUrl', 'hoursLabel', 'paxLabel'] as const) {
-      if (!existing[field]?.trim() && field in reference) data[field] = (reference as unknown as Record<string, unknown>)[field]
+      const next = reference[field]
+      if (next !== undefined && existing[field] !== next) data[field] = next
     }
-    if (!existing.active) warnings.push(`${reference.titleEn} is hidden. Its published status will be preserved.`)
+    if (!existing.active) data.active = true
     if (Object.keys(data).length) actions.push({ model: 'service', operation: 'update', id, label: reference.titleEn, data, changes: Object.entries(data).map(([field, after]) => ({ field, before: existing[field as keyof Service], after })) })
   }
-  const airportId = serviceIds.get('airport-transfer')
+  for (const row of snapshot.services) {
+    if (keptServiceIds.has(row.id) || !row.active) continue
+    actions.push({ model: 'service', operation: 'update', id: row.id, label: row.titleEn, data: { active: false }, changes: [{ field: 'active', before: true, after: false }] })
+    warnings.push(`${row.titleEn} is not on the official list and will be hidden. You can edit or delete it in Services.`)
+  }
+  const keptRouteIds = new Set<string>()
   for (const reference of REFERENCE_ROUTES) {
     const matches = snapshot.routes.filter(row => normalize(row.fromLabel) === normalize(reference.fromLabel) && normalize(row.toLabel) === normalize(reference.toLabel))
     const label = `${reference.fromLabel} → ${reference.toLabel}`
     if (matches.length > 1) { conflicts.push(`Resolve duplicate route: ${label}.`); continue }
-    if (!airportId) continue
-    const existing = matches[0], id = existing?.id || `reference-airport-${reference.key}`
-    const { key: _key, ...fields } = reference
+    const serviceId = serviceIds.get(reference.serviceSlug)
+    if (!serviceId) continue
+    const existing = matches[0], id = existing?.id || `reference-${reference.key}`
+    keptRouteIds.add(id)
+    const fields = { fromLabel: reference.fromLabel, toLabel: reference.toLabel, minutes: reference.minutes, fromIsk: reference.fromIsk, returnTrip: reference.returnTrip, serviceId, active: true }
     if (!existing) {
       if (snapshot.routes.some(row => row.id === id)) { conflicts.push(`The restore ID for ${label} is already used.`); continue }
-      const data = { ...fields, serviceId: airportId, active: true, returnTrip: true }
-      actions.push({ model: 'route', operation: 'create', id, label, data, changes: Object.entries(data).map(([field, after]) => ({ field, before: null, after })) })
+      actions.push({ model: 'route', operation: 'create', id, label, data: fields, changes: Object.entries(fields).map(([field, after]) => ({ field, before: null, after })) })
     } else {
       const data: Record<string, unknown> = {}
-      if (existing.serviceId !== airportId) data.serviceId = airportId
-      if (existing.minutes === null) data.minutes = reference.minutes
-      if (existing.km === null) data.km = reference.km
-      if (existing.fromIsk !== reference.fromIsk) warnings.push(`${label}: keeping the existing ISK ${existing.fromIsk} price (reference: ${reference.fromIsk}).`)
-      if (!existing.active) warnings.push(`${label} is paused. Its published status will be preserved.`)
+      if (existing.serviceId !== serviceId) data.serviceId = serviceId
+      if (existing.minutes !== reference.minutes) data.minutes = reference.minutes
+      if (existing.fromIsk !== reference.fromIsk) data.fromIsk = reference.fromIsk
+      if (existing.returnTrip !== reference.returnTrip) data.returnTrip = reference.returnTrip
+      if (!existing.active) data.active = true
       if (Object.keys(data).length) actions.push({ model: 'route', operation: 'update', id, label, data, changes: Object.entries(data).map(([field, after]) => ({ field, before: existing[field as keyof Route], after })) })
     }
+  }
+  for (const row of snapshot.routes) {
+    if (keptRouteIds.has(row.id) || !row.active) continue
+    const label = `${row.fromLabel} → ${row.toLabel}`
+    actions.push({ model: 'route', operation: 'update', id: row.id, label, data: { active: false }, changes: [{ field: 'active', before: true, after: false }] })
+    warnings.push(`${label} is not on the official list and will be paused. You can edit or delete it in Routes.`)
   }
   for (const reference of referenceBlocks) {
     if (snapshot.blocks.some(row => row.key === reference.key)) continue
@@ -75,7 +92,25 @@ async function loadSnapshot(db: Prisma.TransactionClient | PrismaClient): Promis
 }
 export async function previewCatalogueRestore(db: PrismaClient) { return planCatalogueRestore(await loadSnapshot(db)) }
 
-/** Additive only: no deletes, auth/booking/payment writes, or changes to saved charge snapshots. */
+async function syncOfficialExtras(tx: Prisma.TransactionClient) {
+  const current = await tx.pricingExtra.findMany()
+  const official = new Set<string>(REFERENCE_EXTRAS.map((extra) => extra.key))
+  for (const extra of REFERENCE_EXTRAS) {
+    const existing = current.find((row) => row.key === extra.key)
+    if (!existing) {
+      await tx.pricingExtra.create({ data: { key: extra.key, labelEn: extra.labelEn, isk: extra.isk, active: extra.active, sortOrder: extra.sortOrder } })
+      continue
+    }
+    if (existing.labelEn !== extra.labelEn || existing.isk !== extra.isk || existing.active !== extra.active || existing.sortOrder !== extra.sortOrder) {
+      await tx.pricingExtra.update({ where: { key: extra.key }, data: { labelEn: extra.labelEn, isk: extra.isk, active: extra.active, sortOrder: extra.sortOrder } })
+    }
+  }
+  for (const extra of current) {
+    if (!official.has(extra.key) && extra.active) await tx.pricingExtra.update({ where: { key: extra.key }, data: { active: false } })
+  }
+}
+
+/** Replaces catalogue prices with the official list. Booking and payment snapshots are not rewritten. */
 export async function applyCatalogueRestore(db: PrismaClient, fingerprint: string, restoreExchangeRate: boolean) {
   return db.$transaction(async tx => {
     const snapshot = await loadSnapshot(tx), plan = planCatalogueRestore(snapshot)
@@ -90,6 +125,8 @@ export async function applyCatalogueRestore(db: PrismaClient, fingerprint: strin
         else await tx.route.update({ where: { id: action.id }, data: action.data })
       } else await tx.siteBlock.create({ data: action.data as Prisma.SiteBlockCreateInput })
     }
+    await syncOfficialExtras(tx)
+    await tx.vehicle.updateMany({ where: { NOT: { upgradeIsk: 0 } }, data: { upgradeIsk: 0 } })
     const rateRestored = restoreExchangeRate && plan.rateNeedsRestore
     if (rateRestored) await tx.exchangeRate.create({ data: { iskPerEur: REFERENCE_EUR_RATE, iskPerUsd: snapshot.rate?.iskPerUsd ?? 138, note: 'Reference catalogue EUR display rate restored by administrator. Existing booking snapshots retained.' } })
     return { changed: plan.actions.length, rateRestored, plan: planCatalogueRestore(await loadSnapshot(tx)) }

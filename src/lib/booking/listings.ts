@@ -72,6 +72,19 @@ export function adminPriceIsk(fromIsk: number | null | undefined): number | null
   return rounded
 }
 
+function durationLabel(minutes: number | null | undefined) {
+  if (!minutes || minutes < 1) return null
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60
+    return hours === 1 ? '1 hour' : `${hours} hours`
+  }
+  if (minutes % 30 === 0 && minutes > 60) {
+    const hours = Math.floor(minutes / 60)
+    return `${hours}.5 hours`
+  }
+  return `${minutes} min`
+}
+
 function categoryFor(kind: string | null | undefined): ListingCategory {
   switch (kind) {
     case 'AIRPORT':
@@ -99,27 +112,31 @@ export function publishedListings(routes: CatalogueRoute[], services: CatalogueS
     if (route.service && route.service.active === false) continue
     const price = adminPriceIsk(route.fromIsk)
     if (price == null) continue
+    const parent = services.find((service) => service.id === route.serviceId)
+    const band = route.toLabel.split(' · ').find((part) => part.toLowerCase().includes('person')) || null
     listings.push({
       id: route.id,
       kind: 'route',
       serviceId: route.serviceId,
       routeId: route.id,
-      title: route.service?.titleEn || 'Transfer',
+      title: route.service?.titleEn || parent?.titleEn || 'Transfer',
       fromLabel: route.fromLabel,
       toLabel: route.toLabel,
       fromIsk: price,
       minutes: route.minutes ?? null,
       km: route.km ?? null,
-      category: categoryFor(route.service?.kind),
-      hoursLabel: route.minutes ? `${route.minutes} min` : null,
-      paxLabel: null,
-      blurb: null,
-      imageUrl: null,
+      category: categoryFor(route.service?.kind || parent?.kind),
+      hoursLabel: durationLabel(route.minutes) || parent?.hoursLabel || null,
+      paxLabel: band || parent?.paxLabel || null,
+      blurb: parent?.blurbEn ?? null,
+      imageUrl: parent?.imageUrl ?? null,
     })
   }
+  const covered = new Set(listings.map((listing) => listing.serviceId).filter((id): id is string => Boolean(id)))
   for (const service of services) {
     if (!service.active) continue
     if (service.kind === 'AIRPORT') continue
+    if (covered.has(service.id)) continue
     const price = adminPriceIsk(service.fromIsk)
     if (price == null) continue
     listings.push({

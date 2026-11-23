@@ -38,7 +38,7 @@ export function ReferenceCatalogueRestore({ onRestored }: { onRestored: () => Pr
   return <>
     <AdminButton type="button" pendingLabel="Preparing preview…" onClick={preview} className="inline-flex items-center gap-2 rounded-xl border border-line bg-bg px-4 py-2.5 text-sm font-semibold text-heading"><RotateCcw size={16} /> Restore reference catalogue</AdminButton>
     {plan && <AdminModal title="Restore reference catalogue" busy={busy} onClose={() => setPlan(null)}><div className="space-y-5">
-      <p className="text-sm leading-relaxed text-muted">Restore the tours, airport transfers and private-driver offer shown in the approved site reference. Existing listings, custom prices and published status are preserved. Missing descriptions, photos and duration labels are filled in.</p>
+      <p className="text-sm leading-relaxed text-muted">Replace the public price list with the official tours and transfers. Each line keeps its category, and a route that is not on the list is paused. Existing booking amounts stay as they were. After this, edit or delete any service, route or add-on from the admin screens. Vehicle upgrade amounts are cleared so the listed car price is the fare customers pay.</p>
       <AdminNotice message={notice} />
       {plan.conflicts.map(conflict => <p role="alert" key={conflict} className="rounded-xl bg-error/10 p-3 text-sm text-error">{conflict}</p>)}
       {!!plan.warnings.length && <div className="rounded-xl border border-line p-4"><h3 className="text-sm font-bold">Kept as configured</h3><ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-muted">{plan.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></div>}

@@ -78,7 +78,7 @@ export default function PrivateDriver(props: Props) {
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">{content['driver.hero.title']}</h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">{content['driver.hero.body']}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => driverListings[0] ? router.push(`/book?listing=${encodeURIComponent(driverListings[0].id)}&kind=service`) : router.push('/book?enquiry=1')} className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
+            <button onClick={() => driverListings[0] ? router.push(`/book?listing=${encodeURIComponent(driverListings[0].id)}&kind=${driverListings[0].kind}`) : router.push('/book?enquiry=1')} className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
               Book a private driver <ArrowRight size={16} />
             </button>
             <button onClick={() => router.push('/book?enquiry=1')} className="rounded-full border border-white/30 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10">
@@ -111,7 +111,7 @@ export default function PrivateDriver(props: Props) {
                 </div>
                 <div className="text-right">
                   <p className="font-display text-lg font-bold text-heading">{formatPrice(listing.fromIsk, p.currency, listing.iskPerEur)}</p>
-                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(listing.id)}&kind=service`)} className="mt-2 rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book</button>
+                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(listing.id)}&kind=${listing.kind}`)} className="mt-2 rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book</button>
                 </div>
               </li>
             ))}

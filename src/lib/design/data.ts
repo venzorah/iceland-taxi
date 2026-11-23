@@ -76,16 +76,14 @@ export const SERVICE_CATEGORIES = [
 ] as const
 
 export const AIRPORT_ROUTES = [
-  { from: 'Keflavík Airport (KEF)', to: 'Reykjavík city centre', minutes: 45, km: 49, fromIsk: 22900 },
-  { from: 'Keflavík Airport (KEF)', to: 'Blue Lagoon', minutes: 20, km: 23, fromIsk: 14900 },
-  { from: 'Reykjavík hotel', to: 'Keflavík Airport (KEF)', minutes: 45, km: 49, fromIsk: 22900 },
-  { from: 'Keflavík Airport (KEF)', to: 'Selfoss', minutes: 75, km: 100, fromIsk: 39900 },
+  { from: 'Keflavík Airport (KEF)', to: 'Reykjavík · Car · 1–4 persons', minutes: null, km: null, fromIsk: 24000 },
+  { from: 'Keflavík Airport (KEF)', to: 'Reykjavík · Car · 5–8 persons', minutes: null, km: null, fromIsk: 30750 },
 ]
 
 export const TOURS = [
-  { id: 'golden-circle', title: 'Golden Circle Private Tour', img: IMG.goldenCircle, hours: '7–8 h', pax: 'Up to 8', fromIsk: 89900, blurb: 'Þingvellir, Geysir and Gullfoss at your own pace.' },
-  { id: 'south-coast', title: 'South Coast Private Tour', img: IMG.southCoast, hours: '10–11 h', pax: 'Up to 8', fromIsk: 119900, blurb: 'Seljalandsfoss, Skógafoss and the black sands of Reynisfjara.' },
-  { id: 'northern-lights', title: 'Northern Lights Experience', img: IMG.northernLights, hours: '3–4 h', pax: 'Up to 8', fromIsk: 59900, blurb: 'Your driver follows the forecast away from city light.' },
+  { id: 'golden-circle', title: 'Golden Circle', img: IMG.goldenCircle, hours: '6 hours', pax: '1–4 or 5–8 persons', fromIsk: 102000, blurb: 'Þingvellir, Geysir and Strokkur, Gullfoss, and two or three stops on the way back. Price is per car.' },
+  { id: 'south-coast', title: 'South Coast', img: IMG.southCoast, hours: '12 hours', pax: '1–4 or 5–8 persons', fromIsk: 147000, blurb: 'Seljalandsfoss, Skógafoss, the black beach and Vík. Price is per car.' },
+  { id: 'reykjavik-sightseeing', title: 'Reykjavík sightseeing', img: IMG.reykjavik, hours: '2 hours', pax: '1–4 or 5–8 persons', fromIsk: 27000, blurb: 'A private sightseeing ride in Reykjavík. Price is per car.' },
 ]
 
 export const DESTINATIONS = [

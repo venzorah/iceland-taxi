@@ -1,4 +1,5 @@
 import { PrismaClient, BookingStatus, CurrencyCode, CustomerCategory, Role, ServiceKind } from '@prisma/client'
+import { REFERENCE_EXTRAS, REFERENCE_ROUTES, REFERENCE_SERVICES } from '../src/lib/catalogue/reference'
 
 const prisma = new PrismaClient()
 
@@ -68,80 +69,36 @@ async function main() {
     blueLagoon: '/photos/blue-lagoon.jpg',
   }
 
-  const airport = await prisma.service.create({
-    data: {
-      slug: 'airport-transfer',
-      kind: ServiceKind.AIRPORT,
-      titleEn: 'Airport transfer',
-      titleIs: 'Flugvallarakstur',
-      fromIsk: 14900,
-      active: true,
-      sortOrder: 1,
-    },
-  })
-
-  await prisma.service.createMany({
-    data: [
-      {
-        slug: 'private-taxi',
-        kind: ServiceKind.TAXI,
-        titleEn: 'Private taxi',
-        titleIs: 'Einkabíll',
-        fromIsk: 8900,
-        sortOrder: 2,
-      },
-      {
-        slug: 'golden-circle',
-        kind: ServiceKind.TOUR,
-        titleEn: 'Golden Circle Private Tour',
-        titleIs: 'Gullni hringurinn',
-        blurbEn: 'Þingvellir, Geysir and Gullfoss at your own pace.',
-        imageUrl: img.goldenCircle,
-        hoursLabel: '7–8 h',
-        paxLabel: 'Up to 8',
-        fromIsk: 89900,
-        sortOrder: 3,
-      },
-      {
-        slug: 'south-coast',
-        kind: ServiceKind.TOUR,
-        titleEn: 'South Coast Private Tour',
-        blurbEn: 'Seljalandsfoss, Skógafoss and the black sands of Reynisfjara.',
-        imageUrl: img.southCoast,
-        hoursLabel: '10–11 h',
-        paxLabel: 'Up to 8',
-        fromIsk: 119900,
-        sortOrder: 4,
-      },
-      {
-        slug: 'northern-lights',
-        kind: ServiceKind.TOUR,
-        titleEn: 'Northern Lights Experience',
-        blurbEn: 'Your driver follows the forecast away from city light.',
-        imageUrl: img.northernLights,
-        hoursLabel: '3–4 h',
-        paxLabel: 'Up to 8',
-        fromIsk: 59900,
-        sortOrder: 5,
-      },
-      {
-        slug: 'private-driver',
-        kind: ServiceKind.DRIVER,
-        titleEn: 'Private driver',
-        titleIs: 'Einkabílstjóri',
-        fromIsk: 24900,
-        sortOrder: 6,
-      },
-    ],
-  })
+  const services = await Promise.all(
+    REFERENCE_SERVICES.map((service) =>
+      prisma.service.create({
+        data: {
+          slug: service.slug,
+          kind: service.kind as ServiceKind,
+          titleEn: service.titleEn,
+          blurbEn: service.blurbEn,
+          imageUrl: service.imageUrl,
+          hoursLabel: service.hoursLabel,
+          paxLabel: service.paxLabel,
+          fromIsk: service.fromIsk,
+          sortOrder: service.sortOrder,
+          active: true,
+        },
+      }),
+    ),
+  )
+  const serviceId = new Map(services.map((service) => [service.slug, service.id]))
 
   await prisma.route.createMany({
-    data: [
-      { serviceId: airport.id, fromLabel: 'Keflavík Airport (KEF)', toLabel: 'Reykjavík city centre', minutes: 45, km: 49, fromIsk: 22900 },
-      { serviceId: airport.id, fromLabel: 'Keflavík Airport (KEF)', toLabel: 'Blue Lagoon', minutes: 20, km: 23, fromIsk: 14900 },
-      { serviceId: airport.id, fromLabel: 'Reykjavík hotel', toLabel: 'Keflavík Airport (KEF)', minutes: 45, km: 49, fromIsk: 22900 },
-      { serviceId: airport.id, fromLabel: 'Keflavík Airport (KEF)', toLabel: 'Selfoss', minutes: 75, km: 100, fromIsk: 39900 },
-    ],
+    data: REFERENCE_ROUTES.map((route) => ({
+      serviceId: serviceId.get(route.serviceSlug),
+      fromLabel: route.fromLabel,
+      toLabel: route.toLabel,
+      minutes: route.minutes,
+      fromIsk: route.fromIsk,
+      returnTrip: route.returnTrip,
+      active: true,
+    })),
   })
 
   await prisma.destination.createMany({
@@ -177,7 +134,7 @@ async function main() {
       {
         questionEn: 'Can I hire a driver for several days?',
         answerEn:
-          'Yes. Choose Private driver and select hourly, half-day, full-day or multi-day. For a custom itinerary, send a quotation request and we will reply with a price.',
+          'Send a quotation request with the dates and the itinerary. We reply with a price. The published tours and transfers stay at the fixed price shown for each car.',
         sortOrder: 4,
       },
       {
@@ -190,21 +147,23 @@ async function main() {
   })
 
   await prisma.pricingExtra.createMany({
-    data: [
-      { key: 'meetGreet', labelEn: 'Meet & greet at arrivals', isk: 0, sortOrder: 1 },
-      { key: 'childSeat', labelEn: 'Child seat', isk: 2500, sortOrder: 2 },
-      { key: 'returnTrip', labelEn: 'Return journey', isk: 0, sortOrder: 3 },
-    ],
+    data: REFERENCE_EXTRAS.map((extra) => ({
+      key: extra.key,
+      labelEn: extra.labelEn,
+      isk: extra.isk,
+      active: extra.active,
+      sortOrder: extra.sortOrder,
+    })),
   })
 
   const vehicles = await Promise.all(
     [
       { name: 'Standard Sedan', category: 'sedan', pax: 3, bags: 3, useCase: 'Airport & city rides', plate: 'ST-100', upgradeIsk: 0 },
-      { name: 'Comfort Sedan', category: 'sedan', pax: 3, bags: 3, useCase: 'Longer transfers', plate: 'RX-482', upgradeIsk: 3000 },
-      { name: 'Premium Sedan', category: 'sedan', pax: 3, bags: 2, useCase: 'Business & chauffeur', plate: 'BS-771', upgradeIsk: 6000 },
-      { name: 'SUV', category: 'suv', pax: 4, bags: 4, useCase: 'Winter roads & tours', plate: 'KL-115', upgradeIsk: 8000 },
-      { name: 'Minivan', category: 'van', pax: 7, bags: 7, useCase: 'Families & small groups', plate: 'MV-220', upgradeIsk: 12000 },
-      { name: 'Minibus', category: 'bus', pax: 16, bags: 16, useCase: 'Groups & events', plate: 'MB-016', upgradeIsk: 25000 },
+      { name: 'Comfort Sedan', category: 'sedan', pax: 3, bags: 3, useCase: 'Longer transfers', plate: 'RX-482', upgradeIsk: 0 },
+      { name: 'Premium Sedan', category: 'sedan', pax: 3, bags: 2, useCase: 'Business & chauffeur', plate: 'BS-771', upgradeIsk: 0 },
+      { name: 'SUV', category: 'suv', pax: 4, bags: 4, useCase: 'Winter roads & tours', plate: 'KL-115', upgradeIsk: 0 },
+      { name: 'Minivan', category: 'van', pax: 7, bags: 7, useCase: 'Families & small groups', plate: 'MV-220', upgradeIsk: 0 },
+      { name: 'Minibus', category: 'bus', pax: 16, bags: 16, useCase: 'Groups & events', plate: 'MB-016', upgradeIsk: 0 },
     ].map((v) => prisma.vehicle.create({ data: v })),
   )
 

@@ -1,4 +1,5 @@
-import { AIRPORT_ROUTES, FLEET, TOURS, DESTINATIONS, FAQS, SERVICE_CATEGORIES } from '@/lib/design/data'
+import { FLEET, DESTINATIONS, FAQS, SERVICE_CATEGORIES } from '@/lib/design/data'
+import { REFERENCE_ROUTES, REFERENCE_SERVICES } from '@/lib/catalogue/reference'
 import { apiHandler, jsonOk, withDb, prisma } from '@/lib/api'
 
 async function handleGET() {
@@ -25,22 +26,23 @@ async function handleGET() {
       ({
         source: 'seed-fallback' as const,
         categories: SERVICE_CATEGORIES,
-        services: TOURS.map((t) => ({
-          slug: t.id,
-          kind: 'TOUR',
-          titleEn: t.title,
-          blurbEn: t.blurb,
-          imageUrl: t.img,
-          hoursLabel: t.hours,
-          paxLabel: t.pax,
-          fromIsk: t.fromIsk,
+        services: REFERENCE_SERVICES.map((service) => ({
+          slug: service.slug,
+          kind: service.kind,
+          titleEn: service.titleEn,
+          blurbEn: service.blurbEn ?? null,
+          imageUrl: service.imageUrl ?? null,
+          hoursLabel: service.hoursLabel ?? null,
+          paxLabel: service.paxLabel ?? null,
+          fromIsk: service.fromIsk,
         })),
-        routes: AIRPORT_ROUTES.map((r) => ({
-          fromLabel: r.from,
-          toLabel: r.to,
-          minutes: r.minutes,
-          km: r.km,
-          fromIsk: r.fromIsk,
+        routes: REFERENCE_ROUTES.map((route) => ({
+          fromLabel: route.fromLabel,
+          toLabel: route.toLabel,
+          minutes: route.minutes,
+          km: null,
+          fromIsk: route.fromIsk,
+          serviceSlug: route.serviceSlug,
         })),
         destinations: DESTINATIONS.map((d) => ({ name: d.name, note: d.note, imageUrl: d.img })),
         faqs: FAQS.map((f) => ({ questionEn: f.q, answerEn: f.a })),

@@ -141,7 +141,7 @@ export default function Homepage(props: Props) {
                         <p className="text-xs text-muted">Price</p>
                         <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
                       </div>
-                      <button onClick={() => onSearch?.({ category: 'tour', pickup: tour.title, destination: tour.title, listingId: tour.id, listingKind: 'service', date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
+                      <button onClick={() => onSearch?.({ category: 'tour', pickup: tour.fromLabel, destination: tour.toLabel, listingId: tour.id, listingKind: tour.kind, date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
                         Book tour
                       </button>
                     </div>
@@ -166,7 +166,7 @@ export default function Homepage(props: Props) {
                 ))}
               </div>
               <div className="mt-10 grid gap-3 sm:flex sm:flex-wrap">
-                <button onClick={() => driverListing ? onSearch?.({ category: 'driver', pickup: driverListing.title, destination: driverListing.title, listingId: driverListing.id, listingKind: 'service', date: '', time: '', passengers: 2, luggage: 2 }) : onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
+                <button onClick={() => driverListing ? onSearch?.({ category: 'driver', pickup: driverListing.fromLabel, destination: driverListing.toLabel, listingId: driverListing.id, listingKind: driverListing.kind, date: '', time: '', passengers: 2, luggage: 2 }) : onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
                   Hire a Private Driver
                 </button>
                 <button onClick={() => onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</button>

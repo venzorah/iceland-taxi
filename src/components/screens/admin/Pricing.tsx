@@ -1,7 +1,7 @@
 'use client'
 import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
-import { AdminButton, AdminToggle, AdminEmpty, AdminForm } from '@/components/admin/AdminUI'
+import { AdminButton, AdminToggle, AdminEmpty, AdminForm, useAdminConfirm } from '@/components/admin/AdminUI'
 import { useAdminList, publicationOptions } from '@/components/admin/AdminList'
 import React, { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
@@ -20,6 +20,7 @@ function addonKey(label: string) {
 }
 
 export function Pricing() {
+  const confirm = useAdminConfirm()
   const [rate, setRate] = useState(138)
   const [eurRate, setEurRate] = useState(150)
   const [extras, setExtras] = useState<Extra[]>([])
@@ -101,6 +102,23 @@ export function Pricing() {
     setMsg('Pricing saved.')
   }
 
+  const removeExtra = async (extra: Extra) => {
+    if (extra.isNew) {
+      setExtras((list) => list.filter((row) => row.id !== extra.id))
+      return
+    }
+    const ok = await confirm({ title: 'Delete this add-on?', description: `${extra.labelEn} will be removed. Bookings already made keep their saved amounts.`, confirmLabel: 'Delete add-on', danger: true })
+    if (!ok) return
+    const res = await fetch(`/api/admin/pricing?id=${encodeURIComponent(extra.id)}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.ok) {
+      setMsg(data?.message || 'Could not delete the add-on')
+      return
+    }
+    setExtras((list) => list.filter((row) => row.id !== extra.id))
+    setMsg('Add-on deleted.')
+  }
+
   return (
     <AdminForm onSubmit={save} className="mx-auto max-w-5xl space-y-4 p-3 sm:space-y-6 sm:p-6">
       {msg && <p className="text-xs text-muted">{msg}</p>}
@@ -120,8 +138,8 @@ export function Pricing() {
             </label>
             <p className="mt-2 text-xs text-muted">Public euros use ISK per 1 EUR. The USD rate stays for older USD snapshots. Rates are saved manually; they are not a live FX feed.</p>
             <div className="mt-4 rounded-lg bg-surface p-4 text-sm">
-              <p className="text-muted">Example: KEF → Reykjavík, ISK 22,900</p>
-              <p className="mt-1 font-display text-xl font-bold text-heading">€{Math.round(22900 / (eurRate || 1)).toLocaleString('en-US').replace(/,/g, '.')} EUR</p>
+              <p className="text-muted">Example: KEF → Reykjavík, car for 1–4 persons, ISK 24,000</p>
+              <p className="mt-1 font-display text-xl font-bold text-heading">€{Math.round(24000 / (eurRate || 1)).toLocaleString('en-US').replace(/,/g, '.')} EUR</p>
             </div>
             <div className="mt-4 flex gap-2 rounded-lg border border-line p-3 text-xs text-text">
               <AlertTriangle size={16} className="shrink-0 text-warning" />
@@ -161,7 +179,7 @@ export function Pricing() {
                   className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus"
                 />
               </label>
-              <label className="block text-xs font-semibold text-muted">Icelandic label (optional)<input value={extra.labelIs || ''} onChange={e => setExtras(list => list.map(item => item.id === extra.id ? { ...item, labelIs: e.target.value } : item))} className="mt-1 w-full rounded-lg border border-line p-3" /></label><label className="block text-xs font-semibold text-muted">Display order<input required type="number" min={0} max={100000} step={1} value={extra.sortOrder ?? 0} onChange={e => setExtras(list => list.map(item => item.id === extra.id ? { ...item, sortOrder: Number(e.target.value) } : item))} className="mt-1 w-full rounded-lg border border-line p-3" /></label><AdminToggle label="Active" checked={extra.active} onChange={active => setExtras(list => list.map(item => item.id === extra.id ? { ...item, active } : item))} />
+              <label className="block text-xs font-semibold text-muted">Icelandic label (optional)<input value={extra.labelIs || ''} onChange={e => setExtras(list => list.map(item => item.id === extra.id ? { ...item, labelIs: e.target.value } : item))} className="mt-1 w-full rounded-lg border border-line p-3" /></label><label className="block text-xs font-semibold text-muted">Display order<input required type="number" min={0} max={100000} step={1} value={extra.sortOrder ?? 0} onChange={e => setExtras(list => list.map(item => item.id === extra.id ? { ...item, sortOrder: Number(e.target.value) } : item))} className="mt-1 w-full rounded-lg border border-line p-3" /></label><AdminToggle label="Active" checked={extra.active} onChange={active => setExtras(list => list.map(item => item.id === extra.id ? { ...item, active } : item))} /><AdminButton type="button" onClick={() => removeExtra(extra)} className="text-sm font-semibold text-error">Delete</AdminButton>
             </div>
           ))}
           <AdminButton

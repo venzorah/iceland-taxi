@@ -66,7 +66,7 @@ export default function PrivateTours(props: Props) {
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <h1 className="max-w-3xl font-display text-3xl font-extrabold sm:text-5xl">{content['tours.hero.title']}</h1>
           <p className="mt-4 max-w-2xl text-base text-white/80 sm:text-lg">{content['tours.hero.body']}</p>
-          <button onClick={() => tours[0] ? router.push(`/book?listing=${encodeURIComponent(tours[0].id)}&kind=service`) : router.push('/book?enquiry=1')} className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
+          <button onClick={() => tours[0] ? router.push(`/book?listing=${encodeURIComponent(tours[0].id)}&kind=${tours[0].kind}`) : router.push('/book?enquiry=1')} className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary">
             Book a private tour <ArrowRight size={16} />
           </button>
         </div>
@@ -91,7 +91,7 @@ export default function PrivateTours(props: Props) {
                     <p className="text-xs text-muted">Price</p>
                     <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
                   </div>
-                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(tour.id)}&kind=service`)} className="rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book tour</button>
+                  <button onClick={() => router.push(`/book?listing=${encodeURIComponent(tour.id)}&kind=${tour.kind}`)} className="rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book tour</button>
                 </div>
               </div>
             </article>

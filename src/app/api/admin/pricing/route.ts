@@ -74,5 +74,16 @@ async function handlePOST(req: Request) {
   return jsonOk({ ok: true, extra })
 }
 
+async function handleDELETE(req: Request) {
+  const blocked = await rejectDriverOnly('pricing')
+  if (blocked) return blocked
+  if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
+  const id = new URL(req.url).searchParams.get('id')?.trim()
+  if (!id) return jsonError(400, 'VALIDATION_ERROR', 'Choose an add-on to delete')
+  await prisma.pricingExtra.delete({ where: { id } })
+  return jsonOk({ ok: true })
+}
+
 export const GET = apiHandler(handleGET)
 export const POST = apiHandler(handlePOST)
+export const DELETE = apiHandler(handleDELETE)

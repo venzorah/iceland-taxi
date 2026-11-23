@@ -1,6 +1,7 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
-import { AdminButton, AdminToggle, AdminModal, AdminNotice } from '@/components/admin/AdminUI'
+import { AdminButton, AdminToggle, AdminModal, AdminNotice, AdminForm } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 
@@ -20,6 +21,7 @@ export function Seo() {
   const [pages, setPages] = useState<SeoPage[]>([])
   const [selId, setSelId] = useState<string | null>(null)
   const [msg, setMsg] = useState('Loading…')
+  useNoticeToast(msg)
   const [creating, setCreating] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [draft, setDraft] = useState({ path: '', titleEn: '', descriptionEn: '', titleIs: '', descriptionIs: '', noIndex: false })
@@ -115,10 +117,10 @@ export function Seo() {
         <p className="mt-3 text-xs text-muted">Titles and descriptions are stored on the SEO page record. Sitemap and robots still follow the published public routes.</p>
       </div>
 
-      <>{editorOpen && <AdminModal title={creating ? 'New SEO page' : 'Edit SEO page'} onClose={() => setEditorOpen(false)}><AdminNotice message={msg} />
+      <>{editorOpen && <AdminModal title={creating ? 'New SEO page' : 'Edit SEO page'} onClose={() => setEditorOpen(false)}><AdminNotice message={msg} /><AdminForm onSubmit={save}>
         <p className="text-xs font-semibold text-muted">{creating ? 'New page' : 'Editing'}</p>
-        <label className="mt-4 block text-xs font-semibold text-muted">Path<input value={draft.path} onChange={(event) => setDraft({ ...draft, path: event.target.value })} className={inputClass} /></label>
-        <label className="mt-4 block text-xs font-semibold text-muted">SEO title · English <span className={draft.titleEn.length > 60 ? 'text-error' : ''}>{draft.titleEn.length}/60</span><input value={draft.titleEn} onChange={(event) => setDraft({ ...draft, titleEn: event.target.value })} className={inputClass} /></label>
+        <label className="mt-4 block text-xs font-semibold text-muted">Path<input required pattern="/.*" maxLength={300} value={draft.path} onChange={(event) => setDraft({ ...draft, path: event.target.value })} className={inputClass} /></label>
+        <label className="mt-4 block text-xs font-semibold text-muted">SEO title · English <span className={draft.titleEn.length > 60 ? 'text-error' : ''}>{draft.titleEn.length}/60</span><input required maxLength={60} value={draft.titleEn} onChange={(event) => setDraft({ ...draft, titleEn: event.target.value })} className={inputClass} /></label>
         <label className="mt-4 block text-xs font-semibold text-muted">Meta description · English <span className={draft.descriptionEn.length > 160 ? 'text-error' : ''}>{draft.descriptionEn.length}/160</span><textarea rows={3} value={draft.descriptionEn} onChange={(event) => setDraft({ ...draft, descriptionEn: event.target.value })} className={inputClass} /></label>
         <label className="mt-4 block text-xs font-semibold text-muted">SEO title · Icelandic<input value={draft.titleIs} onChange={(event) => setDraft({ ...draft, titleIs: event.target.value })} className={inputClass} /></label>
         <label className="mt-4 block text-xs font-semibold text-muted">Meta description · Icelandic<textarea rows={3} value={draft.descriptionIs} onChange={(event) => setDraft({ ...draft, descriptionIs: event.target.value })} className={inputClass} /></label>
@@ -128,7 +130,7 @@ export function Seo() {
           <p className="mt-1 truncate text-lg text-[#1a0dab]">{draft.titleEn || 'Untitled'}</p>
           <p className="mt-1 line-clamp-2 text-sm text-[#4d5156]">{draft.descriptionEn}</p>
         </div>
-        <AdminButton onClick={save} className="mt-6 w-full rounded-lg bg-primary py-2.5 text-sm font-bold text-on-primary">Save page</AdminButton>
+        <AdminButton type="submit" className="mt-6 w-full rounded-lg bg-primary py-2.5 text-sm font-bold text-on-primary">Save page</AdminButton></AdminForm>
       </AdminModal>}</>
     </div>
   )

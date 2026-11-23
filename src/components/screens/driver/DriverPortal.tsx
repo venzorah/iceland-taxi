@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 import { DriverProfileMenu } from '@/components/site/DriverProfileMenu'
 import { useSiteImages } from '@/components/providers/SiteContent'
 
@@ -69,8 +70,10 @@ export default function DriverPortal(props: Props) {
   const [history, setHistory] = useState<DriverJob[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  useNoticeToast(loadError)
   const [selected, setSelected] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
+  useNoticeToast(msg)
   const [busy, setBusy] = useState(false)
   useArmMessageSoundOnPointer()
 
@@ -341,6 +344,7 @@ function DriverProfile({ driver, onSaved }: { driver: DriverInfo; onSaved: () =>
   const [status, setStatus] = useState(driver.status)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  useNoticeToast(message)
   useEffect(() => { setStatus(driver.status) }, [driver.status])
   return <details className="mt-4 rounded-xl border border-line bg-surface p-4"><summary className="cursor-pointer text-sm font-semibold text-heading">My account & availability</summary><form className="mt-4 space-y-3" onSubmit={async e => {
     e.preventDefault(); if (saving) return

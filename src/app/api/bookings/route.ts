@@ -7,7 +7,7 @@ import { createBooking, toOpsBooking } from '@/lib/booking/service'
 import { TODAY_BOOKINGS } from '@/lib/design/opsData'
 
 const createSchema = z.object({
-  guestName: z.string().min(1),
+  guestName: z.string().trim().min(1),
   guestEmail: z.string().email(),
   guestPhone: z.string().optional(),
   serviceId: z.string().optional(),

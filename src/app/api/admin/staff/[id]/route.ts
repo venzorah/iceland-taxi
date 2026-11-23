@@ -6,7 +6,7 @@ import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 const patchSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: z.string().trim().min(1).optional(),
   role: z.enum(STAFF_ROLES).optional(),
   active: z.boolean().optional(),
 })

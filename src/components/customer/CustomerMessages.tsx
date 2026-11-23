@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useLivePolling } from '@/lib/polling/use-live-polling'
@@ -15,6 +16,7 @@ export function CustomerMessages({ trips, audience = 'customer', driverConversat
   const [messages, setMessages] = useState<Message[]>([])
   const [draft, setDraft] = useState('')
   const [error, setError] = useState('')
+  useNoticeToast(error)
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const list = useRef<HTMLDivElement>(null)
@@ -62,7 +64,7 @@ export function CustomerMessages({ trips, audience = 'customer', driverConversat
     {error && <p role="alert" className="px-4 py-2 text-sm text-error">{error}</p>}
     <form onSubmit={send} className="shrink-0 border-t border-line bg-bg p-3">
       <label htmlFor={`message-${audience}`} className="mb-2 block text-sm font-semibold text-heading">Message operations</label>
-      <div className="flex items-end gap-2"><textarea id={`message-${audience}`} aria-label="Message" rows={2} value={draft} onChange={e => setDraft(e.target.value)} maxLength={4000} disabled={sending || !ref} placeholder={ref ? 'Type your message here…' : 'Choose a booking to start messaging'} className="min-w-0 flex-1 resize-y rounded-xl border border-input-line bg-input px-3 py-3 text-base text-heading outline-none focus:border-focus disabled:opacity-60" /><button disabled={!ref || sending || !draft.trim() || loading} aria-label="Send message" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-3 py-3 text-sm font-semibold text-on-primary disabled:opacity-50"><Send size={18} /><span>Send</span></button></div>
+      <div className="flex items-end gap-2"><textarea required id={`message-${audience}`} aria-label="Message" rows={2} value={draft} onChange={e => setDraft(e.target.value)} maxLength={4000} disabled={sending || !ref} placeholder={ref ? 'Type your message here…' : 'Choose a booking to start messaging'} className="min-w-0 flex-1 resize-y rounded-xl border border-input-line bg-input px-3 py-3 text-base text-heading outline-none focus:border-focus disabled:opacity-60" /><button disabled={!ref || sending || !draft.trim() || loading} aria-label="Send message" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-3 py-3 text-sm font-semibold text-on-primary disabled:opacity-50"><Send size={18} /><span>Send</span></button></div>
       <p className="mt-2 text-xs text-muted">{ref ? 'Your message goes privately to the operations team.' : driverConversation ? 'Messaging becomes available when operations assigns you a journey.' : 'Your bookings appear above so you can start a conversation.'} {!ref && <Link href="/contact" className="font-semibold text-link underline">Contact support without a booking</Link>}</p>
     </form>
   </aside>

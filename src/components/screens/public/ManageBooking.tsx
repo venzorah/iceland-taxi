@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import React, { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
@@ -49,6 +50,7 @@ export default function ManageBooking(props: Props) {
   const [state, setState] = useState<'default' | 'found' | 'empty' | 'loading'>(p.state)
   const [found, setFound] = useState<FoundBooking | null>(null)
   const [error, setError] = useState<string | null>(null)
+  useNoticeToast(error)
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const signingIn = false
 

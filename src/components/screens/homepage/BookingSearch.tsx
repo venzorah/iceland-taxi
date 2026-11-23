@@ -81,10 +81,10 @@ export function BookingSearch({ language, onSearch, initial }: { language: Lang;
         </Field>
         <div className="grid min-w-0 grid-cols-2 gap-3 lg:contents">
           <Field label={t(language, 'date')} icon={<Calendar size={16} />}>
-            <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
+            <input required min={new Intl.DateTimeFormat('en-CA', { timeZone: 'Atlantic/Reykjavik', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())} type="date" value={form.date} onChange={(e) => set('date', e.target.value)} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
           </Field>
           <Field label={t(language, 'time')} icon={<Clock size={16} />}>
-            <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
+            <input required type="time" value={form.time} onChange={(e) => set('time', e.target.value)} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none [color-scheme:light] dark:[color-scheme:dark]" />
           </Field>
           <Field label={t(language, 'passengers')} icon={<Users size={16} />}>
             <select value={form.passengers} onChange={(e) => set('passengers', Number(e.target.value))} className="w-full min-w-0 max-w-full bg-transparent text-sm font-semibold text-heading outline-none">

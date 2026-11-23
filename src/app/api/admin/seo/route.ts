@@ -12,7 +12,7 @@ async function handleGET() {
 }
 
 const createSchema = z.object({
-  path: z.string().min(1),
+  path: z.string().trim().min(1).max(300).regex(/^\/(?!\/)/),
   titleEn: z.string().nullable().optional(),
   titleIs: z.string().nullable().optional(),
   descriptionEn: z.string().nullable().optional(),

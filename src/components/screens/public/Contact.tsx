@@ -1,4 +1,6 @@
 'use client'
+import { notify } from '@/lib/forms/feedback'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import React, { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, Mail, MessageCircle } from 'lucide-react'
@@ -34,7 +36,7 @@ export default function Contact(props: Props) {
   const th = p.theme as 'light' | 'dark'
   const [sent, setSent] = useState(false)
   const [busy,setBusy]=useState(false)
-  const [error,setError]=useState('')
+  const [error,setError]=useState(''); useNoticeToast(error, 'error')
   const requestKey=useRef('')
   const previousBody=useRef('')
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null; phone?: string | null; addressLine1?: string | null } | null>(null)
@@ -83,7 +85,7 @@ export default function Contact(props: Props) {
               const serialized=JSON.stringify(input)
               if(!requestKey.current||previousBody.current!==serialized){requestKey.current=crypto.randomUUID();previousBody.current=serialized}
               setBusy(true);setError('')
-              try{const response=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...input,requestKey:requestKey.current})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.message||'Your message could not be saved.');setSent(true)}catch(error){setError(error instanceof Error?error.message:'Your message could not be saved. Please try again.')}finally{setBusy(false)}
+              try{const response=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...input,requestKey:requestKey.current})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.message||'Your message could not be saved.');setSent(true); notify('Message received. Our team will reply shortly.', 'success')}catch(error){setError(error instanceof Error?error.message:'Your message could not be saved. Please try again.')}finally{setBusy(false)}
             }}
           >
             {sent ? (

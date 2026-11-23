@@ -7,6 +7,7 @@ import { useSiteSession } from './SessionProvider'
 import { SiteContentProvider } from '@/components/providers/SiteContent'
 import { SessionProvider } from './SessionProvider'
 
+import { FormFeedback } from '@/components/feedback/FormFeedback'
 import { MessageAlerts } from '@/components/alerts/MessageAlerts'
 import { InstallPrompt } from '@/components/site/InstallPrompt'
 import { WelcomeSplash } from '@/components/site/WelcomeSplash'
@@ -94,6 +95,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={value}>
       <SessionProvider>
       <SiteContentProvider>
+      <FormFeedback />
       <CustomerPreferencesSync />
       <WelcomeSplash />
       <InstallPrompt />

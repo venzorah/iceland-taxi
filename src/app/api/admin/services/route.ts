@@ -14,7 +14,7 @@ async function handleGET() {
 const createSchema = z.object({
   slug: z.string().min(1),
   kind: z.nativeEnum(ServiceKind),
-  titleEn: z.string().min(1),
+  titleEn: z.string().trim().min(1),
   titleIs: z.string().optional(),
   blurbEn: z.string().optional(),
   fromIsk: z.number().int().nonnegative().optional(),

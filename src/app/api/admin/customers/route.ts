@@ -4,7 +4,7 @@ import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 const createSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1),
   email: z.string().email(),
   category: z.enum(['INTERNATIONAL', 'RESIDENT']).optional(),
 })

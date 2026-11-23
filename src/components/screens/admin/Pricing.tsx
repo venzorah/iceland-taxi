@@ -1,6 +1,7 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
-import { AdminButton, AdminToggle, AdminEmpty } from '@/components/admin/AdminUI'
+import { AdminButton, AdminToggle, AdminEmpty, AdminForm } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export function Pricing() {
   const [eurRate, setEurRate] = useState(150)
   const [extras, setExtras] = useState<Extra[]>([])
   const [msg, setMsg] = useState<string | null>(null)
+  useNoticeToast(msg)
 
   const load = useCallback(async () => {
     try {
@@ -97,7 +99,7 @@ export function Pricing() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-3 sm:space-y-6 sm:p-6">
+    <AdminForm onSubmit={save} className="mx-auto max-w-5xl space-y-4 p-3 sm:space-y-6 sm:p-6">
       {msg && <p className="text-xs text-muted">{msg}</p>}
       <Panel title="Currencies" hint="Customers see the transaction currency before paying, and are charged in exactly that currency.">
         <div className="grid gap-6 md:grid-cols-2">
@@ -107,11 +109,11 @@ export function Pricing() {
           <div>
             <label className="block">
               <span className="text-xs font-semibold text-muted">Exchange rate · ISK per 1 USD</span>
-              <input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 font-display text-2xl font-bold text-heading outline-none focus:border-focus" />
+              <input required type="number" min={0.001} step="any" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 font-display text-2xl font-bold text-heading outline-none focus:border-focus" />
             </label>
             <label className="mt-4 block">
               <span className="text-xs font-semibold text-muted">Exchange rate · ISK per 1 EUR</span>
-              <input type="number" value={eurRate} onChange={(e) => setEurRate(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 font-display text-2xl font-bold text-heading outline-none focus:border-focus" />
+              <input required type="number" min={0.001} step="any" value={eurRate} onChange={(e) => setEurRate(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 font-display text-2xl font-bold text-heading outline-none focus:border-focus" />
             </label>
             <p className="mt-2 text-xs text-muted">Public euros use ISK per 1 EUR. The USD rate stays for older USD snapshots. Rates are saved manually; they are not a live FX feed.</p>
             <div className="mt-4 rounded-lg bg-surface p-4 text-sm">
@@ -133,7 +135,7 @@ export function Pricing() {
             <div key={extra.id} className="grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-[1fr_160px_auto] sm:items-end">
               <label className="block min-w-0">
                 <span className="text-xs font-semibold text-muted">Add-on</span>
-                <input
+                <input required maxLength={150}
                   value={extra.labelEn}
                   onChange={(e) =>
                     setExtras((list) => list.map((x) => (x.id === extra.id ? { ...x, labelEn: e.target.value } : x)))
@@ -143,7 +145,7 @@ export function Pricing() {
               </label>
               <label className="block min-w-0">
                 <span className="text-xs font-semibold text-muted">Cost ISK</span>
-                <input
+                <input required
                   type="number"
                   min={0}
                   value={extra.isk}
@@ -174,8 +176,8 @@ export function Pricing() {
       </Panel>
 
       <div className="flex justify-end pb-6">
-        <AdminButton pendingLabel="Saving pricing…" onClick={save} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Save pricing</AdminButton>
+        <AdminButton type="submit" pendingLabel="Saving pricing…" className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Save pricing</AdminButton>
       </div>
-    </div>
+    </AdminForm>
   )
 }

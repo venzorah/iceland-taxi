@@ -7,7 +7,7 @@ type Ctx = { params: Promise<{ id: string }> }
 
 const patchSchema = z.object({
   kind: z.nativeEnum(ServiceKind).optional(),
-  titleEn: z.string().min(1).optional(),
+  titleEn: z.string().trim().min(1).optional(),
   titleIs: z.string().nullable().optional(),
   blurbEn: z.string().nullable().optional(),
   fromIsk: z.number().int().nonnegative().nullable().optional(),

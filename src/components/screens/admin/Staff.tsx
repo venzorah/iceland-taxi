@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import { AdminButton, AdminForm, AdminModal, AdminNotice, AdminToggle, AdminEmpty } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
@@ -28,6 +29,7 @@ const inputClass = 'mt-1 w-full rounded-lg border border-input-line bg-input px-
 export function Staff() {
   const [rows, setRows] = useState<StaffRow[]>([])
   const [msg, setMsg] = useState('Loading…')
+  useNoticeToast(msg)
   const [updating, setUpdating] = useState(false)
   const [invite, setInvite] = useState(false)
   const [draft, setDraft] = useState({ name: '', email: '', role: 'STAFF' })

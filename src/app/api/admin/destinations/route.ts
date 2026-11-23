@@ -12,7 +12,7 @@ async function handleGET() {
 }
 
 const createSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1),
   note: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   active: z.boolean().optional(),

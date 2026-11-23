@@ -4,7 +4,7 @@ import { apiHandler, jsonError, jsonOk, prisma } from '@/lib/api'
 import { rejectDriverOnly } from '@/lib/auth/admin-access'
 
 const patchSchema = z.object({
-  path: z.string().min(1).optional(),
+  path: z.string().trim().min(1).max(300).regex(/^\/(?!\/)/).optional(),
   titleEn: z.string().nullable().optional(),
   titleIs: z.string().nullable().optional(),
   descriptionEn: z.string().nullable().optional(),

@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 import { useEffect, useRef, useState } from 'react'
 import { Pencil, X } from 'lucide-react'
 import { useSiteSession } from '@/components/providers/SessionProvider'
@@ -39,6 +40,7 @@ function CustomerProfileForm() {
   const { user } = useSiteSession()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [message, setMessage] = useState('')
+  useNoticeToast(message)
   const [busy, setBusy] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')

@@ -1,7 +1,9 @@
 'use client'
 import { useSiteImages } from '@/components/providers/SiteContent'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import { validateFields } from '@/lib/forms/validation'
+import { notify } from '@/lib/forms/feedback'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Baby, Check, CheckCircle2, Copy, Lock, MessageCircle, Plane, Repeat, Signpost } from 'lucide-react'
 
 import { SiteHeader } from '@/components/site/SiteHeader'
@@ -91,6 +93,7 @@ export type BookingPayPayload = {
 }
 
 export default function Booking(props: Props) {
+  const fields = useRef<HTMLDivElement>(null)
   const images = useSiteImages()
   const p = { ...args, ...props }
   const th = p.theme as 'light' | 'dark'
@@ -154,14 +157,15 @@ export default function Booking(props: Props) {
   })
   const submitPay = () => {
     if (!canPay) return
-    if (!guestName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail) || !hotel.trim() || !p.date || !p.time) { setValidation('Enter your name, email, pickup address, and Iceland pickup date and time.'); return }
+    if (fields.current && !validateFields(fields.current)) return
+    if (!guestName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail) || !hotel.trim() || !p.date || !p.time) { setValidation('Enter your name, email, pickup address, and Iceland pickup date and time.'); notify('Enter your name, email, pickup address, and Iceland pickup date and time.', 'error'); return }
     setValidation('')
     p.onPay?.(payPayload())
   }
 
   return (
     <div className={th === 'dark' ? 'dark' : ''}>
-      <div className="min-h-screen bg-surface font-sans text-text">
+      <div ref={fields} className="min-h-screen bg-surface font-sans text-text">
         <SiteHeader theme={th} language={p.language as Lang} currency={currency} onThemeChange={p.onThemeChange} onLanguageChange={p.onLanguageChange} onCurrencyChange={p.onCurrencyChange} onHome={p.onBack} mobileTitle={p.state === 'confirmed' ? 'Booking confirmed' : 'Checkout'} onMobileBack={p.onBack} announcements={p.announcements} />
 
         {p.state === 'confirmed' ? (
@@ -235,7 +239,8 @@ export default function Booking(props: Props) {
                     <input
                       value={hotel}
                       onChange={(e) => setHotel(e.target.value)}
-                      placeholder="The driver opens this address in Google Maps"
+                      placeholder="Enter address"
+                      required maxLength={500}
                       className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted focus:border-focus"
                     />
                   </label>
@@ -256,15 +261,15 @@ export default function Booking(props: Props) {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block">
                       <span className="text-xs font-medium text-muted">Full name</span>
-                      <input value={guestName} onChange={(e) => setGuestName(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                      <input required maxLength={100} autoComplete="name" value={guestName} onChange={(e) => setGuestName(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
                     </label>
                     <label className="block">
                       <span className="text-xs font-medium text-muted">Email</span>
-                      <input type="email" readOnly={!!p.initialCustomer?.email} value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                      <input type="email" required maxLength={254} autoComplete="email" readOnly={!!p.initialCustomer?.email} value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
                     </label>
                     <label className="block sm:col-span-2">
                       <span className="text-xs font-medium text-muted">Phone (with country code)</span>
-                      <input value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
+                      <input type="tel" maxLength={30} autoComplete="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-input-line bg-input px-3 py-2.5 text-sm font-semibold text-heading outline-none transition-colors duration-150 focus:border-focus" />
                     </label>
                   </div>
                   <p className="mt-6 text-sm font-semibold text-heading">Where do you live?</p>

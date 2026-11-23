@@ -43,7 +43,7 @@ try{
  await js(`document.querySelector('form').requestSubmit()`);await until(`location.pathname==='/search'&&!![...document.querySelectorAll('a')].find(a=>a.textContent.includes('Book journey'))`)
  assert.equal(await js(`window.__fixture.catalogue`),1)
  await js(`[...document.querySelectorAll('a')].find(a=>a.textContent.includes('Book journey')).click()`);await until(`location.pathname==='/book'&&!!document.querySelector('input[type=email]')`)
- await js(`fixtureSet(document.querySelector('input[type=email]'),'fixture@example.test');fixtureSet([...document.querySelectorAll('label')].find(l=>l.textContent.includes('Full name')).querySelector('input'),'Fixture Customer');fixtureSet(document.querySelector('input[placeholder="The driver opens this address in Google Maps"]'),'Fixture terminal')`)
+ await js(`fixtureSet(document.querySelector('input[type=email]'),'fixture@example.test');fixtureSet([...document.querySelectorAll('label')].find(l=>l.textContent.includes('Full name')).querySelector('input'),'Fixture Customer');fixtureSet(document.querySelector('input[placeholder="Enter address"]'),'Fixture terminal')`)
  await until(`!![...document.querySelectorAll('button')].find(b=>b.textContent.trim().startsWith('Pay ')&&!b.disabled)`)
  const start=performance.now();await js(`const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim().startsWith('Pay ')&&!b.disabled);b.click();b.click()`)
  for(let i=0;i<100&&!checkoutNavigated;i++)await sleep(50)

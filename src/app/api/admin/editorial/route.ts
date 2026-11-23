@@ -15,7 +15,7 @@ async function handleGET() {
 const createSchema = z.object({
   kind: z.enum(['blog', 'guide']),
   slug: z.string().optional(),
-  title: z.string().min(1),
+  title: z.string().trim().min(1),
   excerpt: z.string().optional(),
   body: z.string().optional(),
   tag: z.string().optional(),

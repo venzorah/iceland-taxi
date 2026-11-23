@@ -10,6 +10,7 @@ type Node = { type?: unknown; props?: Record<string, unknown> }
 function fixture(failSignup=false, failResend=false, portal: 'customer' | 'driver' | 'admin' = 'customer', initialMode = 'register') {
  const state: unknown[]=[];let index=0,resends=0
  const imports:Record<string,unknown>={
+  '@/components/feedback/FormFeedback':{useNoticeToast:()=>{}},
   react:{useState:(initial:unknown)=>{const slot=index++;if(!(slot in state))state[slot]=initial;return[state[slot],(value:unknown)=>{state[slot]=typeof value==='function'?value(state[slot]):value}]},useRef:()=>({current:null}),useEffect:()=>{}},
   'react/jsx-runtime':jsx,'next/navigation':{useSearchParams:()=>new URLSearchParams()},'next/link':{__esModule:true,default:'a'},'next/image':{__esModule:true,default:'img'},'lucide-react':{},
   '@/lib/auth/login-destination':{},'@/lib/auth/client':{authClient:{signUp:{email:async()=>failSignup?{error:{message:'Fixture signup rejected'}}:{data:{token:null},error:null}},emailOtp:{sendVerificationOtp:async()=>{resends++;return failResend?{error:{message:'Private fixture error'}}:{error:null}},verifyEmail:async({otp}:{otp:string})=>otp==='123456'?{data:{token:null},error:null}:{error:{code:'INVALID_OTP'}}}}},

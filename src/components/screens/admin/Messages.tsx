@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import { AdminEmpty, AdminButton } from '@/components/admin/AdminUI'
 import React, { useCallback, useEffect, useState } from 'react'
@@ -39,6 +40,7 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
   const [q, setQ] = useState('')
   const [waNumber, setWaNumber] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  useNoticeToast(err)
   const [sending, setSending] = useState(false)
   useArmMessageSoundOnPointer()
 

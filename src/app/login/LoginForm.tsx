@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -55,6 +56,7 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
   const submittedCode = useRef('')
   const submitting = useRef(false)
   const [message, setMessage] = useState(search.has('error') ? 'Please sign in with an account that has access, or request a new confirmation code.' : search.get('reset') === 'complete' ? 'Your password was reset. Sign in with your new password.' : search.get('complete') === '1' ? 'Email confirmation is complete. Sign in to continue.' : '')
+  useNoticeToast(message)
   function changeMode(next: Mode) {
     setMode(next)
     setShowPassword(false)
@@ -216,6 +218,8 @@ export function LoginForm({ portal = 'customer', initialMode }: { portal?: 'cust
       {(mode === 'verify' || mode === 'reset-code' || (!adminIntent && mode === 'login')) && <button type="button" disabled={busy || resendCoolingDown} className="mt-4 text-sm text-muted disabled:opacity-60" onClick={async () => {
         if (!email.trim()) { setMessage('Enter your email address first.'); return }
         if (busy || resendCoolingDown) return
+        const emailInput = formRef.current?.querySelector<HTMLInputElement>('input[type=email]')
+        if (emailInput && !emailInput.reportValidity()) return
         setBusy(true)
         try {
           if (mode === 'reset-code') await sendResetCode()

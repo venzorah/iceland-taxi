@@ -1,9 +1,11 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 import { useState } from 'react'
 import Link from 'next/link'
 export function TripActions({ trip, onUpdated }: { trip: { ref: string; status: string; paid: boolean; hasReceipt: boolean }; onUpdated: () => void }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  useNoticeToast(message)
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
   async function cancel(e: React.FormEvent) {

@@ -1,5 +1,6 @@
 'use client'
 
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 import React, { useState } from 'react'
 
 export type EnquiryPayload = {
@@ -35,6 +36,9 @@ export function CustomEnquiryForm({ initial, status = 'idle', error, onSubmit }:
   const [notes, setNotes] = useState(initial?.notes || '')
   const [localError, setLocalError] = useState<string | null>(null)
 
+  useNoticeToast(error || localError, 'error')
+  useNoticeToast(status === 'sent' ? 'Enquiry sent. Our team will reply shortly.' : '')
+
   if (status === 'sent') {
     return (
       <div className="rounded-2xl border border-line bg-card p-5 sm:p-6">
@@ -63,13 +67,13 @@ export function CustomEnquiryForm({ initial, status = 'idle', error, onSubmit }:
       <p className="mt-1 text-sm text-muted">This trip is not a published listing, so there is no price to pay here.</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <Field label="Name">
-          <input required value={name} onChange={(event) => setName(event.target.value)} className={inputClass} />
+          <input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} className={inputClass} />
         </Field>
         <Field label="Email">
-          <input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} />
+          <input required maxLength={254} type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} />
         </Field>
         <Field label="Phone / WhatsApp number">
-          <input required value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+354…" className={inputClass} />
+          <input required type="tel" maxLength={30} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+354…" className={inputClass} />
         </Field>
         <fieldset className="block">
           <legend className="text-xs font-medium text-muted">Preferred contact</legend>
@@ -91,10 +95,10 @@ export function CustomEnquiryForm({ initial, status = 'idle', error, onSubmit }:
           </div>
         </fieldset>
         <Field label="From">
-          <input required value={fromLabel} onChange={(event) => setFromLabel(event.target.value)} className={inputClass} />
+          <input required maxLength={200} value={fromLabel} onChange={(event) => setFromLabel(event.target.value)} className={inputClass} />
         </Field>
         <Field label="To">
-          <input required value={toLabel} onChange={(event) => setToLabel(event.target.value)} className={inputClass} />
+          <input required maxLength={200} value={toLabel} onChange={(event) => setToLabel(event.target.value)} className={inputClass} />
         </Field>
         <Field label="Date">
           <input required type="date" value={tripDate} onChange={(event) => setTripDate(event.target.value)} className={inputClass} />
@@ -111,7 +115,7 @@ export function CustomEnquiryForm({ initial, status = 'idle', error, onSubmit }:
         </Field>
         <label className="block sm:col-span-2">
           <span className="text-xs font-medium text-muted">Notes</span>
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className={`${inputClass} mt-1`} />
+          <textarea maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className={`${inputClass} mt-1`} />
         </label>
       </div>
       {(localError || error) && <p className="mt-3 text-sm font-semibold text-error">{localError || error}</p>}

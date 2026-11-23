@@ -12,7 +12,7 @@ async function handleGET() {
 }
 
 const createSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1),
   category: z.string().min(1),
   pax: z.number().int().positive(),
   bags: z.number().int().nonnegative(),

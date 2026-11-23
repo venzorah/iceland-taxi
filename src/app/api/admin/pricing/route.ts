@@ -18,7 +18,7 @@ const patchExtraSchema = z.object({
   type: z.literal('extra').optional(),
   id: z.string().optional(),
   key: z.string().min(1),
-  labelEn: z.string().min(1),
+  labelEn: z.string().trim().min(1),
   labelIs: z.string().optional(),
   isk: z.number().int(),
   active: z.boolean().optional(),

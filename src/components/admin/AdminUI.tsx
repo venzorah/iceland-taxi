@@ -1,5 +1,8 @@
 'use client'
 
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
+import { notify } from '@/lib/forms/feedback'
+import { validateFields } from '@/lib/forms/validation'
 import React, { createContext, useContext, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Inbox, LoaderCircle, X } from 'lucide-react'
@@ -45,7 +48,7 @@ export function AdminForm({ onSubmit, children, ...props }: Omit<React.FormHTMLA
   const [busy, setBusy] = useState(false)
   const lock = useRef(false)
   const [error, setError] = useState('')
-  return <FormBusy.Provider value={busy}><form {...props} aria-busy={busy} onSubmit={async event => { event.preventDefault(); if (lock.current) return; lock.current = true; setBusy(true); setError(''); try { await onSubmit(event) } catch (e) { setError(e instanceof Error ? e.message : 'Could not save. Please try again.') } finally { lock.current = false; setBusy(false) } }}><fieldset disabled={busy} className="contents">{children}</fieldset>{error && <p role="alert" className="mt-3 text-sm text-error">{error}</p>}</form></FormBusy.Provider>
+  return <FormBusy.Provider value={busy}><form {...props} aria-busy={busy} onSubmit={async event => { event.preventDefault(); if (lock.current || !validateFields(event.currentTarget)) return; lock.current = true; setBusy(true); setError(''); try { await onSubmit(event) } catch (e) { setError(e instanceof Error ? e.message : 'Could not save. Please try again.'); notify(e instanceof Error ? e.message : 'Could not save. Please try again.', 'error') } finally { lock.current = false; setBusy(false) } }}><fieldset disabled={busy} className="contents">{children}</fieldset>{error && <p role="alert" className="mt-3 text-sm text-error">{error}</p>}</form></FormBusy.Provider>
 }
 
 export function AdminButton({ children, onClick, pendingLabel, disabled, ...props }: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & { onClick?: (event: React.MouseEvent<HTMLButtonElement>) => unknown; pendingLabel?: string }) {
@@ -56,7 +59,7 @@ export function AdminButton({ children, onClick, pendingLabel, disabled, ...prop
   const pending = busy || (props.type === 'submit' && formBusy)
   const caption = typeof children === 'string' ? children.trim().toLowerCase() : ''
   const pendingText = pendingLabel || (caption.startsWith('publish') ? 'Publishing…' : caption.startsWith('save') ? 'Saving…' : caption.startsWith('delete') ? 'Deleting…' : caption.startsWith('archive') ? 'Archiving…' : caption.includes('reload') || caption.includes('retry') || caption.includes('try again') ? 'Loading…' : 'Working…')
-  return <><button {...props} disabled={disabled || pending} aria-busy={pending} onClick={onClick ? async event => { if (lock.current) return; setError(''); try { const result = onClick(event); if (result && typeof (result as Promise<unknown>).then === 'function') { lock.current = true; setBusy(true); await result } } catch (e) { setError(e instanceof Error ? e.message : 'Could not complete this action. Please try again.') } finally { lock.current = false; setBusy(false) } } : undefined} className={`${props.className || ''} disabled:cursor-not-allowed disabled:opacity-60`}>{pending ? <span className="inline-flex items-center justify-center gap-2"><LoaderCircle size={16} className="shrink-0 animate-spin" aria-hidden /><span className={props['aria-label'] ? 'sr-only' : ''}>{pendingText}</span></span> : children}</button>{error && <span role="alert" className="block text-sm text-error">{error}</span>}</>
+  return <><button {...props} disabled={disabled || pending} aria-busy={pending} onClick={onClick ? async event => { if (lock.current) return; setError(''); try { const result = onClick(event); if (result && typeof (result as Promise<unknown>).then === 'function') { lock.current = true; setBusy(true); await result } } catch (e) { setError(e instanceof Error ? e.message : 'Could not complete this action. Please try again.'); notify(e instanceof Error ? e.message : 'Could not complete this action. Please try again.', 'error') } finally { lock.current = false; setBusy(false) } } : undefined} className={`${props.className || ''} disabled:cursor-not-allowed disabled:opacity-60`}>{pending ? <span className="inline-flex items-center justify-center gap-2"><LoaderCircle size={16} className="shrink-0 animate-spin" aria-hidden /><span className={props['aria-label'] ? 'sr-only' : ''}>{pendingText}</span></span> : children}</button>{error && <span role="alert" className="block text-sm text-error">{error}</span>}</>
 }
 
 export function AdminToggle({ label, checked, onChange, disabled = false }: { label: string; checked: boolean; onChange: (checked: boolean) => unknown; disabled?: boolean }) {
@@ -68,6 +71,7 @@ export function AdminEmpty({ title, description, action }: { title: string; desc
 }
 
 export function AdminNotice({ message }: { message: string | null }) {
+  useNoticeToast(message)
   return message ? <p role="status" className="rounded-xl border border-line bg-bg px-4 py-3 text-sm text-heading">{message}</p> : null
 }
 

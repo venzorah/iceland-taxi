@@ -44,7 +44,7 @@ async function handleGET() {
 }
 
 const createSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1),
   email: z.string().email(),
   role: z.enum(STAFF_ROLES),
 })

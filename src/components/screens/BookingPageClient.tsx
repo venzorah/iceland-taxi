@@ -1,4 +1,5 @@
 'use client'
+import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -42,6 +43,7 @@ export function BookingPageClient() {
     totalLabel: string
   }>()
   const [error, setError] = useState<string | null>(null)
+  useNoticeToast(error)
   const [category, setCategory] = useState(prefs.customerCategory === 'resident' ? 'RESIDENT' : 'INTERNATIONAL')
   const [payCurrency, setPayCurrency] = useState<'EUR' | 'ISK'>(prefs.currency === 'ISK' ? 'ISK' : 'EUR')
   const categoryTouched = useRef(false)

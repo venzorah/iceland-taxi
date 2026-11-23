@@ -5,15 +5,22 @@ import { AdminButton, AdminForm, AdminModal, AdminNotice, AdminToggle, AdminEmpt
 import { useAdminList, publicationOptions } from '@/components/admin/AdminList'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Check, Minus, Plus } from 'lucide-react'
+import { canUseAdminModule } from '@/lib/auth/permissions'
 
-const MODULES = ['Bookings', 'Services & pricing', 'Drivers & vehicles', 'Customers', 'Payments & refunds', 'Messages', 'Announcements', 'Website & SEO', 'Reports', 'Staff', 'Appearance']
-const ROLES: Record<string, string[]> = {
-  'Super Admin': MODULES,
-  'Booking Manager': ['Bookings', 'Customers', 'Messages'],
-  'Finance Manager': ['Payments & refunds', 'Reports', 'Services & pricing'],
-  'Content Manager': ['Announcements', 'Website & SEO', 'Appearance'],
-  Staff: ['Bookings', 'Customers', 'Messages'],
-}
+const MODULES = [
+  ['bookings', 'Bookings'],
+  ['services', 'Services'],
+  ['routes', 'Routes'],
+  ['pricing', 'Pricing'],
+  ['drivers', 'Drivers'],
+  ['vehicles', 'Vehicles'],
+  ['customers', 'Customers'],
+  ['payments', 'Payments'],
+  ['enquiries', 'Enquiries'],
+  ['editorial', 'Website'],
+  ['theme', 'Appearance'],
+  ['staff', 'Staff'],
+] as const
 
 const ROLE_OPTIONS = [
   ['SUPER_ADMIN', 'Super Admin'],
@@ -99,16 +106,16 @@ export function Staff() {
             <thead className="text-xs font-semibold text-muted">
               <tr>
                 <th className="px-5 py-3 text-left">Role</th>
-                {MODULES.map((module) => <th key={module} className="px-2 py-3 text-center font-semibold">{module}</th>)}
+                {MODULES.map(([module, label]) => <th key={module} className="px-2 py-3 text-center font-semibold">{label}</th>)}
               </tr>
             </thead>
             <tbody className="divide-y divide-line border-t border-line">
-              {Object.entries(ROLES).map(([role, mods]) => (
+              {ROLE_OPTIONS.map(([role, label]) => (
                 <tr key={role}>
-                  <td className="sticky left-0 z-10 whitespace-nowrap bg-bg px-5 py-3 font-semibold text-heading">{role}</td>
-                  {MODULES.map((module) => (
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-bg px-5 py-3 font-semibold text-heading">{label}</td>
+                  {MODULES.map(([module]) => (
                     <td key={module} className="px-2 py-3 text-center">
-                      {mods.includes(module) ? <Check size={16} className="mx-auto text-mint-text" /> : <Minus size={14} className="mx-auto text-line" />}
+                      {canUseAdminModule(role, module) ? <Check size={16} className="mx-auto text-mint-text" /> : <Minus size={14} className="mx-auto text-line" />}
                     </td>
                   ))}
                 </tr>

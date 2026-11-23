@@ -477,18 +477,21 @@ export function LanguagesSection() {
   )
 }
 
-function Field({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="rounded-xl border border-line bg-bg px-4 py-3">
-      <p className="text-xs font-semibold text-muted">{label}</p>
-      <p className="mt-1 break-words text-sm text-heading">{value?.trim() ? value : 'Not set'}</p>
-    </div>
-  )
+const emptyProfile = {
+  displayName: '',
+  email: '',
+  phone: '',
+  addressLine1: '',
+  city: '',
+  registrationNumber: '',
+  vatNumber: '',
+  aboutEn: '',
 }
 
 export function SettingsSection() {
-  const { data, message } = useWorkspace('settings')
+  const { data, message, reload } = useWorkspace('settings')
   const company = data?.settings.company
+  const [profile, setProfile] = useState(emptyProfile)
   const [draft, setDraft] = useState(company?.whatsappE164 || '')
   const [status, setStatus] = useState<string | null>(null)
   const [number, setNumber] = useState<string | null>(company?.whatsappE164 ?? null)
@@ -496,7 +499,44 @@ export function SettingsSection() {
   useEffect(() => {
     setDraft(company?.whatsappE164 || '')
     setNumber(company?.whatsappE164 ?? null)
-  }, [company?.whatsappE164])
+    setProfile({
+      displayName: company?.displayName || '',
+      email: company?.email || '',
+      phone: company?.phone || '',
+      addressLine1: company?.addressLine1 || '',
+      city: company?.city || '',
+      registrationNumber: company?.registrationNumber || '',
+      vatNumber: company?.vatNumber || '',
+      aboutEn: company?.aboutEn || '',
+    })
+  }, [company])
+
+  const saveProfile = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setStatus(null)
+    const blank = (value: string) => value.trim() || null
+    const res = await fetch('/api/admin/company', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        displayName: profile.displayName.trim() || 'Iceland Taxi Booking',
+        email: blank(profile.email),
+        phone: blank(profile.phone),
+        addressLine1: blank(profile.addressLine1),
+        city: blank(profile.city),
+        registrationNumber: blank(profile.registrationNumber),
+        vatNumber: blank(profile.vatNumber),
+        aboutEn: blank(profile.aboutEn),
+      }),
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      setStatus(body?.message || 'Could not save the company profile')
+      return
+    }
+    setStatus('Company profile saved.')
+    reload()
+  }
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -520,11 +560,31 @@ export function SettingsSection() {
   return (
     <Shell message={message}>
       <h2 className="font-display text-base font-bold text-heading">Company profile</h2>
-      <p className="mt-1 text-sm leading-relaxed text-muted">Empty fields stay empty. Phone, address and registration numbers are not filled in here unless they are already stored.</p>
+      <p className="mt-1 text-sm leading-relaxed text-muted">Edit any stored company detail. A blank field is saved as unset.</p>
+      <AdminForm onSubmit={saveProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
+        {([
+          ['displayName', 'Display name'],
+          ['email', 'Email'],
+          ['phone', 'Phone'],
+          ['addressLine1', 'Address'],
+          ['city', 'City'],
+          ['registrationNumber', 'Registration number'],
+          ['vatNumber', 'VAT number'],
+        ] as const).map(([key, label]) => (
+          <label key={key} className="block text-xs font-semibold text-muted">
+            {label}
+            <input value={profile[key]} onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
+          </label>
+        ))}
+        <label className="block text-xs font-semibold text-muted sm:col-span-2">
+          About
+          <textarea rows={3} value={profile.aboutEn} onChange={(event) => setProfile((current) => ({ ...current, aboutEn: event.target.value }))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
+        </label>
+        <div className="sm:col-span-2">
+          <AdminButton type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary">Save company profile</AdminButton>
+        </div>
+      </AdminForm>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Field label="Display name" value={company?.displayName ?? null} />
-        <Field label="Email" value={company?.email ?? null} />
-        <Field label="Phone" value={company?.phone ?? null} />
         <div className="rounded-xl border border-line bg-bg px-4 py-3 sm:col-span-2">
           <p className="text-xs font-semibold text-muted">Official WhatsApp number</p>
           <p className="mt-1 text-sm leading-relaxed text-muted">
@@ -548,10 +608,6 @@ export function SettingsSection() {
           </AdminForm>
           {status && <p className="mt-2 text-xs text-muted">{status}</p>}
         </div>
-        <Field label="Address" value={[company?.addressLine1, company?.city].filter(Boolean).join(', ') || null} />
-        <Field label="Registration number" value={company?.registrationNumber ?? null} />
-        <Field label="VAT number" value={company?.vatNumber ?? null} />
-        <Field label="About" value={company?.aboutEn ?? null} />
       </div>
       <h2 className="mt-8 font-display text-base font-bold text-heading">Integrations</h2>
       <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg">

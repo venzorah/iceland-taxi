@@ -1,22 +1,17 @@
 import { PrismaClient } from '@prisma/client'
-import { applyCatalogueRestore, previewCatalogueRestore } from '../src/lib/catalogue/restore'
+import { publishOfficialCatalogue } from '../src/lib/catalogue/publish'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  const plan = await previewCatalogueRestore(prisma)
-  if (plan.conflicts.length) {
-    console.error(plan.conflicts.join('\n'))
-    process.exitCode = 1
-    return
-  }
-  const result = await applyCatalogueRestore(prisma, plan.fingerprint, false)
-  console.log(`Catalogue updated: ${result.changed} changes. Booking amounts were left as saved.`)
+  const result = await publishOfficialCatalogue(prisma)
+  console.log(JSON.stringify({ event: 'catalogue.publish', ...result }))
+  if (result.reason === 'conflict') process.exitCode = 1
 }
 
 main()
-  .catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Could not update the catalogue')
+  .catch(() => {
+    console.error(JSON.stringify({ event: 'catalogue.publish', applied: false, reason: 'unavailable' }))
     process.exitCode = 1
   })
   .finally(async () => {

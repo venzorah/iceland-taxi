@@ -9,4 +9,6 @@ export NODE_ENV=production NODE_OPTIONS=--max-old-space-size=2048 VPS_BUILD_CPUS
 # Build jobs intentionally have no production DB, SMTP, Teya or Supabase secret credentials.
 npm ci --include=dev
 npm run build
+# This build has no database credentials. The official price list is published
+# when the new release starts and systemd loads /etc/iceland-taxi/app.env.
 # The deployment operator reviews checks and activates the release separately.

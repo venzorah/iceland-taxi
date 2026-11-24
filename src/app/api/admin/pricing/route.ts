@@ -80,7 +80,10 @@ async function handleDELETE(req: Request) {
   if (!process.env.DATABASE_URL) return jsonError(503, 'DATABASE_REQUIRED', 'DATABASE_URL required')
   const id = new URL(req.url).searchParams.get('id')?.trim()
   if (!id) return jsonError(400, 'VALIDATION_ERROR', 'Choose an add-on to delete')
-  await prisma.pricingExtra.delete({ where: { id } })
+  try { await prisma.pricingExtra.delete({ where: { id } }) } catch (error) {
+    if ((error as { code?: string }).code === 'P2025') return jsonError(404, 'NOT_FOUND', 'That add-on no longer exists. Refresh the list.')
+    throw error
+  }
   return jsonOk({ ok: true })
 }
 

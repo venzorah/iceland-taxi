@@ -22,3 +22,10 @@ test('services are searched as offers and retain their own saved prices', () => 
   assert.equal(result[0].fromIsk, 89900)
   assert.equal(catalogueResults(listings, { category: 'tour', pickup: 'Invented', destination: 'Golden Circle' }).length, 0)
 })
+
+test('search excludes a cheaper car band when the party exceeds its passenger limit', () => {
+ const base=listings[0]
+ const banded=[{...base,id:'small',paxLabel:'1–4 persons'},{...base,id:'large',paxLabel:'5–8 persons'}]
+ assert.deepEqual(catalogueResults(banded,{category:'airport',pickup:'KEF',destination:'Reykjavik',passengers:5}).map(row=>row.id),['large'])
+ assert.equal(catalogueResults(banded,{category:'airport',pickup:'KEF',destination:'Reykjavik',passengers:9}).length,0)
+})

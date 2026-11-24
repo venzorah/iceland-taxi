@@ -89,7 +89,7 @@ Do not enable reminders until acceptance. Validate installed paths/users first; 
 
 ## Official price list on VPS start (November 2026)
 
-The release build does not receive database credentials. The first start of this release, with `/etc/iceland-taxi/app.env` loaded, publishes the official tour and transfer list and sets the public euro rate to 150 ISK when it differs. Prices that are not on the list are paused. Saved booking amounts stay as they were. A later restart does not publish again, so admin edits and deletes remain. Back up the target before the first start of this release. Super Admin can still open Services or Routes and use **Restore reference catalogue** if a reviewed replay is needed.
+The release build does not receive database credentials. Ordinary starts leave the catalogue unchanged. Keep `PUBLISH_OFFICIAL_CATALOGUE_ON_START=false` (the default). Only an explicitly opted-in production start publishes the official list once: it replaces prices, hides non-official services/routes/add-ons, zeros vehicle surcharges, fills missing content and sets EUR to 150 ISK. It preserves booking/payment snapshots and matched IDs. Review the Super Admin **Restore reference catalogue** preview and take a database backup before approving any replacement. Remove the opt-in immediately afterwards. The version marker is committed in the same transaction as the replacement. The manual `scripts/replace-official-catalogue.ts` is also a data-writing command, never a validation/build step. No schema migration is introduced by this update.
 
 The restore adds missing airport-transfer, tour and private-driver services, four airport routes, local photo URLs and editable website copy. It corrects the Golden Circle category to TOUR and reuses matching record IDs. Existing custom routes, authored content, non-null prices, publication choices, accounts, bookings and payments are preserved. Exchange rates are appended; previous booking/payment snapshots are unchanged. Matching ambiguities stop the entire transaction. Content is stored in Service, Route, SiteBlock and ExchangeRate; it is not a browser-local fallback.
 
@@ -106,3 +106,5 @@ node --env-file=/etc/iceland-taxi/app.env --import tsx scripts/vps/restore-catal
 ```
 
 Do not run db:seed. The CLI refuses a different database name; the operator must also verify the private connection points to the intended VPS. No live restore has been performed from the developer workstation. Verify the public airport/tour/driver pages and a read-only booking price preview afterward; no checkout is needed. A repeated restore should propose no further changes unless content has changed.
+
+For the approved handover list, follow [the catalogue comparison and controlled publication/rollback procedure](catalogue-handover.md). Publication is a separate operator action; keep both opt-in flags false throughout.

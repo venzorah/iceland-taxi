@@ -15,6 +15,7 @@ function fixture() {
     blocks: [{ key: 'home.airport.title', value: 'Keep our custom heading', updatedAt: date }] as SiteBlock[],
     rates: [{ id: 'old-rate', effective: date, iskPerEur: 1, iskPerUsd: 137, note: 'Keep historical rate' }] as ExchangeRate[],
     extras: [] as { id: string; key: string; labelEn: string; isk: number; active: boolean; sortOrder: number }[],
+    vehicles: [{id:'vehicle-1',name:'Fixture car',upgradeIsk:5000}],
     bookings: [{ id: 'existing-booking', serviceId: 'saved-golden', amountSnapshot: 500, currency: 'EUR' }],
     payments: [{ id: 'existing-payment', amount: 500, currency: 'EUR' }],
   }
@@ -24,7 +25,7 @@ function fixture() {
     route: { findMany: async () => state.routes, create: async ({ data }: { data: Partial<Route> }) => { writes++; if (fail) throw Error('Fixture write failure'); const row = route(data); state.routes.push(row); return row }, update: async ({ where, data }: { where: { id: string }; data: Partial<Route> }) => { writes++; return Object.assign(state.routes.find(row => row.id === where.id)!, data) } },
     siteBlock: { findMany: async ({ where }: { where: { key: { in: string[] } } }) => state.blocks.filter(row => where.key.in.includes(row.key)), create: async ({ data }: { data: { key: string; value: string } }) => { assert.deepEqual(Object.keys(data).sort(), ['key', 'value']); writes++; state.blocks.push({ ...data, updatedAt: date }) } },
     exchangeRate: { findFirst: async () => state.rates.at(-1)!, create: async ({ data }: { data: Pick<ExchangeRate, 'iskPerEur' | 'iskPerUsd' | 'note'> }) => { writes++; state.rates.push({ id: 'new-rate', effective: new Date(), ...data }) } },
-    vehicle: { updateMany: async () => ({ count: 0 }) },
+    vehicle: { findMany: async () => state.vehicles, update: async ({where,data}: {where:{id:string};data:{upgradeIsk:number}}) => { writes++; return Object.assign(state.vehicles.find(row => row.id === where.id)!,data) } },
     pricingExtra: {
       findMany: async () => state.extras,
       create: async ({ data }: { data: { key: string; labelEn: string; isk: number; active: boolean; sortOrder: number } }) => { writes++; const row = { id: data.key, ...data }; state.extras.push(row); return row },
@@ -115,4 +116,25 @@ test('fingerprint is stable across row order and detects content/rate changes', 
   const plan = planCatalogueRestore(snapshot)
   assert.equal(planCatalogueRestore({ ...snapshot, services: [...snapshot.services].reverse() }).fingerprint, plan.fingerprint)
   assert.notEqual(planCatalogueRestore({ ...snapshot, rate: { ...snapshot.rate, iskPerEur: 150 } }).fingerprint, plan.fingerprint)
+})
+
+test('preview includes extras and vehicle changes, and concurrent pricing edits invalidate approval', async () => {
+ const f=fixture(), plan=await previewCatalogueRestore(f.db)
+ assert(plan.actions.some(action=>action.model==='vehicle' && action.changes.some(change=>change.before===5000 && change.after===0)))
+ assert.equal(plan.actions.filter(action=>action.model==='pricingExtra').length,2)
+ f.state().extras.push({id:'custom',key:'custom',labelEn:'Child seat',isk:2500,active:true,sortOrder:1})
+ await assert.rejects(applyCatalogueRestore(f.db,plan.fingerprint,true),error=>(error as {code:string}).code==='CATALOGUE_CHANGED')
+ assert.equal(f.writes(),0)
+ const updated=await previewCatalogueRestore(f.db)
+ assert(updated.actions.some(action=>action.id==='custom' && action.data.active===false))
+ f.state().vehicles[0].upgradeIsk=6000
+ await assert.rejects(applyCatalogueRestore(f.db,updated.fingerprint,true),error=>(error as {code:string}).code==='CATALOGUE_CHANGED')
+ assert.equal(f.writes(),0)
+})
+
+test('publication marker failure rolls back catalogue and rate changes together', async () => {
+ const f=fixture(), before=structuredClone(f.state()), plan=await previewCatalogueRestore(f.db)
+ Object.assign(f.db.siteBlock,{upsert:async()=>{throw new Error('Fixture marker failure')}})
+ await assert.rejects(applyCatalogueRestore(f.db,plan.fingerprint,true,{key:'catalogue.official-price-list',value:'fixture-version'}))
+ assert.deepEqual(f.state(),before)
 })

@@ -4,6 +4,7 @@ import { REFERENCE_EXTRAS, REFERENCE_ROUTES, REFERENCE_SERVICES } from '../src/l
 const prisma = new PrismaClient()
 
 async function main() {
+  if (process.env.ALLOW_DESTRUCTIVE_SEED !== 'true' || process.env.NODE_ENV === 'production') throw new Error('Destructive fixture seed disabled. Use only a disposable development database with explicit ALLOW_DESTRUCTIVE_SEED=true.')
   await prisma.enquiry.deleteMany()
   await prisma.integrationStatus.deleteMany()
   await prisma.payment.deleteMany()

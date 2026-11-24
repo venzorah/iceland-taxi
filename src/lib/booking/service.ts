@@ -5,6 +5,7 @@ import { makeBookingRef } from './refs'
 import { buildQuote, type QuoteInput } from './pricing'
 import { checkAvailability, computeEndsAt } from './availability'
 import {
+  listingFitsPassengers,
   UNAVAILABLE_MESSAGE,
   matchListing,
   publishedListings,
@@ -65,6 +66,7 @@ export async function loadPublishedListings(): Promise<PublishedListing[]> {
 }
 
 export async function quoteFromCatalogue(params: {
+  passengers?: number
   listingId?: string
   listingKind?: string
   routeId?: string
@@ -80,7 +82,7 @@ export async function quoteFromCatalogue(params: {
   const [listings, { iskPerUsd, iskPerEur }] = await Promise.all([loadPublishedListings(), getExchangeRates()])
   const listing = matchListing(listings, params)
   const price = shownAdminPrice(listing, params.pickup)
-  if (!listing || price == null) {
+  if (!listing || price == null || !listingFitsPassengers(listing, params.passengers ?? 1)) {
     return { available: false as const, message: UNAVAILABLE_MESSAGE }
   }
 
@@ -143,6 +145,7 @@ export async function createBooking(input: CreateBookingInput) {
   if (!selectedVehicle?.active || input.passengers > selectedVehicle.pax || (input.luggage ?? 0) > selectedVehicle.bags) return { ok: false as const, code: 'CAPACITY_EXCEEDED' as const, message: 'Choose a vehicle with enough passenger and luggage capacity.' }
 
   const resolved = await quoteFromCatalogue({
+    passengers: input.passengers,
     listingId: input.listingId,
     listingKind: input.listingKind,
     routeId: input.routeId,

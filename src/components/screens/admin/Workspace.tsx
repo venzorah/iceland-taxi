@@ -573,7 +573,7 @@ export function SettingsSection() {
         ] as const).map(([key, label]) => (
           <label key={key} className="block text-xs font-semibold text-muted">
             {label}
-            <input value={profile[key]} onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
+            <input type={key === 'email' ? 'email' : 'text'} required={key === 'displayName'} maxLength={key === 'email' ? 254 : 500} value={profile[key]} onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
           </label>
         ))}
         <label className="block text-xs font-semibold text-muted sm:col-span-2">

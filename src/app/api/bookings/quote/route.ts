@@ -3,6 +3,7 @@ import { apiHandler, jsonError, jsonOk } from '@/lib/api'
 import { quoteFromCatalogue } from '@/lib/booking/service'
 
 const schema = z.object({
+  passengers: z.number().int().min(1).max(16).optional(),
   listingId: z.string().optional(),
   listingKind: z.enum(['route', 'service']).optional(),
   routeId: z.string().optional(),

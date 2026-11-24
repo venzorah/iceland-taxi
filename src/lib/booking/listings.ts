@@ -259,3 +259,9 @@ export function shownAdminPrice(listing: PublishedListing | null, _pickupDetails
   if (!listing) return null
   return adminPriceIsk(listing.fromIsk)
 }
+
+/** Official car-band labels cap the fare; a larger vehicle must not bypass that cap. */
+export function listingFitsPassengers(listing: Pick<PublishedListing, 'paxLabel'>, passengers: number) {
+  const band = listing.paxLabel?.match(/(\d+)\s*[–-]\s*(\d+)\s*persons/i)
+  return !band || passengers <= Number(band[2])
+}

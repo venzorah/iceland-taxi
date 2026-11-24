@@ -1,9 +1,9 @@
-import { normalizePlace, type PublishedListing } from './listings'
+import { listingFitsPassengers, normalizePlace, type PublishedListing } from './listings'
 
-export type CatalogueQuery = { category: string; pickup: string; destination: string }
+export type CatalogueQuery = { category: string; pickup: string; destination: string; passengers?: number }
 /** Exact published selections only; never broaden a failed search to another category or route. */
 export function catalogueResults(listings: PublishedListing[], query: CatalogueQuery) {
-  return listings.filter(item => item.category === query.category && (item.kind === 'service'
+  return listings.filter(item => item.category === query.category && listingFitsPassengers(item, query.passengers ?? 1) && (item.kind === 'service'
     ? (!query.destination || normalizePlace(query.destination) === normalizePlace(item.title)) && !query.pickup
     : (!query.pickup || normalizePlace(query.pickup) === normalizePlace(item.fromLabel)) && (!query.destination || normalizePlace(query.destination) === normalizePlace(item.toLabel))))
 }

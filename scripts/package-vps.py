@@ -14,6 +14,7 @@ fixed = [
     'eslint.config.mjs', 'postcss.config.mjs', 'tailwind.config.ts', '.nvmrc', '.env.example',
     'docs/vps-deployment.md', 'docs/vps-validation.md', 'docs/vps-handoff.md',
     'docs/performance-review.md', 'docs/performance-operations.md',
+    'docs/catalogue-handover.md', 'docs/update-review-fc288ce.md',
     'docs/postgresql-migration.md', 'docs/auth-transition.md', 'docs/auth-setup.md',
     'docs/supabase-exit-audit.md', 'docs/local-development.md', 'scripts/package-vps.py',
 ]
@@ -25,6 +26,7 @@ files.extend((root / 'scripts').glob('check-*.mjs'))
 files.extend(root / name for name in [
     'scripts/fixture-auth.mjs', 'scripts/bootstrap-admin.mjs', 'scripts/customer-browser-check.mjs',
     'scripts/driver-browser-check.mjs', 'scripts/admin-browser-check.mjs',
+    'scripts/replace-official-catalogue.ts',
 ])
 selected = []
 for path in sorted(set(files)):

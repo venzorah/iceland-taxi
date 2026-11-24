@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto'
-import { Prisma, type PrismaClient, type Service, type Route, type ExchangeRate, type SiteBlock } from '@prisma/client'
+import { Prisma, type PrismaClient, type Service, type Route, type ExchangeRate, type SiteBlock, type PricingExtra, type Vehicle } from '@prisma/client'
 import { SITE_BLOCKS } from '@/lib/content/blocks'
 import { HttpError } from '@/lib/security/http'
 import { REFERENCE_SERVICES, REFERENCE_ROUTES, REFERENCE_EXTRAS, REFERENCE_EUR_RATE } from './reference'
 
-type Snapshot = { services: Service[]; routes: Route[]; rate: ExchangeRate | null; blocks: SiteBlock[] }
+type Snapshot = { services: Service[]; routes: Route[]; rate: ExchangeRate | null; blocks: SiteBlock[]; extras?: PricingExtra[]; vehicles?: Pick<Vehicle, 'id' | 'name' | 'upgradeIsk'>[] }
 type Change = { field: string; before: unknown; after: unknown }
-type Action = { model: 'service' | 'route' | 'siteBlock'; operation: 'create' | 'update'; id: string; label: string; data: Record<string, unknown>; changes: Change[] }
+type Action = { model: 'service' | 'route' | 'siteBlock' | 'pricingExtra' | 'vehicle'; operation: 'create' | 'update'; id: string; label: string; data: Record<string, unknown>; changes: Change[] }
 export type CatalogueRestorePlan = { fingerprint: string; actions: Action[]; warnings: string[]; conflicts: string[]; currentEurRate: number | null; referenceEurRate: number; rateNeedsRestore: boolean }
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, ' ')
 const contentKeys = new Set(['home.airport.kicker', 'home.airport.title', 'home.airport.body', 'home.tours.title', 'home.tours.body', 'image.airport', 'image.goldenCircle', 'image.southCoast', 'image.northernLights', 'image.privateDriver', ...SITE_BLOCKS.filter(block => /^(airport|tours|driver)\./.test(block.key)).map(block => block.key)])
@@ -81,37 +81,32 @@ export function planCatalogueRestore(snapshot: Snapshot): CatalogueRestorePlan {
     const data = { key: reference.key, value: reference.value }
     actions.push({ model: 'siteBlock', operation: 'create', id: reference.key, label: reference.label, data, changes: [{ field: 'value', before: null, after: reference.value }] })
   }
+  const extras = snapshot.extras || []
+  for (const reference of REFERENCE_EXTRAS) {
+    const existing = extras.find(row => row.key === reference.key)
+    const data = Object.fromEntries(Object.entries(reference).filter(([field, value]) => !existing || existing[field as keyof PricingExtra] !== value))
+    if (Object.keys(data).length) actions.push({ model: 'pricingExtra', operation: existing ? 'update' : 'create', id: reference.key, label: reference.labelEn, data, changes: Object.entries(data).map(([field, after]) => ({ field, before: existing?.[field as keyof PricingExtra] ?? null, after })) })
+  }
+  const officialKeys = new Set<string>(REFERENCE_EXTRAS.map(extra => extra.key))
+  for (const row of extras) {
+    if (row.active && !officialKeys.has(row.key)) actions.push({ model: 'pricingExtra', operation: 'update', id: row.key, label: row.labelEn, data: { active: false }, changes: [{ field: 'active', before: true, after: false }] })
+  }
+  for (const row of snapshot.vehicles || []) {
+    if (row.upgradeIsk !== 0) actions.push({ model: 'vehicle', operation: 'update', id: row.id, label: row.name, data: { upgradeIsk: 0 }, changes: [{ field: 'upgradeIsk', before: row.upgradeIsk, after: 0 }] })
+  }
   // Sorting makes stale-preview checks independent of the database's row-return order.
-  const fingerprint = createHash('sha256').update(JSON.stringify({ reference: { services: REFERENCE_SERVICES, routes: REFERENCE_ROUTES, blocks: referenceBlocks, eur: REFERENCE_EUR_RATE }, services: [...snapshot.services].sort((a, b) => a.id.localeCompare(b.id)), routes: [...snapshot.routes].sort((a, b) => a.id.localeCompare(b.id)), blocks: [...snapshot.blocks].sort((a, b) => a.key.localeCompare(b.key)), rate: snapshot.rate })).digest('hex')
+  const fingerprint = createHash('sha256').update(JSON.stringify({ reference: { services: REFERENCE_SERVICES, routes: REFERENCE_ROUTES, extras: REFERENCE_EXTRAS, blocks: referenceBlocks, eur: REFERENCE_EUR_RATE }, services: [...snapshot.services].sort((a, b) => a.id.localeCompare(b.id)), routes: [...snapshot.routes].sort((a, b) => a.id.localeCompare(b.id)), blocks: [...snapshot.blocks].sort((a, b) => a.key.localeCompare(b.key)), extras: [...extras].sort((a, b) => a.key.localeCompare(b.key)), vehicles: [...(snapshot.vehicles || [])].sort((a, b) => a.id.localeCompare(b.id)), rate: snapshot.rate })).digest('hex')
   return { fingerprint, actions, warnings, conflicts, currentEurRate: snapshot.rate?.iskPerEur ?? null, referenceEurRate: REFERENCE_EUR_RATE, rateNeedsRestore: snapshot.rate?.iskPerEur !== REFERENCE_EUR_RATE }
 }
 
 async function loadSnapshot(db: Prisma.TransactionClient | PrismaClient): Promise<Snapshot> {
-  const [services, routes, rate, blocks] = await Promise.all([db.service.findMany(), db.route.findMany(), db.exchangeRate.findFirst({ orderBy: { effective: 'desc' } }), db.siteBlock.findMany({ where: { key: { in: [...contentKeys] } } })])
-  return { services, routes, rate, blocks }
+  const [services, routes, rate, blocks, extras, vehicles] = await Promise.all([db.service.findMany(), db.route.findMany(), db.exchangeRate.findFirst({ orderBy: { effective: 'desc' } }), db.siteBlock.findMany({ where: { key: { in: [...contentKeys] } } }), db.pricingExtra.findMany(), db.vehicle.findMany({ select: { id: true, name: true, upgradeIsk: true } })])
+  return { services, routes, rate, blocks, extras, vehicles }
 }
 export async function previewCatalogueRestore(db: PrismaClient) { return planCatalogueRestore(await loadSnapshot(db)) }
 
-async function syncOfficialExtras(tx: Prisma.TransactionClient) {
-  const current = await tx.pricingExtra.findMany()
-  const official = new Set<string>(REFERENCE_EXTRAS.map((extra) => extra.key))
-  for (const extra of REFERENCE_EXTRAS) {
-    const existing = current.find((row) => row.key === extra.key)
-    if (!existing) {
-      await tx.pricingExtra.create({ data: { key: extra.key, labelEn: extra.labelEn, isk: extra.isk, active: extra.active, sortOrder: extra.sortOrder } })
-      continue
-    }
-    if (existing.labelEn !== extra.labelEn || existing.isk !== extra.isk || existing.active !== extra.active || existing.sortOrder !== extra.sortOrder) {
-      await tx.pricingExtra.update({ where: { key: extra.key }, data: { labelEn: extra.labelEn, isk: extra.isk, active: extra.active, sortOrder: extra.sortOrder } })
-    }
-  }
-  for (const extra of current) {
-    if (!official.has(extra.key) && extra.active) await tx.pricingExtra.update({ where: { key: extra.key }, data: { active: false } })
-  }
-}
-
 /** Replaces catalogue prices with the official list. Booking and payment snapshots are not rewritten. */
-export async function applyCatalogueRestore(db: PrismaClient, fingerprint: string, restoreExchangeRate: boolean) {
+export async function applyCatalogueRestore(db: PrismaClient, fingerprint: string, restoreExchangeRate: boolean, publication?: { key: string; value: string }) {
   return db.$transaction(async tx => {
     const snapshot = await loadSnapshot(tx), plan = planCatalogueRestore(snapshot)
     if (plan.fingerprint !== fingerprint) throw new HttpError(409, 'CATALOGUE_CHANGED', 'The catalogue changed. Review a fresh preview before restoring.')
@@ -123,12 +118,15 @@ export async function applyCatalogueRestore(db: PrismaClient, fingerprint: strin
       } else if (action.model === 'route') {
         if (action.operation === 'create') await tx.route.create({ data: { id: action.id, ...action.data } as Prisma.RouteUncheckedCreateInput })
         else await tx.route.update({ where: { id: action.id }, data: action.data })
-      } else await tx.siteBlock.create({ data: action.data as Prisma.SiteBlockCreateInput })
+      } else if (action.model === 'pricingExtra') {
+        if (action.operation === 'create') await tx.pricingExtra.create({ data: action.data as Prisma.PricingExtraCreateInput })
+        else await tx.pricingExtra.update({ where: { key: action.id }, data: action.data })
+      } else if (action.model === 'vehicle') await tx.vehicle.update({ where: { id: action.id }, data: action.data })
+      else await tx.siteBlock.create({ data: action.data as Prisma.SiteBlockCreateInput })
     }
-    await syncOfficialExtras(tx)
-    await tx.vehicle.updateMany({ where: { NOT: { upgradeIsk: 0 } }, data: { upgradeIsk: 0 } })
     const rateRestored = restoreExchangeRate && plan.rateNeedsRestore
     if (rateRestored) await tx.exchangeRate.create({ data: { iskPerEur: REFERENCE_EUR_RATE, iskPerUsd: snapshot.rate?.iskPerUsd ?? 138, note: 'Reference catalogue EUR display rate restored by administrator. Existing booking snapshots retained.' } })
+    if (publication) await tx.siteBlock.upsert({ where: { key: publication.key }, create: publication, update: { value: publication.value } })
     return { changed: plan.actions.length, rateRestored, plan: planCatalogueRestore(await loadSnapshot(tx)) }
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 20000 })
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { publishedListings } from '@/lib/booking/listings'
+import { listingFitsPassengers, publishedListings } from '@/lib/booking/listings'
 import { REFERENCE_EXTRAS, REFERENCE_ROUTES, REFERENCE_SERVICES, eurToIsk } from './reference'
 
 test('every official price is the euro list converted at 150 ISK and sits on the right category', () => {
@@ -54,4 +54,11 @@ test('a service that already has priced routes is not published a second time', 
   assert.equal(listings.filter((listing) => listing.category === 'airport').length, 2)
   assert.equal(listings.filter((listing) => listing.category === 'tour').length, 12)
   assert.equal(listings.filter((listing) => listing.category === 'taxi').length, 14)
+})
+
+test('official passenger-band prices cannot be used for more people than the fare covers', () => {
+ assert(listingFitsPassengers({paxLabel:'1–4 persons'},4))
+ assert.equal(listingFitsPassengers({paxLabel:'1–4 persons'},5),false)
+ assert(listingFitsPassengers({paxLabel:'5–8 persons'},8))
+ assert.equal(listingFitsPassengers({paxLabel:'5–8 persons'},9),false)
 })

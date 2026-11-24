@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { applyCatalogueRestore, previewCatalogueRestore } from './restore'
 
-/** Bump this when a new official list should replace the live catalogue on the next VPS start. */
+/** Bump this when a new official list should replace the live catalogue on the next explicitly opted-in publication. */
 export const OFFICIAL_CATALOGUE_VERSION = '2026-11-taxi-tours'
 const MARKER_KEY = 'catalogue.official-price-list'
 
@@ -12,11 +12,6 @@ export async function publishOfficialCatalogue(db: PrismaClient) {
 
   const plan = await previewCatalogueRestore(db)
   if (plan.conflicts.length) return { applied: false as const, reason: 'conflict' as const }
-  const result = await applyCatalogueRestore(db, plan.fingerprint, true)
-  await db.siteBlock.upsert({
-    where: { key: MARKER_KEY },
-    create: { key: MARKER_KEY, value: OFFICIAL_CATALOGUE_VERSION },
-    update: { value: OFFICIAL_CATALOGUE_VERSION },
-  })
+  const result = await applyCatalogueRestore(db, plan.fingerprint, true, { key: MARKER_KEY, value: OFFICIAL_CATALOGUE_VERSION })
   return { applied: true as const, reason: 'published' as const, changed: result.changed }
 }

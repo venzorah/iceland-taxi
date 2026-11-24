@@ -56,8 +56,8 @@ export default function Homepage(props: Props) {
   const images = useSiteImages()
   const text = useSiteBlock
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
-  const routes = (listings || []).filter((listing) => listing.kind === 'route' && listing.category === 'airport').slice(0, 4)
-  const tours = (listings || []).filter((listing) => listing.category === 'tour').slice(0, 4)
+  const routes = (listings || []).filter((listing) => listing.kind === 'route' && listing.category === 'airport').slice(0, 8)
+  const tours = (listings || []).filter((listing) => listing.category === 'tour').slice(0, 6)
   const driverListing = (listings || []).find((listing) => listing.category === 'driver')
   const book = () => onSearch?.({ category: 'airport', pickup: 'Keflavík Airport (KEF)', destination: 'Reykjavík city centre', date: '', time: '', passengers: 2, luggage: 2 })
 

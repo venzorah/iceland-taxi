@@ -57,7 +57,7 @@ export default function Homepage(props: Props) {
   const images = useSiteImages()
   const text = useSiteBlock
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
-  const routes = (listings || []).filter((listing) => listing.kind === 'route' && listing.category === 'airport').slice(0, 8)
+  const routes = (listings || []).filter((listing) => listing.kind === 'route').slice(0, 8)
   const tours = (listings || []).filter((listing) => listing.category === 'tour').slice(0, 6)
   const driverListing = (listings || []).find((listing) => listing.category === 'driver')
   const book = () => onSearch?.({ category: 'airport', pickup: 'Keflavík Airport (KEF)', destination: 'Reykjavík city centre', date: '', time: '', passengers: 2, luggage: 2 })
@@ -94,7 +94,7 @@ export default function Homepage(props: Props) {
                 {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
                 {!listingsError && listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet.</li>}
                 {routes.map((r) => (
-                  <li key={r.id} onClick={() => onSearch?.({ category: 'airport', pickup: r.fromLabel, destination: r.toLabel, listingId: r.id, listingKind: 'route', date: '', time: '', passengers: 2, luggage: 0 })} className="flex cursor-pointer items-center gap-4 py-4 active:bg-surface">
+                  <li key={r.id} onClick={() => onSearch?.({ category: r.category, pickup: r.fromLabel, destination: r.toLabel, listingId: r.id, listingKind: 'route', date: '', time: '', passengers: 2, luggage: 0 })} className="flex cursor-pointer items-center gap-4 py-4 active:bg-surface">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold leading-snug text-heading">{r.fromLabel} → {r.toLabel}</p>
                       <p className="mt-0.5 text-sm text-muted">{[r.hoursLabel, r.km ? `${r.km} km` : null].filter(Boolean).join(' · ') || 'Fixed price'}</p>

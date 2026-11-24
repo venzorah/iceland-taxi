@@ -56,8 +56,8 @@ export default function Homepage(props: Props) {
   const images = useSiteImages()
   const text = useSiteBlock
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
-  const routes = (listings || []).filter((listing) => listing.kind === 'route')
-  const tours = (listings || []).filter((listing) => listing.category === 'tour')
+  const routes = (listings || []).filter((listing) => listing.kind === 'route' && listing.category === 'airport').slice(0, 4)
+  const tours = (listings || []).filter((listing) => listing.category === 'tour').slice(0, 4)
   const driverListing = (listings || []).find((listing) => listing.category === 'driver')
   const book = () => onSearch?.({ category: 'airport', pickup: 'Keflavík Airport (KEF)', destination: 'Reykjavík city centre', date: '', time: '', passengers: 2, luggage: 2 })
 
@@ -181,8 +181,8 @@ export default function Homepage(props: Props) {
           <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Popular destinations</h2>
           <p className="mt-3 max-w-2xl text-base text-muted">Where our passengers travel most. Every destination can be booked as a transfer, a tour or part of a private driver day.</p>
           <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:mt-10 sm:auto-rows-[220px] sm:gap-3 lg:grid-cols-4">
-            {DESTINATIONS.map((d, i) => (
-              <a key={d.name} href="/destinations" className={`group relative overflow-hidden rounded-2xl ${i === 0 ? 'col-span-2 row-span-2' : ''} ${i === 4 ? 'col-span-2' : ''}`}>
+            {DESTINATIONS.slice(0, 4).map((d) => (
+              <a key={d.name} href="/destinations" className="group relative overflow-hidden rounded-2xl">
                 <ResponsivePhoto src={d.img} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                 <div className="absolute inset-x-0 bottom-0 bg-navy/70 px-4 py-3 backdrop-blur-sm">
                   <p className="font-display text-base font-bold text-white sm:text-lg">{d.name}</p>
@@ -204,7 +204,7 @@ export default function Homepage(props: Props) {
               </div>
               <div className="min-w-0 overflow-hidden rounded-2xl border border-line bg-card">
                 <ul className="divide-y divide-line sm:hidden">
-                  {FLEET.map((v) => (
+                  {FLEET.slice(0, 4).map((v) => (
                     <li key={v.name} className="flex items-center gap-3 px-4 py-3.5">
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-heading">{v.name}</p>
@@ -224,7 +224,7 @@ export default function Homepage(props: Props) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
-                    {FLEET.map((v) => (
+                    {FLEET.slice(0, 4).map((v) => (
                       <tr key={v.name}>
                         <td className="px-5 py-4 font-semibold text-heading">{v.name}</td>
                         <td className="px-3 py-4 text-text">{v.pax}</td>

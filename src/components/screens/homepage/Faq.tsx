@@ -11,7 +11,7 @@ export function Faq() {
   const [open, setOpen] = useState<number | null>(0)
   return (
     <div className="mt-10 divide-y divide-line border-y border-line">
-      {faqs.map((f, i) => {
+      {faqs.slice(0, 4).map((f, i) => {
         const isOpen = open === i
         return (
           <div key={f.q}>

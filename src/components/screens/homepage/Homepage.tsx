@@ -14,7 +14,8 @@ import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
 import { type Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 import { whatsappHref } from '@/lib/whatsapp'
-import { BookingSearch, type SearchPayload } from './BookingSearch'
+import type { SearchPayload } from './BookingSearch'
+// import { BookingSearch } from './BookingSearch' // Temporarily hidden homepage search.
 import { Faq } from './Faq'
 import { HeroCarousel } from './HeroCarousel'
 
@@ -70,10 +71,11 @@ export default function Homepage(props: Props) {
         {/* Hero */}
         <HeroCarousel language={lang} autoplay={autoplay} onSearch={onSearch} />
 
-        {/* Booking form overlapping hero */}
+        {/* Temporarily disabled: booking search overlapping the hero. Restore when needed.
         <div className="relative z-10 mx-auto -mt-24 w-full min-w-0 max-w-7xl px-4 sm:-mt-28 sm:px-6 lg:px-8">
           <BookingSearch language={lang} onSearch={onSearch} />
         </div>
+        */}
 
         <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
         {/* Airport transfers, the primary service */}

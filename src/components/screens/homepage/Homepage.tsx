@@ -56,7 +56,7 @@ export default function Homepage(props: Props) {
   const cur = currency as Currency
   const images = useSiteImages()
   const text = useSiteBlock
-  const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
+  const { listings, error: listingsError, retry: retryListings } = usePublishedListings()
   const routes = (listings || []).filter((listing) => listing.kind === 'route').slice(0, 8)
   const tours = (listings || []).filter((listing) => listing.category === 'tour').slice(0, 6)
   const driverListing = (listings || []).find((listing) => listing.category === 'driver')
@@ -68,263 +68,264 @@ export default function Homepage(props: Props) {
         <SiteHeader theme={th} language={lang} currency={cur} onThemeChange={onThemeChange} onLanguageChange={onLanguageChange} onCurrencyChange={onCurrencyChange} onBook={book} onSignIn={onSignIn} announcements={announcements} />
         <div className="page-shell break-words leading-relaxed">
 
-        {/* Hero */}
-        <HeroCarousel language={lang} autoplay={autoplay} onSearch={onSearch} />
+          {/* Hero */}
+          <HeroCarousel language={lang} autoplay={autoplay} onSearch={onSearch} />
 
-        {/* Temporarily disabled: booking search overlapping the hero. Restore when needed.
+          {/* Temporarily disabled: booking search overlapping the hero. Restore when needed.
         <div className="relative z-10 mx-auto -mt-24 w-full min-w-0 max-w-7xl px-4 sm:-mt-28 sm:px-6 lg:px-8">
           <BookingSearch language={lang} onSearch={onSearch} />
         </div>
         */}
 
-        <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
-        {/* Airport transfers, the primary service */}
-        <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
-          <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-            <div className="relative hidden overflow-hidden rounded-2xl sm:block">
-              <ResponsivePhoto src={images.airport} alt="Chauffeur loading luggage outside Keflavík Airport" className="aspect-[4/3] w-full object-cover" />
-            </div>
-            <div>
-              <p className="flex items-center gap-2 text-sm font-semibold text-mint-text"><Plane size={16} /> {text('home.airport.kicker')}</p>
-              <h2 className="mt-3 text-balance font-display text-2xl font-bold leading-tight text-heading sm:text-4xl">{text('home.airport.title')}</h2>
-              <p className="mt-4 text-base leading-relaxed text-muted">
-                {text('home.airport.body')}
-              </p>
-              <ul className="mt-8 divide-y divide-line border-y border-line">
-                {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
-                {!listingsError && listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet.</li>}
-                {routes.map((r) => (
-                  <li key={r.id} onClick={() => onSearch?.({ category: r.category, pickup: r.fromLabel, destination: r.toLabel, listingId: r.id, listingKind: 'route', date: '', time: '', passengers: 2, luggage: 0 })} className="flex cursor-pointer items-center gap-4 py-4 active:bg-surface">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold leading-snug text-heading">{r.fromLabel} → {r.toLabel}</p>
-                      <p className="mt-0.5 text-sm text-muted">{[r.hoursLabel, r.km ? `${r.km} km` : null].filter(Boolean).join(' · ') || 'Fixed price'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted">Price</p>
-                      <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <a href="/airport-transfer" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-link hover:underline">
-                See all airport routes <ArrowRight size={16} />
-              </a>
-            </div>
-          </div>
-        </section>
-
-        {/* Private tours */}
-        <section className="bg-surface py-14 sm:py-20 lg:py-28">
-          <div className="mx-auto w-full min-w-0 max-w-7xl">
-            <div className="flex flex-wrap items-end justify-between gap-4 px-4 sm:px-6 lg:px-8">
-              <div className="max-w-2xl">
-                <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">{text('home.tours.title')}</h2>
-                <p className="mt-3 text-base text-muted">{text('home.tours.body')}</p>
+          <PublishedListingsNotice error={listingsError} onRetry={retryListings} />
+          {/* Airport transfers, the primary service */}
+          <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
+            <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+              <div className="relative hidden overflow-hidden rounded-2xl sm:block">
+                <ResponsivePhoto src={images.airport} alt="Chauffeur loading luggage outside Keflavík Airport" className="aspect-[4/3] w-full object-cover" />
               </div>
-              <a href="/private-tours" className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-bold text-link hover:underline">Discover Private Tours <ArrowRight size={16} /></a>
-            </div>
-            <div className="no-scrollbar mt-8 flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mt-10 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-6 lg:px-8">
-              {listings === null && <p className="px-4 text-sm text-muted">Loading published prices…</p>}
-              {!listingsError && listings !== null && tours.length === 0 && <p className="px-4 text-sm text-muted">No published tour price yet.</p>}
-              {tours.map((tour) => (
-                <article key={tour.id} className="group flex w-[min(82%,20rem)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card sm:w-[60%] md:w-auto md:shrink">
-                  <div className="overflow-hidden">
-                    <ResponsivePhoto src={tour.imageUrl || images.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
-                  </div>
-                  <div className="flex flex-1 flex-col p-5 sm:p-6">
-                    <h3 className="font-display text-lg font-bold text-heading sm:text-xl">{tour.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted">{tour.blurb}</p>
-                    <div className="mt-4 flex gap-4 text-sm text-muted">
-                      {tour.hoursLabel && <span className="flex items-center gap-1.5"><Clock size={14} /> {tour.hoursLabel}</span>}
-                      {tour.paxLabel && <span className="flex items-center gap-1.5"><Users size={14} /> {tour.paxLabel}</span>}
-                    </div>
-                    <div className="mt-auto flex items-end justify-between pt-6">
-                      <div>
-                        <p className="text-xs text-muted">Price</p>
-                        <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
-                      </div>
-                      <button onClick={() => onSearch?.({ category: 'tour', pickup: tour.fromLabel, destination: tour.toLabel, listingId: tour.id, listingKind: tour.kind, date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
-                        Book tour
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Private driver */}
-        <section className="relative isolate overflow-hidden bg-navy">
-          <div className="mx-auto grid w-full min-w-0 max-w-7xl lg:grid-cols-2">
-            <div className="min-w-0 px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
-              <h2 className="font-display text-2xl font-bold text-white sm:text-4xl">{text('home.driver.title')}</h2>
-              <p className="mt-4 max-w-lg text-base leading-relaxed text-white/80">
-                {text('home.driver.body')}
-              </p>
-              <div className="mt-8 flex w-full min-w-0 flex-wrap gap-2">
-                {['2 hours', '4 hours', '8 hours', 'Full day', 'Multi-day'].map((d) => (
-                  <span key={d} className="whitespace-nowrap rounded-full border border-white/25 px-4 py-2 text-sm font-medium text-white">{d}</span>
-                ))}
-              </div>
-              <div className="mt-10 grid gap-3 sm:flex sm:flex-wrap">
-                <button onClick={() => driverListing ? onSearch?.({ category: 'driver', pickup: driverListing.fromLabel, destination: driverListing.toLabel, listingId: driverListing.id, listingKind: driverListing.kind, date: '', time: '', passengers: 2, luggage: 2 }) : onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
-                  Hire a Private Driver
-                </button>
-                <button onClick={() => onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</button>
-              </div>
-            </div>
-            <ResponsivePhoto src={images.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />
-          </div>
-        </section>
-
-        {/* Destinations mosaic */}
-        <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
-          <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Popular destinations</h2>
-          <p className="mt-3 max-w-2xl text-base text-muted">Where our passengers travel most. Every destination can be booked as a transfer, a tour or part of a private driver day.</p>
-          <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:mt-10 sm:auto-rows-[220px] sm:gap-3 lg:grid-cols-4">
-            {DESTINATIONS.slice(0, 4).map((d) => (
-              <a key={d.name} href="/destinations" className="group relative overflow-hidden rounded-2xl">
-                <ResponsivePhoto src={d.img} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
-                <div className="absolute inset-x-0 bottom-0 bg-navy/70 px-4 py-3 backdrop-blur-sm">
-                  <p className="font-display text-base font-bold text-white sm:text-lg">{d.name}</p>
-                  <p className="text-xs text-white/80">{d.note}</p>
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        {/* Fleet */}
-        <section className="bg-surface py-14 sm:py-20 lg:py-28">
-          <div className="mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
               <div>
-                <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Our fleet</h2>
-                <p className="mt-3 text-base text-muted">Choose the vehicle that fits your group and luggage. Capacities are per vehicle. <a href="/fleet" className="font-semibold text-link hover:underline">Full fleet page</a></p>
-                <ResponsivePhoto src={images.fleet} alt="Sedan, SUV and minivan parked in Reykjavík" className="mt-8 hidden aspect-[16/10] w-full rounded-2xl object-cover sm:block" />
-              </div>
-              <div className="min-w-0 overflow-hidden rounded-2xl border border-line bg-card">
-                <ul className="divide-y divide-line sm:hidden">
-                  {FLEET.slice(0, 4).map((v) => (
-                    <li key={v.name} className="flex items-center gap-3 px-4 py-3.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-heading">{v.name}</p>
-                        <p className="mt-0.5 text-sm text-muted">{v.use}</p>
+                <p className="flex items-center gap-2 text-sm font-semibold text-mint-text"><Plane size={16} /> {text('home.airport.kicker')}</p>
+                <h2 className="mt-3 text-balance font-display text-2xl font-bold leading-tight text-heading sm:text-4xl">{text('home.airport.title')}</h2>
+                <p className="mt-4 text-base leading-relaxed text-muted">
+                  {text('home.airport.body')}
+                </p>
+                <ul className="mt-8 divide-y divide-line border-y border-line">
+                  {listings === null && <li className="py-4 text-sm text-muted">Loading published prices…</li>}
+                  {!listingsError && listings !== null && routes.length === 0 && <li className="py-4 text-sm text-muted">No published airport price yet.</li>}
+                  {routes.map((r) => (
+                    <li key={r.id} className="flex flex-wrap items-center gap-4 py-4 sm:flex-nowrap">
+                      <div className="w-full min-w-0 sm:w-auto sm:flex-1">
+                        <p className="font-semibold leading-snug text-heading">{r.fromLabel} → {r.toLabel}</p>
+                        <p className="mt-0.5 text-sm text-muted">{[r.hoursLabel, r.km ? `${r.km} km` : null].filter(Boolean).join(' · ') || 'Fixed price'}</p>
                       </div>
-                      <p className="shrink-0 text-right text-sm text-text">{v.pax} seats<br />{v.bags} bags</p>
+                      <div className="text-right">
+                        <p className="text-xs text-muted">Price</p>
+                        <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p>
+                      </div>
+                      <a href={`/book?listing=${encodeURIComponent(r.id)}&kind=route`} aria-label={`Book Now: ${r.fromLabel} to ${r.toLabel}`} className="ml-auto inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition-colors hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:ml-0">Book</a>
                     </li>
                   ))}
                 </ul>
-                <table className="hidden w-full table-fixed text-left text-sm sm:table">
-                  <thead className="border-b border-line text-xs font-semibold text-muted">
-                    <tr>
-                      <th className="px-5 py-4">Vehicle</th>
-                      <th className="px-3 py-4"><span className="flex items-center gap-1"><Users size={13} /> Seats</span></th>
-                      <th className="px-3 py-4"><span className="flex items-center gap-1"><Luggage size={13} /> Bags</span></th>
-                      <th className="px-5 py-4">Best for</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {FLEET.slice(0, 4).map((v) => (
-                      <tr key={v.name}>
-                        <td className="px-5 py-4 font-semibold text-heading">{v.name}</td>
-                        <td className="px-3 py-4 text-text">{v.pax}</td>
-                        <td className="px-3 py-4 text-text">{v.bags}</td>
-                        <td className="px-5 py-4 text-muted">{v.use}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <a href="/airport-transfer" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-link hover:underline">
+                  See all airport routes <ArrowRight size={16} />
+                </a>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Why + How it works */}
-        <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-            <div>
-              <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Why travel with us</h2>
-              <dl className="mt-8 divide-y divide-line border-t border-line">
-                {[
-                  ['Price before you pay', 'The full breakdown, extras, surcharges and currency, is shown before checkout.'],
-                  ['Your currency, clearly', 'Pay in euro (EUR), or in ISK if you live in Iceland. You are charged in the currency you see.'],
-                  ['Our own drivers and vehicles', 'Every journey is run by Iceland Taxi Booking, not passed to an unknown operator.'],
-                  ['A person to talk to', 'Message us in your booking or on WhatsApp before, during and after your trip.'],
-                ].map(([title, body]) => (
-                  <div key={title} className="py-5">
-                    <dt className="font-semibold text-heading">{title}</dt>
-                    <dd className="mt-1 text-sm leading-relaxed text-muted">{body}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-            <div>
-              <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl"><a href="/how-it-works" className="hover:text-link">How booking works</a></h2>
-              <ol className="mt-8 space-y-6">
-                {[
-                  ['Tell us your journey', 'Pickup, destination, date, passengers and luggage.'],
-                  ['Choose vehicle and extras', 'Child seats, extra stops, waiting time or a return trip.'],
-                  ['Pay securely', 'Card payment in EUR or ISK. Custom trips start as a quotation.'],
-                  ['Meet your driver', 'Your booking reference and driver details arrive before pickup.'],
-                ].map(([title, body], i) => (
-                  <li key={title} className="flex gap-4">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary font-display text-sm font-bold text-on-primary">{i + 1}</span>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-heading">{title}</p>
-                      <p className="mt-1 text-sm text-muted">{body}</p>
+          {/* Private tours */}
+          <section className="bg-surface py-14 sm:py-20 lg:py-28">
+            <div className="mx-auto w-full min-w-0 max-w-7xl">
+              <div className="flex flex-wrap items-end justify-between gap-4 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-2xl">
+                  <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">{text('home.tours.title')}</h2>
+                  <p className="mt-3 text-base text-muted">{text('home.tours.body')}</p>
+                </div>
+                <a href="/private-tours" className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-bold text-link hover:underline">Discover Private Tours <ArrowRight size={16} /></a>
+              </div>
+              <div className="no-scrollbar mt-8 flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mt-10 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-6 lg:px-8">
+                {listings === null && <p className="px-4 text-sm text-muted">Loading published prices…</p>}
+                {!listingsError && listings !== null && tours.length === 0 && <p className="px-4 text-sm text-muted">No published tour price yet.</p>}
+                {tours.map((tour) => (
+                  <article key={tour.id} className="group flex w-[min(82%,20rem)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-line bg-card sm:w-[60%] md:w-auto md:shrink">
+                    <div className="overflow-hidden">
+                      <ResponsivePhoto src={tour.imageUrl || images.goldenCircle} alt={tour.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                     </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        </section>
-
-        {/* Reviews, verified bookings only */}
-        <section className="border-y border-line bg-surface py-12 sm:py-16">
-          <div className="mx-auto w-full min-w-0 max-w-7xl">
-            <h2 className="px-4 font-display text-2xl font-bold text-heading sm:px-6 sm:text-3xl lg:px-8">Reviews from verified journeys</h2>
-            {showDemoReviews ? (
-              <div className="no-scrollbar mt-8 flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-6 lg:px-8">
-                {['Golden Circle Private Tour', 'Keflavík Airport → Reykjavík', 'Private driver · 3 days'].map((s) => (
-                  <figure key={s} className="flex w-[min(82%,20rem)] shrink-0 snap-start flex-col rounded-2xl border border-line bg-card p-6 md:w-auto md:shrink">
-                    <p className="text-sm font-semibold text-warning">★★★★★</p>
-                    <blockquote className="mt-3 text-sm leading-relaxed text-text">Demo review text. Real reviews are submitted by customers after a completed booking and approved in the admin portal.</blockquote>
-                    <figcaption className="mt-auto pt-5 text-xs text-muted">Demo content · {s}</figcaption>
-                  </figure>
+                    <div className="flex flex-1 flex-col p-5 sm:p-6">
+                      <h3 className="font-display text-lg font-bold text-heading sm:text-xl">{tour.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-muted">{tour.blurb}</p>
+                      <div className="mt-4 flex gap-4 text-sm text-muted">
+                        {tour.hoursLabel && <span className="flex items-center gap-1.5"><Clock size={14} /> {tour.hoursLabel}</span>}
+                        {tour.paxLabel && <span className="flex items-center gap-1.5"><Users size={14} /> {tour.paxLabel}</span>}
+                      </div>
+                      <div className="mt-auto flex items-end justify-between pt-6">
+                        <div>
+                          <p className="text-xs text-muted">Price</p>
+                          <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
+                        </div>
+                        <button onClick={() => onSearch?.({ category: 'tour', pickup: tour.fromLabel, destination: tour.toLabel, listingId: tour.id, listingKind: tour.kind, date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
+                          Book tour
+                        </button>
+                      </div>
+                    </div>
+                  </article>
                 ))}
               </div>
-            ) : (
-              <p className="mt-4 max-w-2xl px-4 text-sm text-muted sm:px-6 lg:px-8">Reviews are collected only from customers with a completed booking, and appear here once approved by our team.</p>
-            )}
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="mx-auto w-full min-w-0 max-w-3xl px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
-          <h2 className="font-display text-2xl font-bold text-heading sm:text-center sm:text-4xl">Frequently asked questions</h2>
-          <Faq />
-          <p className="mt-8 text-center">
-            <a href="/faqs" className="text-sm font-bold text-link hover:underline">View all FAQs</a>
-          </p>
-        </section>
-
-        {/* CTA */}
-        <section className="relative isolate overflow-hidden">
-          <ResponsivePhoto src={images.northernLights} alt="Northern lights above snowy mountains" className="absolute inset-0 -z-10 h-full w-full object-cover" />
-          <div className="absolute inset-0 -z-10 bg-navy/60" />
-          <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-16 text-center sm:px-6 sm:py-24 lg:px-8 lg:py-32">
-            <h2 className="font-display text-3xl font-extrabold text-white sm:text-5xl">Your Journey Across Iceland Starts Here.</h2>
-            <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap sm:justify-center">
-              <button onClick={book} className="whitespace-nowrap rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Book Your Ride</button>
-              <a href={whatsappHref({ text: 'Hello Iceland Taxi Booking' })} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-7 py-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10"><MessageCircle size={16} /> Ask on WhatsApp</a>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <SiteFooter onStaff={onStaff} onStaffMobile={onStaffMobile} onDriver={onDriver} onAccount={onSignIn} />
+          {/* Private driver */}
+          <section className="relative isolate overflow-hidden bg-navy">
+            <div className="mx-auto grid w-full min-w-0 max-w-7xl lg:grid-cols-2">
+              <div className="min-w-0 px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
+                <h2 className="font-display text-2xl font-bold text-white sm:text-4xl">{text('home.driver.title')}</h2>
+                <p className="mt-4 max-w-lg text-base leading-relaxed text-white/80">
+                  {text('home.driver.body')}
+                </p>
+                <div className="mt-8 flex w-full min-w-0 flex-wrap gap-2">
+                  {['2 hours', '4 hours', '8 hours', 'Full day', 'Multi-day'].map((d) => (
+                    <span key={d} className="whitespace-nowrap rounded-full border border-white/25 px-4 py-2 text-sm font-medium text-white">{d}</span>
+                  ))}
+                </div>
+                <div className="mt-10 grid gap-3 sm:flex sm:flex-wrap">
+                  <button onClick={() => driverListing ? onSearch?.({ category: 'driver', pickup: driverListing.fromLabel, destination: driverListing.toLabel, listingId: driverListing.id, listingKind: driverListing.kind, date: '', time: '', passengers: 2, luggage: 2 }) : onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
+                    Hire a Private Driver
+                  </button>
+                  <button onClick={() => onSearch?.({ category: 'driver', pickup: '', destination: 'Custom itinerary', enquiry: true, date: '', time: '', passengers: 2, luggage: 2 })} className="whitespace-nowrap rounded-full border border-white/40 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">Request a Custom Trip</button>
+                </div>
+              </div>
+              <ResponsivePhoto src={images.privateDriver} alt="View from the back seat of a chauffeured car along an Icelandic fjord" className="hidden h-96 w-full object-cover sm:block lg:h-full" />
+            </div>
+          </section>
+
+          {/* Destinations mosaic */}
+          <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
+            <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Popular destinations</h2>
+            <p className="mt-3 max-w-2xl text-base text-muted">Where our passengers travel most. Every destination can be booked as a transfer, a tour or part of a private driver day.</p>
+            <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:mt-10 sm:auto-rows-[220px] sm:gap-3 lg:grid-cols-4">
+              {DESTINATIONS.slice(0, 4).map((d) => (
+                <a key={d.name} href="/destinations" className="group relative overflow-hidden rounded-2xl">
+                  <ResponsivePhoto src={d.img} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
+                  <div className="absolute inset-x-0 bottom-0 bg-navy/70 px-4 py-3 backdrop-blur-sm">
+                    <p className="font-display text-base font-bold text-white sm:text-lg">{d.name}</p>
+                    <p className="text-xs text-white/80">{d.note}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          {/* Fleet */}
+          <section className="bg-surface py-14 sm:py-20 lg:py-28">
+            <div className="mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
+                <div>
+                  <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Our fleet</h2>
+                  <p className="mt-3 text-base text-muted">Choose the vehicle that fits your group and luggage. Capacities are per vehicle. <a href="/fleet" className="font-semibold text-link hover:underline">Full fleet page</a></p>
+                  <ResponsivePhoto src={images.fleet} alt="Sedan, SUV and minivan parked in Reykjavík" className="mt-8 hidden aspect-[16/10] w-full rounded-2xl object-cover sm:block" />
+                </div>
+                <div className="min-w-0 overflow-hidden rounded-2xl border border-line bg-card">
+                  <ul className="divide-y divide-line sm:hidden">
+                    {FLEET.slice(0, 4).map((v) => (
+                      <li key={v.name} className="flex items-center gap-3 px-4 py-3.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-heading">{v.name}</p>
+                          <p className="mt-0.5 text-sm text-muted">{v.use}</p>
+                        </div>
+                        <p className="shrink-0 text-right text-sm text-text">{v.pax} seats<br />{v.bags} bags</p>
+                      </li>
+                    ))}
+                  </ul>
+                  <table className="hidden w-full table-fixed text-left text-sm sm:table">
+                    <thead className="border-b border-line text-xs font-semibold text-muted">
+                      <tr>
+                        <th className="px-5 py-4">Vehicle</th>
+                        <th className="px-3 py-4"><span className="flex items-center gap-1"><Users size={13} /> Seats</span></th>
+                        <th className="px-3 py-4"><span className="flex items-center gap-1"><Luggage size={13} /> Bags</span></th>
+                        <th className="px-5 py-4">Best for</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {FLEET.slice(0, 4).map((v) => (
+                        <tr key={v.name}>
+                          <td className="px-5 py-4 font-semibold text-heading">{v.name}</td>
+                          <td className="px-3 py-4 text-text">{v.pax}</td>
+                          <td className="px-3 py-4 text-text">{v.bags}</td>
+                          <td className="px-5 py-4 text-muted">{v.use}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Why + How it works */}
+          <section className="mx-auto w-full min-w-0 max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
+            <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl">Why travel with us</h2>
+                <dl className="mt-8 divide-y divide-line border-t border-line">
+                  {[
+                    ['Price before you pay', 'The full breakdown, extras, surcharges and currency, is shown before checkout.'],
+                    ['Your currency, clearly', 'Pay in euro (EUR), or in ISK if you live in Iceland. You are charged in the currency you see.'],
+                    ['Our own drivers and vehicles', 'Every journey is run by Iceland Taxi Booking, not passed to an unknown operator.'],
+                    ['A person to talk to', 'Message us in your booking or on WhatsApp before, during and after your trip.'],
+                  ].map(([title, body]) => (
+                    <div key={title} className="py-5">
+                      <dt className="font-semibold text-heading">{title}</dt>
+                      <dd className="mt-1 text-sm leading-relaxed text-muted">{body}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              <div>
+                <h2 className="font-display text-2xl font-bold text-heading sm:text-4xl"><a href="/how-it-works" className="hover:text-link">How booking works</a></h2>
+                <ol className="mt-8 space-y-6">
+                  {[
+                    ['Tell us your journey', 'Pickup, destination, date, passengers and luggage.'],
+                    ['Choose vehicle and extras', 'Child seats, extra stops, waiting time or a return trip.'],
+                    ['Pay securely', 'Card payment in EUR or ISK. Custom trips start as a quotation.'],
+                    ['Meet your driver', 'Your booking reference and driver details arrive before pickup.'],
+                  ].map(([title, body], i) => (
+                    <li key={title} className="flex gap-4">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary font-display text-sm font-bold text-on-primary">{i + 1}</span>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-heading">{title}</p>
+                        <p className="mt-1 text-sm text-muted">{body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </section>
+
+          {/* Reviews, verified bookings only */}
+          <section className="border-y border-line bg-surface py-12 sm:py-16">
+            <div className="mx-auto w-full min-w-0 max-w-7xl">
+              <h2 className="px-4 font-display text-2xl font-bold text-heading sm:px-6 sm:text-3xl lg:px-8">Reviews from verified journeys</h2>
+              {showDemoReviews ? (
+                <div className="no-scrollbar mt-8 flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-6 lg:px-8">
+                  {['Golden Circle Private Tour', 'Keflavík Airport → Reykjavík', 'Private driver · 3 days'].map((s) => (
+                    <figure key={s} className="flex w-[min(82%,20rem)] shrink-0 snap-start flex-col rounded-2xl border border-line bg-card p-6 md:w-auto md:shrink">
+                      <p className="text-sm font-semibold text-warning">★★★★★</p>
+                      <blockquote className="mt-3 text-sm leading-relaxed text-text">Demo review text. Real reviews are submitted by customers after a completed booking and approved in the admin portal.</blockquote>
+                      <figcaption className="mt-auto pt-5 text-xs text-muted">Demo content · {s}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 max-w-2xl px-4 text-sm text-muted sm:px-6 lg:px-8">Reviews are collected only from customers with a completed booking, and appear here once approved by our team.</p>
+              )}
+            </div>
+          </section>
+
+          {/* FAQ */}
+          <section className="mx-auto w-full min-w-0 max-w-3xl px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
+            <h2 className="font-display text-2xl font-bold text-heading sm:text-center sm:text-4xl">Frequently asked questions</h2>
+            <Faq />
+            <p className="mt-8 text-center">
+              <a href="/faqs" className="text-sm font-bold text-link hover:underline">View all FAQs</a>
+            </p>
+          </section>
+
+          {/* CTA */}
+          <section className="relative isolate overflow-hidden">
+            <ResponsivePhoto src={images.northernLights} alt="Northern lights above snowy mountains" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+            <div className="absolute inset-0 -z-10 bg-navy/60" />
+            <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-16 text-center sm:px-6 sm:py-24 lg:px-8 lg:py-32">
+              <h2 className="font-display text-3xl font-extrabold text-white sm:text-5xl">Your Journey Across Iceland Starts Here.</h2>
+              <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap sm:justify-center">
+                <button onClick={book} className="whitespace-nowrap rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">Book Your Ride</button>
+                <a href={whatsappHref({ text: 'Hello Iceland Taxi Booking' })} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-7 py-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10"><MessageCircle size={16} /> Ask on WhatsApp</a>
+              </div>
+            </div>
+          </section>
+
+          <SiteFooter onStaff={onStaff} onStaffMobile={onStaffMobile} onDriver={onDriver} onAccount={onSignIn} />
         </div>
       </div>
       <SiteTabBar language={lang} active="home" onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onBook={book} onTrips={onSignIn} onHelp={onMessages} />

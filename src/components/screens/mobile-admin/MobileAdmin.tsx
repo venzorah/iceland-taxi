@@ -1,4 +1,5 @@
 'use client'
+import { useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -485,19 +486,15 @@ function MessagesTab({ chat, setChat }: { chat: string | null; setChat: (c: stri
   const [threads, setThreads] = useState<Array<{ ref: string; customer: string; preview: string; time: string; unread: number; readState?: 'read' | 'unread' | null }>>([])
   const [messages, setMessages] = useState<Array<{ id: string; body: string; authorRole: string; time: string; authorName?: string }>>([])
   const [draft, setDraft] = useState('')
-  const [waNumber, setWaNumber] = useState<string | null>(null)
+  const waNumber = useSiteWhatsAppNumber()
   const [openRef, setOpenRef] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
     const load = async () => {
-      const [data, company] = await Promise.all([
-        fetch('/api/messages?as=staff').then((r) => r.json()),
-        fetch('/api/company').then((r) => r.json()).catch(() => null),
-      ])
+      const data = await fetch('/api/messages?as=staff').then(r => r.json())
       if (!alive) return
       setThreads(markThreadOpen(data.threads || [], openRef))
-      setWaNumber(company?.company?.whatsappE164 || null)
     }
     load()
     const timer = setInterval(load, 8000)

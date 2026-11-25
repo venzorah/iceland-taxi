@@ -5,15 +5,17 @@ import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, MessageCircle, Pause, Play } from 'lucide-react'
 
-import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
+import { useSiteBlocks, useSiteImages, useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 import { whatsappHref } from '@/lib/whatsapp'
-import { t, type Lang } from '@/lib/design/i18n'
+import { type Lang } from '@/lib/design/i18n'
 import type { SearchPayload } from './BookingSearch'
+
+import { HERO_SLIDES, safeHeroHref } from '@/lib/content/hero'
 
 const INTERVAL = 6500
 const EASE = [0.23, 1, 0.32, 1] as const
 
-export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang; autoplay: boolean; onSearch?: (p: SearchPayload) => void }) {
+export function HeroCarousel({ language, autoplay }: { language: Lang; autoplay: boolean; onSearch?: (p: SearchPayload) => void }) {
   const reduce = useReducedMotion()
   const [index, setIndex] = useState(0)
   const [visited, setVisited] = useState([0])
@@ -23,53 +25,13 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
   const touchX = useRef<number | null>(null)
 
   const images = useSiteImages()
-  const heroTitle = useSiteBlock('home.hero.title')
-  const heroBody = useSiteBlock('home.hero.body')
-  const go = (category: string, pickup: string, destination: string) => () =>
-    onSearch?.({ category, pickup, destination, date: '', time: '', passengers: 2, luggage: 2 })
-
-  const slides = [
-    {
-      img: images.hero,
-      alt: 'Private car on a highland road beneath a glacier in Iceland',
-      title: language === 'is' ? t(language, 'heroTitle') : heroTitle,
-      body: language === 'is' ? t(language, 'heroBody') : heroBody,
-      cta: 'Book Your Ride',
-      action: go('airport', 'Keflavík Airport (KEF)', 'Reykjavík city centre'),
-    },
-    {
-      img: images.airport,
-      alt: 'Chauffeur loading luggage outside Keflavík Airport',
-      title: 'Met at Keflavík arrivals.',
-      body: 'Private airport transfers to Reykjavík, the Blue Lagoon or your hotel. Your driver tracks your flight and waits with your name sign.',
-      cta: 'Book Airport Transfer',
-      action: go('airport', 'Keflavík Airport (KEF)', 'Reykjavík city centre'),
-    },
-    {
-      img: images.goldenCircle,
-      alt: 'Gullfoss waterfall on the Golden Circle',
-      title: 'The Golden Circle, at your pace.',
-      body: 'Þingvellir, Geysir and Gullfoss with your own driver and vehicle. Stop where you want, stay as long as you like.',
-      cta: 'Discover Private Tours',
-      action: go('tour', 'Reykjavík hotel', 'Golden Circle Private Tour'),
-    },
-    {
-      img: images.northernLights,
-      alt: 'Northern lights over snowy mountains with an SUV on the road',
-      title: 'Chase the northern lights.',
-      body: 'Your driver follows the aurora forecast and heads away from the city lights, so you can simply look up.',
-      cta: 'Book Northern Lights',
-      action: go('tour', 'Reykjavík hotel', 'Northern Lights Experience'),
-    },
-    {
-      img: images.privateDriver,
-      alt: 'View from the back seat of a chauffeured car along an Icelandic fjord',
-      title: 'Your Journey Across Iceland Starts Here.',
-      body: 'Hire a private driver by the hour, the day or for your whole stay, or send us your itinerary for a custom quote.',
-      cta: 'Hire a Private Driver',
-      action: go('driver', 'Reykjavík hotel', 'Custom itinerary'),
-    },
-  ]
+  const blocks = useSiteBlocks()
+  const whatsappNumber = useSiteWhatsAppNumber()
+  const slides = HERO_SLIDES.map(def => {
+    const translated = (field:string) => language === 'is' ? blocks[`${def.key}.${field}Is`] || blocks[`${def.key}.${field}`] : blocks[`${def.key}.${field}`]
+    const href = blocks[`${def.key}.href`]
+    return {img:images[def.image],alt:blocks[`${def.key}.alt`] || def.alt,title:translated('title'),body:translated('body'),cta:translated('cta'),href:safeHeroHref(href)?href:def.href}
+  })
   const n = slides.length
   const slide = slides[index]
   const running = !paused && !hovered && !reduce
@@ -102,7 +64,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
       {/* Only current/visited slides load; never preload all five photos. */}
       {slides.map((s, i) => (i === index || visited.includes(i)) && (
         <ResponsivePhoto
-          key={s.img}
+          key={HERO_SLIDES[i].id}
           src={s.img}
           priority={i === index}
           sizes="100vw"
@@ -133,11 +95,11 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
               )}
               <p className="mt-4 max-w-xl text-base leading-relaxed text-white/90 sm:mt-6 sm:text-lg">{slide.body}</p>
               <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
-                <button onClick={slide.action} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
+                <a href={slide.href} className="whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-hover">
                   {slide.cta}
-                </button>
-                <a href={whatsappHref({ text: 'Hello Iceland Taxi Booking' })} aria-label="Chat on WhatsApp" className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-4 py-3 sm:px-6 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">
-                  <MessageCircle size={16} /> <span className="hidden sm:inline">Chat on WhatsApp</span><span className="sm:hidden">WhatsApp</span>
+                </a>
+                <a href={whatsappHref({ e164: whatsappNumber, text: 'Hello Iceland Taxi Booking' })} aria-label={blocks['home.hero.whatsappLabel']} className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/40 px-4 py-3 sm:px-6 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10">
+                  <MessageCircle size={16} /> <span className="hidden sm:inline">{blocks['home.hero.whatsappLabel']}</span><span className="sm:hidden">WhatsApp</span>
                 </a>
               </div>
             </motion.div>
@@ -152,7 +114,7 @@ export function HeroCarousel({ language, autoplay, onSearch }: { language: Lang;
           <div className="flex items-center gap-2" role="tablist" aria-label="Choose slide">
             {slides.map((s, i) => (
               <button
-                key={s.img}
+                key={HERO_SLIDES[i].id}
                 role="tab"
                 aria-selected={i === index}
                 aria-label={`Slide ${i + 1}`}

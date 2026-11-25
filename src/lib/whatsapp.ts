@@ -6,7 +6,7 @@ export function companyWhatsAppNumber(stored: string | null | undefined) {
   return normalizeStoredE164(stored) || OFFICIAL_WHATSAPP_E164
 }
 
-/** Build a wa.me deep link. Never invent a company number — omit the path when unset. */
+/** Build a wa.me deep link. Use the contact page until a company number is available. */
 export function whatsappHref(opts: {
   e164?: string | null
   text?: string
@@ -14,7 +14,7 @@ export function whatsappHref(opts: {
   const digits = (opts.e164 || '').replace(/\D/g, '')
   const q = opts.text ? `?text=${encodeURIComponent(opts.text)}` : ''
   if (!digits) {
-    return `https://wa.me/${q}`
+    return '/contact'
   }
   return `https://wa.me/${digits}${q}`
 }
@@ -28,12 +28,12 @@ export function staffMessageNotice(bookingRef: string) {
   return `New message on booking ${bookingRef}. A new customer message arrived.`
 }
 
-/** International number, or null when the value is empty or not a usable E.164 string. */
+/** International number with a nonzero country code, or null when the value is empty or not a usable E.164 string. */
 export function normalizeStoredE164(value: string | null | undefined): string | null {
   if (!value) return null
   const trimmed = value.trim()
   if (!trimmed) return null
-  if (!/^\+?[0-9][0-9\s().-]{6,20}$/.test(trimmed)) return null
+  if (!/^\+?[1-9][0-9\s().-]{6,20}$/.test(trimmed)) return null
   const digits = trimmed.replace(/\D/g, '')
   if (digits.length < 8 || digits.length > 15) return null
   return `+${digits}`

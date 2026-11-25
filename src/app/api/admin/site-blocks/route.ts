@@ -1,3 +1,4 @@
+import {safeHeroHref} from '@/lib/content/hero'
 import {z} from 'zod'
 import {apiHandler,jsonError,jsonOk,prisma} from '@/lib/api'
 import {rejectDriverOnly} from '@/lib/auth/admin-access'
@@ -14,6 +15,7 @@ export const PUT=apiHandler(async(req:Request)=>{
  const known=SITE_BLOCKS.find(b=>b.key===parsed.data.key)
  if(!known)return jsonError(400,'VALIDATION_ERROR','Unknown website field.')
  const value=parsed.data.value.trim()
+ if(known.kind==='link'&&value&&!safeHeroHref(value))return jsonError(400,'VALIDATION_ERROR','Use a site path beginning with / or a secure HTTPS link.')
  if(known.kind==='image'&&value){
   const builtIn=value.startsWith('/')&&!value.startsWith('//')&&!value.includes('\\')&&!value.includes('..')
   let valid=builtIn

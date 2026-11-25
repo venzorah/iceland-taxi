@@ -1,5 +1,5 @@
 'use client'
-import { useSiteImages } from '@/components/providers/SiteContent'
+import { useSiteImages, useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 
 import { validateFields } from '@/lib/forms/validation'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
@@ -7,7 +7,7 @@ import { ArrowLeft, Baby, Check, CheckCircle2, Copy, Lock, MessageCircle, Plane,
 
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { formatPrice, type Currency } from '@/lib/design/data'
-import { OFFICIAL_WHATSAPP_E164, whatsappHref } from '@/lib/whatsapp'
+import { whatsappHref } from '@/lib/whatsapp'
 import type { Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 
@@ -377,6 +377,7 @@ function Confirmed({
   statusLabel: string
   onBack?: () => void
 }) {
+  const whatsappNumber = useSiteWhatsAppNumber()
   const ref = bookingRef || 'ITB-PENDING'
   return (
     <main className="mx-auto max-w-2xl px-3 py-6 sm:px-6 sm:py-16">
@@ -412,7 +413,7 @@ function Confirmed({
           ))}
         </dl>
         <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-          <a href={whatsappHref({ e164: OFFICIAL_WHATSAPP_E164, text: `Hello Iceland Taxi Booking, about booking ${ref}` })} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-mint px-5 py-3.5 text-sm font-bold text-navy sm:py-3">
+          <a href={whatsappHref({ e164: whatsappNumber, text: `Hello Iceland Taxi Booking, about booking ${ref}` })} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-mint px-5 py-3.5 text-sm font-bold text-navy sm:py-3">
             <MessageCircle size={16} /> Message us on WhatsApp
           </a>
           <button onClick={onBack} className="whitespace-nowrap rounded-full border border-line px-5 py-3 text-sm font-semibold text-heading transition-colors duration-150 hover:bg-surface">Back to homepage</button>

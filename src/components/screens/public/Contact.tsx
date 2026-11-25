@@ -1,4 +1,5 @@
 'use client'
+import { useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 import { notify } from '@/lib/forms/feedback'
 import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
@@ -39,6 +40,7 @@ export default function Contact(props: Props) {
   const [error,setError]=useState(''); useNoticeToast(error, 'error')
   const requestKey=useRef('')
   const previousBody=useRef('')
+  const whatsappNumber = useSiteWhatsAppNumber()
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null; phone?: string | null; addressLine1?: string | null } | null>(null)
 
   useEffect(() => {
@@ -135,7 +137,7 @@ export default function Contact(props: Props) {
           <aside className="space-y-4">
             <div className="rounded-2xl border border-line bg-surface p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">Faster channels</p>
-              <a href={whatsappHref({ e164: company?.whatsappE164, text: 'Hello Iceland Taxi Booking, ' })} className="mt-4 flex items-center gap-3 rounded-2xl bg-mint px-4 py-3.5 font-bold text-navy">
+              <a href={whatsappHref({ e164: whatsappNumber, text: 'Hello Iceland Taxi Booking, ' })} className="mt-4 flex items-center gap-3 rounded-2xl bg-mint px-4 py-3.5 font-bold text-navy">
                 <MessageCircle size={18} /> WhatsApp
               </a>
               {company?.email ? (

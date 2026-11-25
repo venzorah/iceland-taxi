@@ -1,6 +1,7 @@
+import { HERO_SLIDES } from './hero'
 import { IMG, LOGO_DARK, LOGO_LIGHT, FAQS } from '@/lib/design/data'
 
-export type SiteBlockKind = 'image' | 'text'
+export type SiteBlockKind = 'image' | 'text' | 'link'
 
 export type SiteBlockDef = {
   key: string
@@ -26,8 +27,8 @@ const images: SiteBlockDef[] = [
 ].map(([key, label, value]) => ({ key, kind: 'image' as const, group: 'Images', label, value }))
 
 const texts: SiteBlockDef[] = [
-  ['home.hero.title', 'Hero title', 'Discover Iceland. Travel Comfortably.'],
-  ['home.hero.body', 'Hero introduction', 'From airport transfers to private tours and personalised vacation drivers, enjoy convenient transportation across Iceland with a booking experience designed around you.'],
+  ['home.hero.title', 'Slide 1 · Heading', 'Discover Iceland. Travel Comfortably.'],
+  ['home.hero.body', 'Slide 1 · Description', 'From airport transfers to private tours and personalised vacation drivers, enjoy convenient transportation across Iceland with a booking experience designed around you.'],
   ['home.airport.kicker', 'Airport label', 'Keflavík International Airport'],
   ['home.airport.title', 'Airport heading', 'Airport transfers, met at arrivals'],
   ['home.airport.body', 'Airport description', 'Private transfers between KEF, Reykjavík, the Blue Lagoon and hotels across the southwest. Add your flight number and your driver follows your arrival time.'],
@@ -79,9 +80,14 @@ const texts: SiteBlockDef[] = [
     [`faq.${index}.q`, `FAQ ${index + 1} question`, item.q],
     [`faq.${index}.a`, `FAQ ${index + 1} answer`, item.a],
   ] as [string, string, string][]),
-].map(([key, label, value]) => ({ key, kind: 'text' as const, group: key.startsWith('airport.') ? 'Airport transfers' : key.startsWith('tours.') ? 'Private tours' : key.startsWith('driver.') ? 'Private driver' : key.startsWith('faq') ? 'FAQs' : key.startsWith('about') ? 'About' : key.startsWith('services') ? 'Services' : 'Homepage', label, value }))
+].map(([key, label, value]) => ({ key, kind: 'text' as const, group: key.startsWith('home.hero.') ? 'Homepage hero' : key.startsWith('airport.') ? 'Airport transfers' : key.startsWith('tours.') ? 'Private tours' : key.startsWith('driver.') ? 'Private driver' : key.startsWith('faq') ? 'FAQs' : key.startsWith('about') ? 'About' : key.startsWith('services') ? 'Services' : 'Homepage', label, value }))
 
-export const SITE_BLOCKS: SiteBlockDef[] = [...images, ...texts]
+const heroBlocks: SiteBlockDef[] = HERO_SLIDES.flatMap((slide, index) => {
+ const labels: Record<string,string> = {title:'Heading',body:'Description',alt:'Image description',cta:'Button text',href:'Button link'}
+ const fields = {alt:slide.alt,title:slide.title,body:slide.body,cta:slide.cta,href:slide.href,titleIs:'titleIs' in slide ? slide.titleIs : '',bodyIs:'bodyIs' in slide ? slide.bodyIs : '',ctaIs:''}
+ return Object.entries(fields).filter(([field]) => index !== 0 || !['title','body'].includes(field)).map(([field,value]) => ({key:`${slide.key}.${field}`,kind:field==='href'?'link' as const:'text' as const,group:'Homepage hero',label:`Slide ${index+1} · ${field.endsWith('Is')?`${labels[field.slice(0,-2)]} (Icelandic, optional)`:labels[field]}`,value}))
+})
+export const SITE_BLOCKS: SiteBlockDef[] = [...images, ...texts, ...heroBlocks, {key:'home.hero.whatsappLabel',kind:'text',group:'Homepage hero',label:'WhatsApp button text',value:'Chat on WhatsApp'}]
 
 export const SITE_DEFAULTS: Record<string, string> = Object.fromEntries(SITE_BLOCKS.map((block) => [block.key, block.value]))
 

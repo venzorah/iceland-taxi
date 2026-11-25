@@ -1,5 +1,5 @@
 import { apiHandler, jsonOk, prisma, withDb } from '@/lib/api'
-import { OFFICIAL_WHATSAPP_E164 } from '@/lib/whatsapp'
+import { companyWhatsAppNumber, OFFICIAL_WHATSAPP_E164 } from '@/lib/whatsapp'
 
 /**
  * Company profile is CMS/admin-owned. Never invent contact, registration,
@@ -9,7 +9,7 @@ async function handleGET() {
   const data = await withDb(
     async () => {
       const settings = await prisma.companySettings.findUnique({ where: { id: 'singleton' } })
-      const whatsappE164 = settings?.whatsappE164 || OFFICIAL_WHATSAPP_E164
+      const whatsappE164 = companyWhatsAppNumber(settings?.whatsappE164)
       return {
         source: 'database' as const,
         company: settings

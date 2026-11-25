@@ -1,4 +1,5 @@
 'use client'
+import { useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 import { useNoticeToast } from '@/components/feedback/FormFeedback'
 
 import { AdminEmpty, AdminButton } from '@/components/admin/AdminUI'
@@ -38,7 +39,7 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
   const [driverChat, setDriverChat] = useState(false)
   const [draft, setDraft] = useState('')
   const [q, setQ] = useState('')
-  const [waNumber, setWaNumber] = useState<string | null>(null)
+  const waNumber = useSiteWhatsAppNumber()
   const [err, setErr] = useState<string | null>(null)
   useNoticeToast(err)
   const [sending, setSending] = useState(false)
@@ -46,12 +47,11 @@ export function Messages({ focusRef, onOpenSettings }: Props) {
 
   const loadThreads = useCallback(async (signal?: AbortSignal) => {
     try {
-      const [response, companyResponse] = await Promise.all([fetch('/api/messages?as=staff', { signal, cache: 'no-store' }), fetch('/api/company', { signal })])
-      const [list, company] = await Promise.all([response.json(), companyResponse.json()])
+      const response = await fetch('/api/messages?as=staff', { signal, cache: 'no-store' })
+      const list = await response.json()
       if (!response.ok || !list.ok) throw new Error(list.message || 'Could not load conversations.')
       if (signal?.aborted) return
       setThreads(list.threads); setActive(current => current || list.threads[0]?.ref || null)
-      setWaNumber(company.company?.whatsappE164 || null)
     } catch (error) { if (!signal?.aborted) setErr(error instanceof Error ? error.message : 'Could not load conversations.'); throw error }
   }, [])
   const loadThread = useCallback(async (ref: string, signal?: AbortSignal) => {

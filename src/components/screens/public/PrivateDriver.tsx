@@ -1,6 +1,7 @@
 'use client'
+import { useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, CalendarRange, Clock3, Map } from 'lucide-react'
 
@@ -43,14 +44,9 @@ export default function PrivateDriver(props: Props) {
   const router = useRouter()
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
   const driverListings = (listings || []).filter((listing) => listing.category === 'driver')
-  const [whatsappE164, setWhatsappE164] = useState<string | null>(null)
+  const whatsappE164 = useSiteWhatsAppNumber()
 
-  useEffect(() => {
-    fetch('/api/company')
-      .then((r) => r.json())
-      .then((d) => setWhatsappE164(d.company?.whatsappE164 || null))
-      .catch(() => {})
-  }, [])
+
 
   return (
     <PublicPageShell

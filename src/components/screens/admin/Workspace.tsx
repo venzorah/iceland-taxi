@@ -494,11 +494,9 @@ export function SettingsSection() {
   const [profile, setProfile] = useState(emptyProfile)
   const [draft, setDraft] = useState(company?.whatsappE164 || '')
   const [status, setStatus] = useState<string | null>(null)
-  const [number, setNumber] = useState<string | null>(company?.whatsappE164 ?? null)
 
   useEffect(() => {
     setDraft(company?.whatsappE164 || '')
-    setNumber(company?.whatsappE164 ?? null)
     setProfile({
       displayName: company?.displayName || '',
       email: company?.email || '',
@@ -552,9 +550,9 @@ export function SettingsSection() {
       return
     }
     const saved = body.company?.whatsappE164 || null
-    setNumber(saved)
+    window.dispatchEvent(new Event('itb-site-content-updated'))
     setDraft(saved || '')
-    setStatus(saved ? 'Saved. Customer messages can now notify staff on this WhatsApp number.' : 'Saved. WhatsApp delivery stays off until an official number is stored.')
+    setStatus(saved ? 'Saved. All company WhatsApp buttons now use this number.' : 'Saved. Website WhatsApp buttons use the default company number.')
   }
 
   return (
@@ -586,13 +584,9 @@ export function SettingsSection() {
       </AdminForm>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-line bg-bg px-4 py-3 sm:col-span-2">
-          <p className="text-xs font-semibold text-muted">Official WhatsApp number</p>
+          <p className="text-xs font-semibold text-muted">Company WhatsApp number · used across the website</p>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            {!number
-              ? 'WhatsApp delivery is off. Add the official company WhatsApp number here. No number is invented, and customer messages are not sent to WhatsApp until one is saved.'
-              : data?.integrations?.find((item) => item.key === 'whatsapp')?.configured
-                ? 'Outbound WhatsApp notices are sent when a customer messages. Inbound WhatsApp chats are not synced into this inbox.'
-                : 'Each new customer message creates a staff notification and a WhatsApp link with the booking reference. The private message is not included. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server to send that notice automatically. Inbound WhatsApp chats are not synced.'}
+            Enter the company’s WhatsApp number with its country code. This number is used by the hero, footer, contact page, booking confirmations and company WhatsApp buttons throughout the app. Clearing it restores the default company number.
           </p>
           <AdminForm onSubmit={save} className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input

@@ -1,5 +1,5 @@
 'use client'
-import { useSiteImages } from '@/components/providers/SiteContent'
+import { useSiteImages, useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 
 import React, { useEffect, useState } from 'react'
 import { Mail, MessageCircle } from 'lucide-react'
@@ -9,6 +9,7 @@ import { whatsappHref } from '@/lib/whatsapp'
 
 export function SiteFooter(_props: { onStaff?: () => void; onStaffMobile?: () => void; onDriver?: () => void; onAccount?: () => void }) {
   const images = useSiteImages()
+  const whatsappNumber = useSiteWhatsAppNumber()
   const [company, setCompany] = useState<{ whatsappE164?: string | null; email?: string | null } | null>(null)
   useEffect(() => {
     fetch('/api/company')
@@ -26,7 +27,7 @@ export function SiteFooter(_props: { onStaff?: () => void; onStaffMobile?: () =>
               Airport transfers, private taxis, sightseeing tours and private drivers across Iceland.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <a href={whatsappHref({ e164: company?.whatsappE164, text: 'Hello Iceland Taxi Booking' })} className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-mint px-4 py-2 text-sm font-semibold text-navy transition-opacity duration-150 hover:opacity-90">
+              <a href={whatsappHref({ e164: whatsappNumber, text: 'Hello Iceland Taxi Booking' })} className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-mint px-4 py-2 text-sm font-semibold text-navy transition-opacity duration-150 hover:opacity-90">
                 <MessageCircle size={16} /> WhatsApp
               </a>
               {company?.email ? (

@@ -5,7 +5,7 @@ import { useAdminList } from '@/components/admin/AdminList'
 import React, { useEffect, useState } from 'react'
 import { ImageField, type LibraryImage } from '@/components/screens/admin/ImageField'
 
-type Block = { key: string; kind: 'image' | 'text'; group: string; label: string; value: string }
+type Block = { key: string; kind: 'image' | 'text' | 'link'; group: string; label: string; value: string }
 
 export function WebsiteContent() {
   const [blocks, setBlocks] = useState<Block[]>([])
@@ -66,7 +66,7 @@ export function WebsiteContent() {
     <div className="space-y-8 p-4 sm:p-6">
       <div>
         <h2 className="font-display text-base font-bold text-heading">Website content</h2>
-        <p className="mt-1 text-sm text-muted">Edit the public wording and photos. Upload a new picture or pick one from the library, then save. Clearing a text field and saving restores the original.</p>
+        <p className="mt-1 text-sm text-muted">Choose Homepage hero in the filter to edit each slide’s heading, description, button text and link. Edit the public wording and photos. Upload a new picture or pick one from the library, then save. Clearing a text field and saving restores the original.</p>
         <p className="mt-2 text-xs text-muted">{message}</p>
       </div>
       {list.controls}{list.pagination}
@@ -85,6 +85,8 @@ export function WebsiteContent() {
                       onUploaded={(image) => setImages((current) => [image, ...current.filter((item) => item.id !== image.id)])}
                       onChange={(url) => update(block.key, url)}
                     />
+                  ) : block.kind === 'link' ? (
+                    <input aria-label={block.label} placeholder="/airport-transfer or https://example.com" disabled={saving !== null} value={block.value} onChange={event => update(block.key,event.target.value)} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading" />
                   ) : (
                     <textarea aria-label={block.label} disabled={saving !== null} rows={block.value.length > 120 ? 4 : 2} value={block.value} onChange={(event) => update(block.key, event.target.value)} className="mt-1 w-full rounded-lg border border-input-line bg-input px-3 py-2 text-sm text-heading outline-none focus:border-focus" />
                   )}

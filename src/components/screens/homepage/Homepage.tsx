@@ -2,6 +2,7 @@
 import { useSiteWhatsAppNumber } from '@/components/providers/SiteContent'
 import { ResponsivePhoto } from '@/components/site/ResponsivePhoto'
 
+import { sitePhoto } from '@/lib/content/blocks'
 import React from 'react'
 import { ArrowRight, Clock, Luggage, MessageCircle, Plane, Users } from 'lucide-react'
 
@@ -11,7 +12,7 @@ import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import { DESTINATIONS, FLEET, formatPrice, type Currency } from '@/lib/design/data'
-import { useSiteBlock, useSiteImages } from '@/components/providers/SiteContent'
+import { useSiteBlock, useSiteBlocks, useSiteImages } from '@/components/providers/SiteContent'
 import { type Lang } from '@/lib/design/i18n'
 import type { AnnouncementState } from '@/lib/design/announcements'
 import { whatsappHref } from '@/lib/whatsapp'
@@ -56,6 +57,7 @@ export default function Homepage(props: Props) {
   const lang = language as Lang
   const cur = currency as Currency
   const images = useSiteImages()
+  const pageContent = useSiteBlocks()
   const whatsappNumber = useSiteWhatsAppNumber()
   const text = useSiteBlock
   const { listings, error: listingsError, retry: retryListings } = usePublishedListings()
@@ -188,7 +190,7 @@ export default function Homepage(props: Props) {
             <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-2.5 sm:mt-10 sm:auto-rows-[220px] sm:gap-3 lg:grid-cols-4">
               {DESTINATIONS.slice(0, 4).map((d) => (
                 <a key={d.name} href="/destinations" className="group relative overflow-hidden rounded-2xl">
-                  <ResponsivePhoto src={d.img} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
+                  <ResponsivePhoto src={sitePhoto(d.img,pageContent)} alt={d.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                   <div className="absolute inset-x-0 bottom-0 bg-navy/70 px-4 py-3 backdrop-blur-sm">
                     <p className="font-display text-base font-bold text-white sm:text-lg">{d.name}</p>
                     <p className="text-xs text-white/80">{d.note}</p>

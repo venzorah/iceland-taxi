@@ -108,3 +108,9 @@ export function siteImageMap(blocks: Record<string, string>) {
     logoDark: (blocks['image.logoDark'] || LOGO_DARK).replace(/^\/brand\/logo-dark-white-text\.png$/, '/brand/logo-dark-white-text.webp'),
   }
 }
+
+/** Resolve shared CMS photos used by the destination previews and page. */
+export function sitePhoto(source: string, blocks: Record<string,string>) {
+ const key=Object.entries(IMG).find(([,url])=>url===source)?.[0]
+ return key ? blocks[`image.${key}`] || source : source
+}

@@ -16,4 +16,8 @@ build_env=(env -i "PATH=$PATH" "HOME=$HOME" "TMPDIR=${TMPDIR:-/tmp}"
 [[ -z "${NEXT_PUBLIC_APP_URL:-}" ]] || build_env+=("NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL")
 "${build_env[@]}" npm ci --include=dev
 "${build_env[@]}" npm run build
+# The production build cache is regenerable and is the part that grows every release.
+rm -rf .next/cache node_modules/.cache
+mkdir -p .next/cache
 # Activation and any explicitly approved catalogue replacement are separate steps.
+# Keep development tools until prisma migrate deploy has run, then run slim-release.sh.

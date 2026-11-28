@@ -59,7 +59,7 @@ export async function getIskPerUsd() {
 
 export async function loadPublishedListings(): Promise<PublishedListing[]> {
   const [routes, services] = await timed('catalogue', () => Promise.all([
-    prisma.route.findMany({ where: { active: true }, select: { id: true, serviceId: true, fromLabel: true, toLabel: true, fromIsk: true, minutes: true, km: true, active: true, service: { select: { id: true, kind: true, titleEn: true, active: true } } } }),
+    prisma.route.findMany({ where: { active: true }, select: { id: true, serviceId: true, fromLabel: true, toLabel: true, fromIsk: true, minutes: true, km: true, active: true, imageUrl: true, service: { select: { id: true, kind: true, titleEn: true, active: true } } } }),
     prisma.service.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' }, select: { id: true, kind: true, titleEn: true, fromIsk: true, active: true, hoursLabel: true, paxLabel: true, blurbEn: true, imageUrl: true } }),
   ]))
   return publishedListings(routes, services)

@@ -6,6 +6,7 @@ import { ArrowRight, Clock, Plane, Shield } from 'lucide-react'
 
 import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
+import { customerPlaceLabel, listingsForCustomers, passengerChoices } from '@/lib/booking/listings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import { useSiteBlocks, useSiteImages } from '@/components/providers/SiteContent'
 import { formatPrice, type Currency } from '@/lib/design/data'
@@ -38,7 +39,7 @@ export default function AirportTransfer(props: Props) {
   const cur = p.currency as Currency
   const router = useRouter()
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
-  const routes = (listings || []).filter((listing) => listing.kind === 'route')
+  const routes = listingsForCustomers((listings || []).filter((listing) => listing.category === 'airport'))
 
   return (
     <PublicPageShell
@@ -94,12 +95,11 @@ export default function AirportTransfer(props: Props) {
           {routes.map((r) => (
             <li key={r.id} className="flex items-center gap-4 py-4">
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-heading">{r.fromLabel} → {r.toLabel}</p>
+                <p className="font-semibold text-heading">{r.fromLabel} → {customerPlaceLabel(r)}</p>
                 <p className="text-sm text-muted">{[r.hoursLabel, r.km ? `${r.km} km` : null].filter(Boolean).join(' · ') || 'Fixed price'}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted">Price</p>
-                <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p>
+                {(listings ? passengerChoices(listings, r) : []).length > 1 ? (listings ? passengerChoices(listings, r) : []).map((choice) => <p key={choice.id} className="text-sm font-semibold text-heading">{choice.label} · {formatPrice(choice.fromIsk, cur, r.iskPerEur)}</p>) : <><p className="text-xs text-muted">Price</p><p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p></>}
               </div>
               <button onClick={() => router.push(`/book?listing=${encodeURIComponent(r.id)}&kind=route`)} className="rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book</button>
             </li>

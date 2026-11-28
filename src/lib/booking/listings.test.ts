@@ -3,7 +3,10 @@ import { describe, it } from 'node:test'
 import {
   UNAVAILABLE_MESSAGE,
   adminPriceIsk,
+  listingsForCustomers,
   matchListing,
+  passengerChoices,
+  passengersInChoice,
   searchListings,
   publishedListings,
   shownAdminPrice,
@@ -113,6 +116,54 @@ describe('published listings', () => {
     assert.deepEqual(found.map((listing) => listing.id), ['route-kef'])
     assert.equal(found[0]?.fromIsk, 22900)
     assert.equal(searchListings(listings, { pickup: 'Akureyri', destination: 'Vík' }).length, 0)
+  })
+
+  it('keeps a saved photo on that price when the parent tour uses another photo', () => {
+    const parent = { ...tour, imageUrl: '/photos/golden-circle.jpg' }
+    const small: CatalogueRoute = {
+      id: 'golden-small',
+      serviceId: parent.id,
+      fromLabel: 'Reykjavík',
+      toLabel: 'Golden Circle · Car · 1–4 persons',
+      fromIsk: 102000,
+      active: true,
+      imageUrl: '/photos/hero.jpg',
+      service: { id: parent.id, kind: 'TOUR', titleEn: parent.titleEn, active: true },
+    }
+    const large: CatalogueRoute = { ...small, id: 'golden-large', toLabel: 'Golden Circle · Car · 5–8 persons', fromIsk: 133500, imageUrl: null }
+    const cards = publishedListings([small, large], [parent])
+    assert.equal(cards.find((card) => card.id === 'golden-small')?.imageUrl, '/photos/hero.jpg')
+    assert.notEqual(cards.find((card) => card.id === 'golden-large')?.imageUrl, cards.find((card) => card.id === 'golden-small')?.imageUrl)
+  })
+
+  it('does not reuse one tour photo for two prices of the same place', () => {
+    const parent = { ...tour, imageUrl: '/photos/golden-circle.jpg' }
+    const shared = { serviceId: parent.id, fromLabel: 'Reykjavík', fromIsk: 102000, active: true, imageUrl: null, service: { id: parent.id, kind: 'TOUR', titleEn: parent.titleEn, active: true } }
+    const cards = publishedListings([
+      { ...shared, id: 'price-a', toLabel: 'Same place · 1–4 persons' },
+      { ...shared, id: 'price-b', toLabel: 'Same place · 5–8 persons', fromIsk: 133500 },
+    ], [parent])
+    assert.notEqual(cards[0]?.imageUrl, cards[1]?.imageUrl)
+    assert.equal(cards.some((card) => card.imageUrl === parent.imageUrl), false)
+  })
+
+  it('shows one place with a choice of passenger prices', () => {
+    const parent = { ...tour, id: 'golden', imageUrl: '/photos/golden-circle.jpg' }
+    const service = { id: parent.id, kind: 'TOUR', titleEn: 'Golden Circle', active: true }
+    const cards = publishedListings([
+      { id: 'small', serviceId: parent.id, fromLabel: 'Reykjavík', toLabel: 'Golden Circle · Car · 1–4 persons', fromIsk: 102000, minutes: 360, active: true, service },
+      { id: 'large', serviceId: parent.id, fromLabel: 'Reykjavík', toLabel: 'Golden Circle · Car · 5–8 persons', fromIsk: 133500, minutes: 360, active: true, service },
+      { id: 'return-small', serviceId: 'lagoon', fromLabel: 'Reykjavík', toLabel: 'Blue Lagoon · return · Car · 1–4 persons', fromIsk: 49500, minutes: 240, active: true, service: { id: 'lagoon', kind: 'TAXI', titleEn: 'Blue Lagoon', active: true } },
+      { id: 'return-large', serviceId: 'lagoon', fromLabel: 'Reykjavík', toLabel: 'Blue Lagoon · return · Car · 5–8 persons', fromIsk: 61500, minutes: 240, active: true, service: { id: 'lagoon', kind: 'TAXI', titleEn: 'Blue Lagoon', active: true } },
+      { id: 'one-way', serviceId: 'lagoon', fromLabel: 'Reykjavík', toLabel: 'Blue Lagoon · one way · Car · 1–4 persons', fromIsk: 24000, minutes: null, active: true, service: { id: 'lagoon', kind: 'TAXI', titleEn: 'Blue Lagoon', active: true } },
+    ], [parent])
+    const shown = listingsForCustomers(cards)
+    assert.deepEqual(shown.map((card) => card.id), ['small', 'return-small', 'one-way'])
+    const choices = passengerChoices(cards, shown[0])
+    assert.deepEqual(choices.map((choice) => [choice.label, choice.fromIsk]), [['1–4 persons', 102000], ['5–8 persons', 133500]])
+    assert.equal(passengerChoices(cards, cards.find((card) => card.id === 'one-way')!).length, 0)
+    assert.equal(passengersInChoice('5–8 persons', 2), 5)
+    assert.equal(passengersInChoice('1–4 persons', 3), 3)
   })
 
   it('does not invent a listing for an unknown trip', () => {

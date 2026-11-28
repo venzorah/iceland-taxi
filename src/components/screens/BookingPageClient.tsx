@@ -12,7 +12,7 @@ import { PublishedListingsNotice } from '@/components/booking/PublishedListingsN
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
 import Booking, { type BookingPayPayload, type BookingVehicle } from '@/components/screens/booking/Booking'
 import { useAppPrefs } from '@/components/providers/AppProviders'
-import { UNAVAILABLE_MESSAGE, listingLabel, matchListing, searchListings } from '@/lib/booking/listings'
+import { UNAVAILABLE_MESSAGE, customerPlaceLabel, listingLabel, listingsForCustomers, matchListing, passengerChoices, passengersInChoice, searchListings } from '@/lib/booking/listings'
 import { formatChargedAmount, formatPrice } from '@/lib/design/data'
 
 export function BookingPageClient() {
@@ -72,6 +72,16 @@ export function BookingPageClient() {
     if (!listings || enquiryOnly) return null
     return matchListing(listings, { listingId, listingKind, pickup, destination })
   }, [listings, enquiryOnly, listingId, listingKind, pickup, destination])
+  const choices = useMemo(() => listing && listings ? passengerChoices(listings, listing) : [], [listings, listing])
+  const choosePassengers = (id: string) => {
+    const choice = choices.find((item) => item.id === id)
+    if (!choice) return
+    const q = new URLSearchParams(params.toString())
+    q.set('listing', choice.id)
+    q.set('kind', choice.kind)
+    q.set('passengers', String(passengersInChoice(choice.label, passengers)))
+    router.replace(`/book?${q.toString()}`, { scroll: false })
+  }
 
   const pickupAt = pickupInstant(date, time)?.toISOString()
 
@@ -297,8 +307,8 @@ export function BookingPageClient() {
   const searchCategory = params.get('category') || ''
   const options = useMemo(() => {
     if (!listings || listing) return []
-    if (!pickup && !destination) return listings
-    return searchListings(listings, { pickup, destination, category: searchCategory })
+    const found = !pickup && !destination ? listings : searchListings(listings, { pickup, destination, category: searchCategory })
+    return listingsForCustomers(found)
   }, [listings, listing, pickup, destination, searchCategory])
   const showEnquiry = enquiryOnly || (!listingsError && listings !== null && !listing && options.length === 0 && Boolean(listingId || pickup || destination))
   const showPicker = !listingsError && listings !== null && !listing && !showEnquiry
@@ -340,13 +350,15 @@ export function BookingPageClient() {
           customerCategory={category === 'RESIDENT' ? 'resident' : 'international'}
           announcements={prefs.announcements}
           listing={listing}
+          passengerChoices={choices}
+          onPassengerChoice={choosePassengers}
           quoteReady={quoteReady}
           chargedLabel={chargedLabel}
           unavailableMessage={quoteReady ? null : error}
           vehicles={vehicles ?? undefined}
           onVehicleChange={setSelectedVehicle}
           pickup={listing.fromLabel}
-          destination={listing.toLabel}
+          destination={choices.length > 1 ? `${listing.title} · ${customerPlaceLabel(listing)}` : listing.toLabel}
           date={date}
           time={time}
           passengers={passengers}

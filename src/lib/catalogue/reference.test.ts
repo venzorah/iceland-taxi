@@ -23,6 +23,10 @@ test('every official price is the euro list converted at 150 ISK and sits on the
   assert.deepEqual(airport, [24000, 30750])
   const golden = REFERENCE_ROUTES.filter((route) => route.serviceSlug === 'golden-circle').map((route) => route.fromIsk).sort((a, b) => a - b)
   assert.deepEqual(golden, [102000, 133500])
+  for (const service of REFERENCE_SERVICES) {
+    const photos = REFERENCE_ROUTES.filter((route) => route.serviceSlug === service.slug).map((route) => route.imageUrl)
+    assert.equal(new Set(photos).size, photos.length, service.slug)
+  }
   assert.equal(REFERENCE_EXTRAS.every((extra) => extra.isk === 0), true)
 })
 

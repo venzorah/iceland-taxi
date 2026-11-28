@@ -7,7 +7,7 @@ import { formatPrice } from '@/lib/design/data'
 
 const date = new Date('2026-01-01T00:00:00Z')
 function service(data: Partial<Service>): Service { return { id: 'saved-golden', slug: 'custom-golden-slug', kind: 'TAXI', titleEn: 'Golden Circle Private Tour', titleIs: null, blurbEn: null, blurbIs: null, imageUrl: null, hoursLabel: '7-8 h', paxLabel: 'Up to 8', fromIsk: 89900, active: true, sortOrder: 0, createdAt: date, updatedAt: date, ...data } }
-function route(data: Partial<Route>): Route { return { id: 'custom-route', serviceId: null, fromLabel: 'Jabi', toLabel: 'Bwari', fromIsk: 2, minutes: null, km: null, active: true, returnTrip: false, override: true, createdAt: date, updatedAt: date, ...data } }
+function route(data: Partial<Route>): Route { return { id: 'custom-route', serviceId: null, fromLabel: 'Jabi', toLabel: 'Bwari', fromIsk: 2, minutes: null, km: null, imageUrl: null, active: true, returnTrip: false, override: true, createdAt: date, updatedAt: date, ...data } }
 function fixture() {
   let state = {
     services: [service({}), service({ id: 'private-taxi', slug: 'private-taxi', titleEn: 'Private taxi', fromIsk: 8900 })],

@@ -27,9 +27,29 @@ type OfficialRoute = {
   minutes: number | null
   fromIsk: number
   returnTrip: boolean
+  imageUrl: string
 }
 
 const car = (band: '1–4 persons' | '5–8 persons') => `Car · ${band}`
+
+const routePhotos = [
+  '/photos/reykjavik.jpg',
+  '/photos/hero.jpg',
+  '/photos/golden-circle.jpg',
+  '/photos/glacier-lagoon.jpg',
+  '/photos/south-coast.jpg',
+  '/photos/blue-lagoon.jpg',
+  '/photos/northern-lights.jpg',
+  '/photos/fleet.jpg',
+  '/photos/airport.jpg',
+  '/photos/private-driver.jpg',
+]
+let routePhotoIndex = 0
+function nextRoutePhoto() {
+  const photo = routePhotos[routePhotoIndex % routePhotos.length]
+  routePhotoIndex += 1
+  return photo
+}
 
 function route(
   key: string,
@@ -37,7 +57,7 @@ function route(
   fromLabel: string,
   toLabel: string,
   euros: number,
-  options: { minutes?: number | null; returnTrip?: boolean } = {},
+  options: { minutes?: number | null; returnTrip?: boolean; imageUrl?: string } = {},
 ): OfficialRoute {
   return {
     key,
@@ -47,6 +67,7 @@ function route(
     minutes: options.minutes ?? null,
     fromIsk: eurToIsk(euros),
     returnTrip: options.returnTrip ?? false,
+    imageUrl: options.imageUrl || nextRoutePhoto(),
   }
 }
 
@@ -57,23 +78,23 @@ export const REFERENCE_ROUTES: OfficialRoute[] = [
   route('kef-1-4', 'airport-transfer', 'Keflavík Airport (KEF)', `Reykjavík · ${car('1–4 persons')}`, 160),
   route('kef-5-8', 'airport-transfer', 'Keflavík Airport (KEF)', `Reykjavík · ${car('5–8 persons')}`, 205),
 
-  route('reykjavik-sightseeing-1-4', 'reykjavik-sightseeing', 'Reykjavík', `Sightseeing · 2 hours · ${car('1–4 persons')}`, 180, { minutes: 120 }),
-  route('reykjavik-sightseeing-5-8', 'reykjavik-sightseeing', 'Reykjavík', `Sightseeing · 2 hours · ${car('5–8 persons')}`, 240, { minutes: 120 }),
+  route('reykjavik-sightseeing-1-4', 'reykjavik-sightseeing', 'Reykjavík', `Sightseeing · 2 hours · ${car('1–4 persons')}`, 180, { minutes: 120, imageUrl: '/photos/reykjavik.jpg' }),
+  route('reykjavik-sightseeing-5-8', 'reykjavik-sightseeing', 'Reykjavík', `Sightseeing · 2 hours · ${car('5–8 persons')}`, 240, { minutes: 120, imageUrl: '/photos/hero.jpg' }),
 
-  route('golden-circle-1-4', 'golden-circle', 'Reykjavík', `Golden Circle · ${car('1–4 persons')}`, 680, { minutes: 360 }),
-  route('golden-circle-5-8', 'golden-circle', 'Reykjavík', `Golden Circle · ${car('5–8 persons')}`, 890, { minutes: 360 }),
+  route('golden-circle-1-4', 'golden-circle', 'Reykjavík', `Golden Circle · ${car('1–4 persons')}`, 680, { minutes: 360, imageUrl: '/photos/golden-circle.jpg' }),
+  route('golden-circle-5-8', 'golden-circle', 'Reykjavík', `Golden Circle · ${car('5–8 persons')}`, 890, { minutes: 360, imageUrl: '/photos/glacier-lagoon.jpg' }),
 
-  route('south-coast-1-4', 'south-coast', 'Reykjavík', `South Coast · ${car('1–4 persons')}`, 980, { minutes: 720 }),
-  route('south-coast-5-8', 'south-coast', 'Reykjavík', `South Coast · ${car('5–8 persons')}`, 1190, { minutes: 720 }),
+  route('south-coast-1-4', 'south-coast', 'Reykjavík', `South Coast · ${car('1–4 persons')}`, 980, { minutes: 720, imageUrl: '/photos/south-coast.jpg' }),
+  route('south-coast-5-8', 'south-coast', 'Reykjavík', `South Coast · ${car('5–8 persons')}`, 1190, { minutes: 720, imageUrl: '/photos/blue-lagoon.jpg' }),
 
-  route('silver-circle-1-4', 'silver-circle', 'Reykjavík', `Silver Circle · ${car('1–4 persons')}`, 610, { minutes: 360 }),
-  route('silver-circle-5-8', 'silver-circle', 'Reykjavík', `Silver Circle · ${car('5–8 persons')}`, 810, { minutes: 360 }),
+  route('silver-circle-1-4', 'silver-circle', 'Reykjavík', `Silver Circle · ${car('1–4 persons')}`, 610, { minutes: 360, imageUrl: '/photos/northern-lights.jpg' }),
+  route('silver-circle-5-8', 'silver-circle', 'Reykjavík', `Silver Circle · ${car('5–8 persons')}`, 810, { minutes: 360, imageUrl: '/photos/fleet.jpg' }),
 
-  route('snaefellsnes-1-4', 'snaefellsnes', 'Reykjavík', `Snæfellsnes Peninsula · ${car('1–4 persons')}`, 1090, { minutes: 720 }),
-  route('snaefellsnes-5-8', 'snaefellsnes', 'Reykjavík', `Snæfellsnes Peninsula · ${car('5–8 persons')}`, 1320, { minutes: 720 }),
+  route('snaefellsnes-1-4', 'snaefellsnes', 'Reykjavík', `Snæfellsnes Peninsula · ${car('1–4 persons')}`, 1090, { minutes: 720, imageUrl: '/photos/airport.jpg' }),
+  route('snaefellsnes-5-8', 'snaefellsnes', 'Reykjavík', `Snæfellsnes Peninsula · ${car('5–8 persons')}`, 1320, { minutes: 720, imageUrl: '/photos/private-driver.jpg' }),
 
-  route('krysuvik-1-4', 'krysuvik-reykjanes', 'Reykjavík', `Krýsuvík and Reykjanes · ${car('1–4 persons')}`, 470),
-  route('krysuvik-5-8', 'krysuvik-reykjanes', 'Reykjavík', `Krýsuvík and Reykjanes · ${car('5–8 persons')}`, 620),
+  route('krysuvik-1-4', 'krysuvik-reykjanes', 'Reykjavík', `Krýsuvík and Reykjanes · ${car('1–4 persons')}`, 470, { imageUrl: '/photos/glacier-lagoon.jpg' }),
+  route('krysuvik-5-8', 'krysuvik-reykjanes', 'Reykjavík', `Krýsuvík and Reykjanes · ${car('5–8 persons')}`, 620, { imageUrl: '/photos/south-coast.jpg' }),
 
   route('blue-lagoon-one-1-4', 'blue-lagoon-transfer', 'Reykjavík', `Blue Lagoon · one way · ${car('1–4 persons')}`, 160),
   route('blue-lagoon-one-5-8', 'blue-lagoon-transfer', 'Reykjavík', `Blue Lagoon · one way · ${car('5–8 persons')}`, 205),
@@ -90,6 +111,18 @@ export const REFERENCE_ROUTES: OfficialRoute[] = [
   route('lava-tunnel-return-1-4', 'lava-tunnel-transfer', 'Reykjavík', `Lava Tunnel · return, 2.5 hours · ${car('1–4 persons')}`, 330, { minutes: 150, returnTrip: true }),
   route('lava-tunnel-return-5-8', 'lava-tunnel-transfer', 'Reykjavík', `Lava Tunnel · return, 2.5 hours · ${car('5–8 persons')}`, 410, { minutes: 150, returnTrip: true }),
 ]
+
+export function separateRoutePhoto(index: number, taken: Iterable<string>) {
+  const used = new Set(taken)
+  const available = routePhotos.filter((photo) => !used.has(photo))
+  const pool = available.length ? available : routePhotos
+  return pool[Math.max(0, index) % pool.length]
+}
+
+export function referenceRouteImage(fromLabel: string, toLabel: string) {
+  const key = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, ' ')
+  return REFERENCE_ROUTES.find((row) => key(row.fromLabel) === key(fromLabel) && key(row.toLabel) === key(toLabel))?.imageUrl || null
+}
 
 function lowest(slug: string) {
   return Math.min(...REFERENCE_ROUTES.filter((row) => row.serviceSlug === slug).map((row) => row.fromIsk))

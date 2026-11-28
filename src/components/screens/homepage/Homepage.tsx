@@ -11,6 +11,7 @@ import { SiteFooter } from '@/components/site/SiteFooter'
 import { SiteTabBar } from '@/components/site/SiteTabBar'
 import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
+import { customerPlaceLabel, listingsForCustomers, passengerChoices } from '@/lib/booking/listings'
 import { DESTINATIONS, FLEET, formatPrice, type Currency } from '@/lib/design/data'
 import { useSiteBlock, useSiteBlocks, useSiteImages } from '@/components/providers/SiteContent'
 import { type Lang } from '@/lib/design/i18n'
@@ -61,8 +62,8 @@ export default function Homepage(props: Props) {
   const whatsappNumber = useSiteWhatsAppNumber()
   const text = useSiteBlock
   const { listings, error: listingsError, retry: retryListings } = usePublishedListings()
-  const routes = (listings || []).filter((listing) => listing.kind === 'route').slice(0, 8)
-  const tours = (listings || []).filter((listing) => listing.category === 'tour').slice(0, 6)
+  const routes = listingsForCustomers((listings || []).filter((listing) => listing.kind === 'route' && (listing.category === 'airport' || listing.category === 'taxi'))).slice(0, 8)
+  const tours = listingsForCustomers((listings || []).filter((listing) => listing.category === 'tour')).slice(0, 6)
   const driverListing = (listings || []).find((listing) => listing.category === 'driver')
   const book = () => onSearch?.({ category: 'airport', pickup: 'Keflavík Airport (KEF)', destination: 'Reykjavík city centre', date: '', time: '', passengers: 2, luggage: 2 })
 
@@ -100,12 +101,11 @@ export default function Homepage(props: Props) {
                   {routes.map((r) => (
                     <li key={r.id} className="flex flex-wrap items-center gap-4 py-4 sm:flex-nowrap">
                       <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-                        <p className="font-semibold leading-snug text-heading">{r.fromLabel} → {r.toLabel}</p>
+                        <p className="font-semibold leading-snug text-heading">{r.fromLabel} → {customerPlaceLabel(r)}</p>
                         <p className="mt-0.5 text-sm text-muted">{[r.hoursLabel, r.km ? `${r.km} km` : null].filter(Boolean).join(' · ') || 'Fixed price'}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-muted">Price</p>
-                        <p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p>
+                        {(listings ? passengerChoices(listings, r) : []).length > 1 ? (listings ? passengerChoices(listings, r) : []).map((choice) => <p key={choice.id} className="text-sm font-semibold text-heading">{choice.label} · {formatPrice(choice.fromIsk, cur, r.iskPerEur)}</p>) : <><p className="text-xs text-muted">Price</p><p className="font-display text-lg font-bold text-heading">{formatPrice(r.fromIsk, cur, r.iskPerEur)}</p></>}
                       </div>
                       <a href={`/book?listing=${encodeURIComponent(r.id)}&kind=route`} aria-label={`Book Now: ${r.fromLabel} to ${r.toLabel}`} className="ml-auto inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-on-primary transition-colors hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:ml-0">Book</a>
                     </li>
@@ -141,12 +141,11 @@ export default function Homepage(props: Props) {
                       <p className="mt-2 text-sm leading-relaxed text-muted">{tour.blurb}</p>
                       <div className="mt-4 flex gap-4 text-sm text-muted">
                         {tour.hoursLabel && <span className="flex items-center gap-1.5"><Clock size={14} /> {tour.hoursLabel}</span>}
-                        {tour.paxLabel && <span className="flex items-center gap-1.5"><Users size={14} /> {tour.paxLabel}</span>}
+                        {(listings ? passengerChoices(listings, tour) : []).length < 2 && tour.paxLabel && <span className="flex items-center gap-1.5"><Users size={14} /> {tour.paxLabel}</span>}
                       </div>
                       <div className="mt-auto flex items-end justify-between pt-6">
                         <div>
-                          <p className="text-xs text-muted">Price</p>
-                          <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
+                          {(listings ? passengerChoices(listings, tour) : []).length > 1 ? (listings ? passengerChoices(listings, tour) : []).map((choice) => <p key={choice.id} className="text-sm font-semibold text-heading">{choice.label} · {formatPrice(choice.fromIsk, cur, tour.iskPerEur)}</p>) : <><p className="text-xs text-muted">Price</p><p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p></>}
                         </div>
                         <button onClick={() => onSearch?.({ category: 'tour', pickup: tour.fromLabel, destination: tour.toLabel, listingId: tour.id, listingKind: tour.kind, date: '', time: '', passengers: 2, luggage: 0 })} className="whitespace-nowrap rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy-2 dark:bg-primary dark:text-on-primary dark:hover:bg-primary-hover">
                           Book tour

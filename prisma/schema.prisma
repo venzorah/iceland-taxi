@@ -178,6 +178,7 @@ model Route {
   minutes     Int?
   km          Float?
   fromIsk     Int
+  imageUrl    String?
   returnTrip  Boolean  @default(true)
   active      Boolean  @default(true)
   override    Boolean  @default(false)

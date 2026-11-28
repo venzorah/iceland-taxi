@@ -97,6 +97,7 @@ async function main() {
       toLabel: route.toLabel,
       minutes: route.minutes,
       fromIsk: route.fromIsk,
+      imageUrl: route.imageUrl,
       returnTrip: route.returnTrip,
       active: true,
     })),

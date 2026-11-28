@@ -56,7 +56,7 @@ export function planCatalogueRestore(snapshot: Snapshot): CatalogueRestorePlan {
     if (!serviceId) continue
     const existing = matches[0], id = existing?.id || `reference-${reference.key}`
     keptRouteIds.add(id)
-    const fields = { fromLabel: reference.fromLabel, toLabel: reference.toLabel, minutes: reference.minutes, fromIsk: reference.fromIsk, returnTrip: reference.returnTrip, serviceId, active: true }
+    const fields = { fromLabel: reference.fromLabel, toLabel: reference.toLabel, minutes: reference.minutes, fromIsk: reference.fromIsk, returnTrip: reference.returnTrip, imageUrl: reference.imageUrl, serviceId, active: true }
     if (!existing) {
       if (snapshot.routes.some(row => row.id === id)) { conflicts.push(`The restore ID for ${label} is already used.`); continue }
       actions.push({ model: 'route', operation: 'create', id, label, data: fields, changes: Object.entries(fields).map(([field, after]) => ({ field, before: null, after })) })
@@ -66,6 +66,7 @@ export function planCatalogueRestore(snapshot: Snapshot): CatalogueRestorePlan {
       if (existing.minutes !== reference.minutes) data.minutes = reference.minutes
       if (existing.fromIsk !== reference.fromIsk) data.fromIsk = reference.fromIsk
       if (existing.returnTrip !== reference.returnTrip) data.returnTrip = reference.returnTrip
+      if (!existing.imageUrl && reference.imageUrl) data.imageUrl = reference.imageUrl
       if (!existing.active) data.active = true
       if (Object.keys(data).length) actions.push({ model: 'route', operation: 'update', id, label, data, changes: Object.entries(data).map(([field, after]) => ({ field, before: existing[field as keyof Route], after })) })
     }

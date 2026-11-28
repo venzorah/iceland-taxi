@@ -1,3 +1,5 @@
+import { referenceRouteImage, separateRoutePhoto } from '@/lib/catalogue/reference'
+
 export const UNAVAILABLE_MESSAGE = 'This option is unavailable'
 
 export type ListingKind = 'route' | 'service'
@@ -43,6 +45,7 @@ export type CatalogueRoute = {
   minutes?: number | null
   km?: number | null
   active: boolean
+  imageUrl?: string | null
   service?: { id: string; kind: string; titleEn: string; active: boolean } | null
 }
 
@@ -105,15 +108,24 @@ function categoryFor(kind: string | null | undefined): ListingCategory {
  * An airport service is not a second price on top of its routes.
  * Kilometres are kept for display and are never a fare.
  */
+function routePhoto(route: CatalogueRoute, group: CatalogueRoute[], parentImage: string | null) {
+  const saved = route.imageUrl || referenceRouteImage(route.fromLabel, route.toLabel)
+  if (saved) return saved
+  if (group.length < 2) return parentImage
+  const taken = group.map((item) => item.imageUrl || referenceRouteImage(item.fromLabel, item.toLabel)).filter((photo): photo is string => Boolean(photo))
+  const blanks = group.filter((item) => !(item.imageUrl || referenceRouteImage(item.fromLabel, item.toLabel)))
+  return separateRoutePhoto(Math.max(0, blanks.findIndex((item) => item.id === route.id)), taken)
+}
+
 export function publishedListings(routes: CatalogueRoute[], services: CatalogueService[]): PublishedListing[] {
   const listings: PublishedListing[] = []
-  for (const route of routes) {
-    if (!route.active) continue
-    if (route.service && route.service.active === false) continue
+  const visible = routes.filter((route) => route.active && route.service?.active !== false && adminPriceIsk(route.fromIsk) != null)
+  for (const route of visible) {
     const price = adminPriceIsk(route.fromIsk)
     if (price == null) continue
     const parent = services.find((service) => service.id === route.serviceId)
     const band = route.toLabel.split(' · ').find((part) => part.toLowerCase().includes('person')) || null
+    const group = visible.filter((item) => item.serviceId && item.serviceId === route.serviceId)
     listings.push({
       id: route.id,
       kind: 'route',
@@ -129,7 +141,7 @@ export function publishedListings(routes: CatalogueRoute[], services: CatalogueS
       hoursLabel: durationLabel(route.minutes) || parent?.hoursLabel || null,
       paxLabel: band || parent?.paxLabel || null,
       blurb: parent?.blurbEn ?? null,
-      imageUrl: parent?.imageUrl ?? null,
+      imageUrl: routePhoto(route, group, parent?.imageUrl || null),
     })
   }
   const covered = new Set(listings.map((listing) => listing.serviceId).filter((id): id is string => Boolean(id)))
@@ -258,6 +270,88 @@ export function searchListings(
 export function shownAdminPrice(listing: PublishedListing | null, _pickupDetails?: string): number | null {
   if (!listing) return null
   return adminPriceIsk(listing.fromIsk)
+}
+
+const passengerBand = /(\d+)\s*[–-]\s*(\d+)\s*persons/i
+
+export type PassengerChoice = {
+  id: string
+  kind: ListingKind
+  label: string
+  fromIsk: number
+  paxLabel: string | null
+}
+
+export function customerPlaceLabel(listing: Pick<PublishedListing, 'toLabel'>) {
+  return listing.toLabel
+    .replace(/\s*·\s*car\s*·\s*\d+\s*[–-]\s*\d+\s*persons/gi, '')
+    .replace(/\s*·\s*\d+\s*[–-]\s*\d+\s*persons/gi, '')
+    .trim() || listing.toLabel
+}
+
+function passengerGroupKey(listing: PublishedListing) {
+  return [
+    listing.serviceId || listing.id,
+    normalizePlace(listing.fromLabel),
+    normalizePlace(customerPlaceLabel(listing)),
+    listing.minutes ?? '',
+    listing.category,
+  ].join('|')
+}
+
+export function passengerChoiceLabel(listing: Pick<PublishedListing, 'paxLabel' | 'toLabel'>) {
+  const band = `${listing.paxLabel || ''} ${listing.toLabel}`.match(passengerBand)
+  if (!band) return listing.paxLabel || customerPlaceLabel(listing)
+  return `${band[1]}–${band[2]} persons`
+}
+
+/** Prices for the same place that differ by passenger count. One-way and return stay separate. */
+export function passengerChoices(listings: PublishedListing[], listing: PublishedListing): PassengerChoice[] {
+  if (listing.kind !== 'route' || !listing.serviceId) return []
+  const key = passengerGroupKey(listing)
+  const group = listings.filter((item) => item.kind === 'route' && item.serviceId === listing.serviceId && passengerGroupKey(item) === key)
+  const choices = group
+    .filter((item) => passengerBand.test(`${item.paxLabel || ''} ${item.toLabel}`))
+    .map((item) => ({
+      id: item.id,
+      kind: item.kind,
+      label: passengerChoiceLabel(item),
+      fromIsk: item.fromIsk,
+      paxLabel: item.paxLabel,
+    }))
+    .sort((a, b) => a.fromIsk - b.fromIsk || a.label.localeCompare(b.label))
+  return choices.length > 1 ? choices : []
+}
+
+/** One card per place. The cheapest passenger price is the card the customer opens, and the other prices stay selectable. */
+export function listingsForCustomers(listings: PublishedListing[]): PublishedListing[] {
+  const seen = new Set<string>()
+  const shown: PublishedListing[] = []
+  for (const listing of listings) {
+    const key = listing.kind === 'route' && listing.serviceId ? passengerGroupKey(listing) : `${listing.kind}:${listing.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const choices = passengerChoices(listings, listing)
+    if (choices.length < 2) {
+      shown.push(listing)
+      continue
+    }
+    const selected = listings.find((item) => item.id === choices[0]?.id) || listing
+    shown.push({
+      ...selected,
+      paxLabel: choices.map((choice) => choice.label).join(' or '),
+    })
+  }
+  return shown
+}
+
+export function passengersInChoice(label: string, current: number) {
+  const band = label.match(/(\d+)\s*[–-]\s*(\d+)/)
+  if (!band) return current
+  const min = Number(band[1])
+  const max = Number(band[2])
+  if (current >= min && current <= max) return current
+  return min
 }
 
 /** Official car-band labels cap the fare; a larger vehicle must not bypass that cap. */

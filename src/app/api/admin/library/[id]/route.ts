@@ -20,6 +20,7 @@ export const PATCH=apiHandler(async(req:Request,ctx:Ctx)=>{
    const asset=await tx.mediaAsset.create({data:{name:file.name.slice(0,180)||'Image',mime:file.type,alt:alt||current.alt,url:uploaded.url,publicId:uploaded.publicId,bytes:file.size}})
    await tx.siteBlock.updateMany({where:{value:current.url},data:{value:uploaded.url}})
    await tx.service.updateMany({where:{imageUrl:current.url},data:{imageUrl:uploaded.url}})
+   await tx.route.updateMany({where:{imageUrl:current.url},data:{imageUrl:uploaded.url}})
    await tx.destination.updateMany({where:{imageUrl:current.url},data:{imageUrl:uploaded.url}})
    await tx.editorialPost.updateMany({where:{imageUrl:current.url},data:{imageUrl:uploaded.url}})
    return mediaView(asset)

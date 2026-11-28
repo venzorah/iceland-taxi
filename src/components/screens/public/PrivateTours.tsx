@@ -7,6 +7,7 @@ import { ArrowRight, Clock, Users } from 'lucide-react'
 
 import { PublishedListingsNotice } from '@/components/booking/PublishedListingsNotice'
 import { usePublishedListings } from '@/components/booking/usePublishedListings'
+import { listingsForCustomers, passengerChoices } from '@/lib/booking/listings'
 import { PublicPageShell } from '@/components/site/PublicPageShell'
 import { useSiteBlocks, useSiteImages } from '@/components/providers/SiteContent'
 import { formatPrice, type Currency } from '@/lib/design/data'
@@ -39,7 +40,7 @@ export default function PrivateTours(props: Props) {
   const cur = p.currency as Currency
   const router = useRouter()
   const {listings, error: listingsError, retry: retryListings} = usePublishedListings()
-  const tours = (listings || []).filter((listing) => listing.category === 'tour')
+  const tours = listingsForCustomers((listings || []).filter((listing) => listing.category === 'tour'))
 
   return (
     <PublicPageShell
@@ -84,12 +85,11 @@ export default function PrivateTours(props: Props) {
                 <p className="mt-2 text-sm text-muted">{tour.blurb}</p>
                 <div className="mt-3 flex gap-4 text-sm text-muted">
                   {tour.hoursLabel && <span className="inline-flex items-center gap-1"><Clock size={14} /> {tour.hoursLabel}</span>}
-                  {tour.paxLabel && <span className="inline-flex items-center gap-1"><Users size={14} /> {tour.paxLabel}</span>}
+                  {(listings ? passengerChoices(listings, tour) : []).length < 2 && tour.paxLabel && <span className="inline-flex items-center gap-1"><Users size={14} /> {tour.paxLabel}</span>}
                 </div>
                 <div className="mt-auto flex items-end justify-between gap-3 pt-6">
                   <div>
-                    <p className="text-xs text-muted">Price</p>
-                    <p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p>
+                    {(listings ? passengerChoices(listings, tour) : []).length > 1 ? (listings ? passengerChoices(listings, tour) : []).map((choice) => <p key={choice.id} className="text-sm font-semibold text-heading">{choice.label} · {formatPrice(choice.fromIsk, cur, tour.iskPerEur)}</p>) : <><p className="text-xs text-muted">Price</p><p className="font-display text-xl font-bold text-heading">{formatPrice(tour.fromIsk, cur, tour.iskPerEur)}</p></>}
                   </div>
                   <button onClick={() => router.push(`/book?listing=${encodeURIComponent(tour.id)}&kind=${tour.kind}`)} className="rounded-full bg-navy px-4 py-2.5 text-sm font-bold text-white dark:bg-primary dark:text-on-primary">Book tour</button>
                 </div>

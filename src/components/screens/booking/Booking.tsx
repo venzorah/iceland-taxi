@@ -58,6 +58,8 @@ type Props = Partial<typeof args> & {
   onLanguageChange?: (l: Lang) => void
   onCurrencyChange?: (c: Currency) => void
   onCategoryChange?: (category: string) => void
+  passengerChoices?: { id: string; label: string; fromIsk: number }[]
+  onPassengerChoice?: (id: string) => void
   announcements?: AnnouncementState
   confirmation?: {
     ref: string
@@ -202,6 +204,7 @@ export default function Booking(props: Props) {
                       </div>
                     </label>
                   </div>
+                  {(p.passengerChoices || []).length > 1 && <fieldset className="mt-4 space-y-2"><legend className="text-sm font-semibold text-heading">Choose passengers and price</legend>{(p.passengerChoices || []).map((choice) => <label key={choice.id} className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-3 ${p.listing?.id === choice.id ? 'border-primary bg-primary/5' : 'border-line'}`}><span className="flex items-center gap-2 text-sm font-semibold"><input type="radio" name="passenger-price" checked={p.listing?.id === choice.id} onChange={() => p.onPassengerChoice?.(choice.id)} />{choice.label}</span><span className="font-display font-bold">{formatPrice(choice.fromIsk, currency, p.listing?.iskPerEur)}</span></label>)}</fieldset>}
                   <p className="mt-4 text-sm text-muted">{p.passengers} passengers · {p.luggage || 0} bags</p>
                 </Section>
 
